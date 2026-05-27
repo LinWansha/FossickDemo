@@ -4,7 +4,7 @@
 PlayerSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 26
-  productGUID: 951ed5d63f505481b8d619b46fdf07d6
+  productGUID: 345848062ba994ae2823c806c1a00bdf
   AndroidProfiler: 0
   AndroidFilterTouchesWhenObscured: 0
   AndroidEnableSustainedPerformanceMode: 0
@@ -13,7 +13,7 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 60
   companyName: DefaultCompany
-  productName: UnityProject
+  productName: FossickUnity
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -871,14 +871,14 @@ PlayerSettings:
   apiCompatibilityLevelPerPlatform: {}
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: UnityProject
+  metroPackageName: FossickUnity
   metroPackageVersion: 
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
-  metroApplicationDescription: UnityProject
+  metroApplicationDescription: FossickUnity
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0
@@ -948,10 +948,10 @@ PlayerSettings:
   apiCompatibilityLevel: 6
   activeInputHandler: 0
   windowsGamepadBackendHint: 0
-  cloudProjectId: 73076bdb-2bc3-4586-ad5e-aecf3d06147c
+  cloudProjectId: 0070f6dd-178a-4ec4-99b2-134ccf0cec08
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: UnityProject
+  projectName: FossickUnity
   organizationId: wechat_os_qy0w0rffjui3rcv7qsjj7ymq4
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
