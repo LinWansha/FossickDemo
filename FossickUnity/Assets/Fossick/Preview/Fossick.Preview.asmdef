@@ -1,0 +1,18 @@
+{
+  "name": "Fossick.Preview",
+  "rootNamespace": "Fossick.Preview",
+  "references": [
+    "Fossick.Core",
+    "Fossick.Runtime",
+    "UnityEngine.UI"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

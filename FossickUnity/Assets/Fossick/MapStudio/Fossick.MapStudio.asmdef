@@ -1,0 +1,17 @@
+{
+  "name": "Fossick.MapStudio",
+  "rootNamespace": "Fossick.MapStudio",
+  "references": [
+    "Fossick.Core",
+    "UnityEngine.UI"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

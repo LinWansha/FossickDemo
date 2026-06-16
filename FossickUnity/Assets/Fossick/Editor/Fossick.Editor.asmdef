@@ -1,0 +1,21 @@
+{
+  "name": "Fossick.Editor",
+  "rootNamespace": "Fossick.Editor",
+  "references": [
+    "Fossick.Core",
+    "Fossick.Runtime",
+    "Fossick.MapStudio",
+    "Fossick.Preview"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
