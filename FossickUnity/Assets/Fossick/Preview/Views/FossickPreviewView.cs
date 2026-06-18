@@ -1,10 +1,12 @@
 using Fossick.Core.Actions;
 using Fossick.Core.Board;
 using Fossick.Core.Config;
+using Fossick.Core.Gameplay;
 using Fossick.Core.Visual;
 using Fossick.Preview.Controllers;
 using Fossick.Runtime.Views;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -37,7 +39,10 @@ namespace Fossick.Preview.Views
         private RectTransform root;
         private Font font;
         [SerializeField] private FossickArtCatalog artCatalog;
+        [SerializeField] private float boardScrollAnimationDuration = 0.22f;
         private FossickBoardView boardView;
+        private Coroutine boardScrollRoutine;
+        private bool isBoardAnimating;
 
         private void Awake()
         {
@@ -232,8 +237,13 @@ namespace Fossick.Preview.Views
             boardView.CellPointerUp += ClearPreview;
             boardView.CellClicked += (x, y) =>
             {
-                controller.UseTool(x, y);
-                Build();
+                if (isBoardAnimating)
+                {
+                    return;
+                }
+
+                var result = controller.UseTool(x, y);
+                PlayResultOrRebuild(result);
             };
             boardView.Render(board, previewTargetKeys);
         }
@@ -385,6 +395,50 @@ namespace Fossick.Preview.Views
 
             previewTargetKeys.Clear();
             RefreshCellColors();
+        }
+
+        private void PlayResultOrRebuild(FossickGameplayActionResult result)
+        {
+            previewTargetKeys.Clear();
+            if (result == null || result.action == null || !result.action.scrolled || result.action.scrollCount <= 0 || boardView == null)
+            {
+                Build();
+                return;
+            }
+
+            if (boardScrollRoutine != null)
+            {
+                StopCoroutine(boardScrollRoutine);
+            }
+
+            boardScrollRoutine = StartCoroutine(PlayBoardScroll(result.action.scrollCount));
+        }
+
+        private IEnumerator PlayBoardScroll(int scrollRows)
+        {
+            isBoardAnimating = true;
+            var duration = Mathf.Max(0.01f, boardScrollAnimationDuration);
+            var elapsed = 0f;
+
+            while (elapsed < duration && boardView != null && controller != null && controller.Board != null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                var eased = 1f - Mathf.Pow(1f - t, 3f);
+                boardView.SetVisualRowOffset(Mathf.Lerp(scrollRows, 0f, eased));
+                boardView.Render(controller.Board, previewTargetKeys);
+                yield return null;
+            }
+
+            if (boardView != null && controller != null && controller.Board != null)
+            {
+                boardView.SetVisualRowOffset(0f);
+                boardView.Render(controller.Board, previewTargetKeys);
+            }
+
+            isBoardAnimating = false;
+            boardScrollRoutine = null;
+            Build();
         }
 
         private void RefreshCellColors()

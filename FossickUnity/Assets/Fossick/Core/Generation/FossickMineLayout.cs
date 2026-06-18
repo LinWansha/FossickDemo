@@ -38,13 +38,23 @@ namespace Fossick.Core.Generation
 
         public static FossickGeneratedMine Build(FossickMapConfig config, int seed, int targetRows, IDictionary<int, FossickFragmentConfig> sequenceOverrides)
         {
+            return Build(config, new FossickGenerationState(seed), targetRows, sequenceOverrides);
+        }
+
+        public static FossickGeneratedMine Build(FossickMapConfig config, FossickGenerationState state, int targetRows)
+        {
+            return Build(config, state, targetRows, null);
+        }
+
+        public static FossickGeneratedMine Build(FossickMapConfig config, FossickGenerationState state, int targetRows, IDictionary<int, FossickFragmentConfig> sequenceOverrides)
+        {
             var mine = new FossickGeneratedMine();
             if (config == null || targetRows <= 0)
             {
                 return mine;
             }
 
-            var generator = new FossickFragmentGenerator(config, seed);
+            var generator = new FossickFragmentGenerator(config, state);
             var initial = generator.GenerateInitialFragments();
             for (var i = 0; i < initial.Count && mine.rows.Count < targetRows; i++)
             {
@@ -56,11 +66,40 @@ namespace Fossick.Core.Generation
                 AppendFragment(mine, generator.Next(), sequenceOverrides);
             }
 
-            ApplyRowOverrides(mine, config.generation == null ? null : config.generation.rowOverrides);
+            ApplyRowOverrides(mine, config.generation == null ? null : config.generation.rowOverrides, 0);
             return mine;
         }
 
-        private static void ApplyRowOverrides(FossickGeneratedMine mine, List<FossickRowOverrideConfig> rowOverrides)
+        public static FossickGeneratedMine BuildAdditional(FossickMapConfig config, FossickGenerationState state, int minimumAdditionalRows)
+        {
+            return BuildAdditional(config, state, minimumAdditionalRows, 0, null);
+        }
+
+        public static FossickGeneratedMine BuildAdditional(FossickMapConfig config, FossickGenerationState state, int minimumAdditionalRows, int absoluteStartRow, IDictionary<int, FossickFragmentConfig> sequenceOverrides)
+        {
+            var mine = new FossickGeneratedMine();
+            if (config == null || minimumAdditionalRows <= 0)
+            {
+                return mine;
+            }
+
+            var generator = new FossickFragmentGenerator(config, state);
+            var initial = generator.GenerateInitialFragments();
+            for (var i = 0; i < initial.Count && mine.rows.Count < minimumAdditionalRows; i++)
+            {
+                AppendFragment(mine, initial[i], sequenceOverrides);
+            }
+
+            while (mine.rows.Count < minimumAdditionalRows)
+            {
+                AppendFragment(mine, generator.Next(), sequenceOverrides);
+            }
+
+            ApplyRowOverrides(mine, config.generation == null ? null : config.generation.rowOverrides, absoluteStartRow);
+            return mine;
+        }
+
+        private static void ApplyRowOverrides(FossickGeneratedMine mine, List<FossickRowOverrideConfig> rowOverrides, int absoluteStartRow)
         {
             if (mine == null || rowOverrides == null)
             {
@@ -77,7 +116,7 @@ namespace Fossick.Core.Generation
 
                 for (var y = 0; y < item.fragment.height; y++)
                 {
-                    var rowIndex = item.startRow + y;
+                    var rowIndex = item.startRow + y - absoluteStartRow;
                     if (rowIndex < 0 || rowIndex >= mine.rows.Count)
                     {
                         continue;

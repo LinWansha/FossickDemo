@@ -34,7 +34,7 @@ namespace Fossick.Core.Config
                         x = x,
                         y = y,
                         backgroundId = "mine_default",
-                        rewardBackgroundId = type == FossickFragmentType.Reward ? "treasure_room" : null,
+                        rewardBackgroundId = type == FossickFragmentType.Reward && y < 2 ? "treasure_room" : null,
                         terrain = terrain,
                         hp = GetHp(terrain),
                         reward = GetSampleElement(type, x, y, width, height),

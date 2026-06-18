@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: FossickArtCatalog
   m_EditorClassIdentifier: 
   emptyCellColor: {r: 0.08, g: 0.18, b: 0.22, a: 1}
-  fogColor: {r: 0.16, g: 0.17, b: 0.19, a: 0.88}
+  fogColor: {r: 0.08, g: 0.06, b: 0.045, a: 0.58}
   previewColor: {r: 0.32, g: 0.9, b: 0.48, a: 0.95}
   fallbackDirtColor: {r: 0.56, g: 0.38, b: 0.25, a: 1}
   fallbackStoneColor: {r: 0.48, g: 0.53, b: 0.58, a: 1}

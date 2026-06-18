@@ -129,6 +129,86 @@ namespace Fossick.Core.Tests
         }
 
         [Test]
+        public void NewSession_PrefetchesConfiguredRowsAheadWithoutDepthLimit()
+        {
+            var config = FossickSampleMapFactory.CreateDefaultConfig();
+            config.generation.prefetchVisibleScreens = 1;
+            config.generation.minimumRowsAhead = 40;
+
+            var session = new FossickGameplaySession(config, 12345, config.visibleHeight);
+
+            Assert.That(session.Board.RowCount, Is.GreaterThanOrEqualTo(session.Board.TopVisibleRow + config.visibleHeight + 40));
+        }
+
+        [Test]
+        public void UseTool_AfterBoardMovesDown_ReplenishesRowsAhead()
+        {
+            var config = CreateConfigWithInitialBottomGap();
+            config.generation.prefetchVisibleScreens = 1;
+            config.generation.minimumRowsAhead = 18;
+            config.generation.retainRowsBehind = 2;
+            config.gameplay.startingPickaxes = 10;
+
+            var session = new FossickGameplaySession(config, 12345, config.visibleHeight);
+            var rowCountBefore = session.Board.RowCount;
+
+            session.UseTool(FossickToolType.Pickaxe, 0, 0);
+
+            Assert.That(session.Board.RowCount, Is.GreaterThanOrEqualTo(session.Board.TopVisibleRow + config.visibleHeight + 18));
+            Assert.That(session.Board.RowCount, Is.GreaterThanOrEqualTo(rowCountBefore));
+        }
+
+        [Test]
+        public void Board_WhenRowsBehindWindowArePruned_KeepsAbsoluteRowNumbers()
+        {
+            var config = CreateConfigWithScrollingFragments();
+            config.generation.prefetchVisibleScreens = 1;
+            config.generation.minimumRowsAhead = 6;
+            config.generation.retainRowsBehind = 2;
+            var session = new FossickGameplaySession(config, 12345, config.visibleHeight, true);
+
+            for (var i = 0; i < 8; i++)
+            {
+                session.UseTool(FossickToolType.Pickaxe, 0, 0);
+            }
+
+            Assert.That(session.Board.TopVisibleRow, Is.GreaterThanOrEqualTo(8));
+            Assert.That(session.Board.FirstLoadedRow, Is.EqualTo(session.Board.TopVisibleRow - 2));
+            Assert.That(session.Board.GetCellAtAbsoluteRow(0, session.Board.FirstLoadedRow - 1), Is.Null);
+            Assert.That(session.Board.GetCellAtAbsoluteRow(0, session.Board.FirstLoadedRow), Is.Not.Null);
+            Assert.That(session.Board.RowCount, Is.GreaterThan(session.Board.FirstLoadedRow + session.Board.LoadedRowCount - 1));
+        }
+
+        [Test]
+        public void SaveAndRestore_UsesLoadedWindowAndGenerationStateToContinueInfiniteMine()
+        {
+            var config = CreateConfigWithScrollingFragments();
+            config.generation.prefetchVisibleScreens = 1;
+            config.generation.minimumRowsAhead = 6;
+            config.generation.retainRowsBehind = 2;
+            var session = new FossickGameplaySession(config, 24680, config.visibleHeight, true);
+
+            for (var i = 0; i < 8; i++)
+            {
+                session.UseTool(FossickToolType.Pickaxe, 0, 0);
+            }
+
+            var save = session.CreateSaveState();
+            var restored = FossickGameplaySession.Restore(config, save, config.visibleHeight, true);
+
+            Assert.That(save.loadedRows.Count, Is.EqualTo(session.Board.LoadedRowCount));
+            Assert.That(save.loadedStartRow, Is.EqualTo(session.Board.FirstLoadedRow));
+            Assert.That(restored.Board.FirstLoadedRow, Is.EqualTo(session.Board.FirstLoadedRow));
+            Assert.That(restored.Board.TopVisibleRow, Is.EqualTo(session.Board.TopVisibleRow));
+            Assert.That(restored.Board.RowCount, Is.EqualTo(session.Board.RowCount));
+            Assert.That(restored.Board.GetCellAtAbsoluteRow(0, restored.Board.FirstLoadedRow), Is.Not.Null);
+
+            restored.UseTool(FossickToolType.Pickaxe, 0, 0);
+
+            Assert.That(restored.Board.RowCount, Is.GreaterThanOrEqualTo(restored.Board.TopVisibleRow + config.visibleHeight + 6));
+        }
+
+        [Test]
         public void EndActivity_ReturnsCoreStatsAndRemainingCoins()
         {
             var config = CreateConfigWithSettlementRewards();
@@ -183,6 +263,22 @@ namespace Fossick.Core.Tests
                 amount = 30
             };
             config.fragments.Add(fragment);
+            return config;
+        }
+
+        private static FossickMapConfig CreateConfigWithScrollingFragments()
+        {
+            var config = new FossickMapConfig();
+            config.fragments.Clear();
+            var tutorial = CreateSolidFragment(1001, FossickFragmentType.Tutorial, 6, FossickTerrainType.Dirt);
+            FillFragmentRow(tutorial, 0, FossickTerrainType.Empty, FossickFogType.None);
+            FillFragmentRow(tutorial, 5, FossickTerrainType.Empty, FossickFogType.None);
+            config.fragments.Add(tutorial);
+
+            var regular = CreateSolidFragment(2001, FossickFragmentType.Regular, 6, FossickTerrainType.Dirt);
+            regular.difficulty = 1;
+            FillFragmentRow(regular, 5, FossickTerrainType.Empty, FossickFogType.None);
+            config.fragments.Add(regular);
             return config;
         }
 

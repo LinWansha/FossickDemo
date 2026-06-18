@@ -126,6 +126,48 @@ namespace Fossick.Core.Tests
             }
         }
 
+        [Test]
+        public void BuildAdditional_MatchesSinglePassGenerationWhenAppendedInChunks()
+        {
+            var config = FossickSampleMapFactory.CreateDefaultConfig();
+            var full = FossickMineLayoutBuilder.Build(config, 2468, 36);
+
+            var state = new FossickGenerationState(2468);
+            var first = FossickMineLayoutBuilder.BuildAdditional(config, state, 12, 0, null);
+            var second = FossickMineLayoutBuilder.BuildAdditional(config, state, 36 - first.rows.Count, first.rows.Count, null);
+
+            var appendedRows = first.rows.Count + second.rows.Count;
+            Assert.That(appendedRows, Is.GreaterThanOrEqualTo(36));
+            for (var y = 0; y < 36; y++)
+            {
+                var row = y < first.rows.Count ? first.rows[y] : second.rows[y - first.rows.Count];
+                Assert.That(row.fragment.fragmentId, Is.EqualTo(full.rows[y].fragment.fragmentId));
+                Assert.That(row.cells[0].terrain, Is.EqualTo(full.rows[y].cells[0].terrain));
+            }
+        }
+
+        [Test]
+        public void Generator_StateSnapshotContinuesWithTheSameFragmentSequence()
+        {
+            var config = FossickSampleMapFactory.CreateDefaultConfig();
+            config.generation.rewardInsertMin = 99;
+            config.generation.rewardInsertMax = 99;
+
+            var generator = new FossickFragmentGenerator(config, 13579);
+            generator.GenerateInitialFragments();
+            generator.Next();
+            generator.Next();
+
+            var snapshot = generator.State.Clone();
+            var expected = generator.Next();
+            var restoredGenerator = new FossickFragmentGenerator(config, snapshot);
+            var actual = restoredGenerator.Next();
+
+            Assert.That(actual.config.id, Is.EqualTo(expected.config.id));
+            Assert.That(actual.sequenceIndex, Is.EqualTo(expected.sequenceIndex));
+            Assert.That(actual.insertedAsReward, Is.EqualTo(expected.insertedAsReward));
+        }
+
         private static FossickFragmentConfig CreateFlatFragment(int id, FossickTerrainType terrain, int height)
         {
             var fragment = new FossickFragmentConfig

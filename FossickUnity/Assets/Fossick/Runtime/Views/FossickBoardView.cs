@@ -11,12 +11,18 @@ namespace Fossick.Runtime.Views
     public sealed class FossickBoardView : MonoBehaviour
     {
         private const float SmoothTileOverlap = 2f;
+        private const float FogTileOverlap = 0f;
         private const int StoneDamagedSpriteIndex = 19;
+        private const string TreasureRoomSmallId = "treasure_room_3x2";
+        private const string TreasureRoomMediumId = "treasure_room_5x2";
+        private const string TreasureRoomLargeId = "treasure_room";
 
         [SerializeField] private FossickArtCatalog artCatalog;
         [SerializeField] private FossickCellView cellViewPrefab;
         [SerializeField] private bool showDebugLabels;
         [SerializeField] private float labelWidth = 56f;
+        [SerializeField] private int renderRowsAbove = 1;
+        [SerializeField] private int renderRowsBelow = 2;
 
         private readonly List<Image> terrainImages = new List<Image>();
         private readonly List<Image> stoneDamageImages = new List<Image>();
@@ -44,7 +50,10 @@ namespace Fossick.Runtime.Views
         private Font font;
         private int currentWidth;
         private int currentHeight;
+        private int currentRenderedRowCount;
+        private int currentVisibleRowOffset;
         private float currentCellSize;
+        private float visualRowOffset;
 
         private struct RewardBackgroundRegion
         {
@@ -71,6 +80,23 @@ namespace Fossick.Runtime.Views
         {
             get => showDebugLabels;
             set => showDebugLabels = value;
+        }
+
+        public int RenderRowsAbove
+        {
+            get => renderRowsAbove;
+            set => renderRowsAbove = Mathf.Max(0, value);
+        }
+
+        public int RenderRowsBelow
+        {
+            get => renderRowsBelow;
+            set => renderRowsBelow = Mathf.Max(0, value);
+        }
+
+        public void SetVisualRowOffset(float rowOffset)
+        {
+            visualRowOffset = rowOffset;
         }
 
         public void SetArtCatalog(FossickArtCatalog catalog)
@@ -115,16 +141,26 @@ namespace Fossick.Runtime.Views
             }
 
             SetPreviewKeys(previewedCells);
-            var rows = board.GetVisibleRows();
             currentWidth = board.Spec.width;
             currentHeight = board.Spec.visibleHeight;
+            var firstRenderedRow = Mathf.Max(board.FirstLoadedRow, board.TopVisibleRow - Mathf.Max(0, renderRowsAbove));
+            var lastRenderedRow = Mathf.Min(board.RowCount - 1, board.TopVisibleRow + board.Spec.visibleHeight - 1 + Mathf.Max(0, renderRowsBelow));
+            if (lastRenderedRow < firstRenderedRow)
+            {
+                firstRenderedRow = board.TopVisibleRow;
+                lastRenderedRow = board.TopVisibleRow + board.Spec.visibleHeight - 1;
+            }
+
+            var rows = board.GetRowsWindow(firstRenderedRow, lastRenderedRow - firstRenderedRow + 1);
+            currentRenderedRowCount = rows.Count;
+            currentVisibleRowOffset = board.TopVisibleRow - firstRenderedRow;
 
             EnsureRoots();
             EnsureLayout();
             RenderBackground(rows);
             RenderTerrain(rows, currentWidth, currentHeight, currentCellSize);
             RenderCellSpriteLayers(rows, currentCellSize);
-            RenderInteractionRows(board, rows, currentCellSize);
+            RenderInteractionRows(board, rows, currentCellSize, currentVisibleRowOffset);
         }
 
         public void RefreshPreviews()
@@ -149,6 +185,8 @@ namespace Fossick.Runtime.Views
             previewImages.Clear();
             rowLabels.Clear();
             cellViews.Clear();
+            currentRenderedRowCount = 0;
+            currentVisibleRowOffset = 0;
             labelRoot = null;
             backgroundRoot = null;
             rewardBackgroundRoot = null;
@@ -230,9 +268,9 @@ namespace Fossick.Runtime.Views
         private void RenderTerrain(IReadOnlyList<FossickCellState[]> rows, int width, int height, float cellSize)
         {
             var used = 0;
-            used = RenderTerrainLayer(rows, width, height, cellSize, FossickTerrainType.Dirt, used);
-            used = RenderTerrainLayer(rows, width, height, cellSize, FossickTerrainType.Stone, used);
-            used = RenderTerrainLayer(rows, width, height, cellSize, FossickTerrainType.Unbreakable, used);
+            used = RenderTerrainLayer(rows, width, rows == null ? 0 : rows.Count, cellSize, FossickTerrainType.Dirt, used);
+            used = RenderTerrainLayer(rows, width, rows == null ? 0 : rows.Count, cellSize, FossickTerrainType.Stone, used);
+            used = RenderTerrainLayer(rows, width, rows == null ? 0 : rows.Count, cellSize, FossickTerrainType.Unbreakable, used);
             DisableUnused(terrainImages, used);
             RenderStoneDamageOverlay(rows, width, cellSize);
         }
@@ -261,7 +299,7 @@ namespace Fossick.Runtime.Views
                     SetTopLeft(
                         image.rectTransform,
                         (cornerX - 0.5f) * cellSize - SmoothTileOverlap * 0.5f,
-                        (cornerY - 0.5f) * cellSize - SmoothTileOverlap * 0.5f,
+                        GetRenderTop(cornerY - 0.5f, cellSize) - SmoothTileOverlap * 0.5f,
                         cellSize + SmoothTileOverlap,
                         cellSize + SmoothTileOverlap);
                 }
@@ -293,7 +331,7 @@ namespace Fossick.Runtime.Views
 
                     var image = GetImage(stoneDamageImages, terrainRoot, "Stone Damage", used++);
                     BindSprite(image, sprite);
-                    SetTopLeft(image.rectTransform, x * cellSize, y * cellSize, cellSize, cellSize);
+                    SetTopLeft(image.rectTransform, x * cellSize, GetRenderTop(y, cellSize), cellSize, cellSize);
                 }
             }
 
@@ -314,7 +352,7 @@ namespace Fossick.Runtime.Views
                 {
                     var cell = row[x];
                     var left = x * cellSize;
-                    var top = y * cellSize;
+                    var top = GetRenderTop(y, cellSize);
 
                     attachmentCount = RenderOptionalSprite(
                         attachmentImages,
@@ -363,7 +401,7 @@ namespace Fossick.Runtime.Views
             DisableUnused(rewardImages, rewardCount);
             DisableUnused(decorationImages, decorationCount);
             RenderFogLayer(rows, currentWidth, cellSize);
-            RenderPreviewLayer(currentWidth, rows.Count, cellSize);
+            RenderPreviewLayer(currentWidth, currentHeight, cellSize);
         }
 
         private int RenderRewardBackgroundRegions(IReadOnlyList<FossickCellState[]> rows, float cellSize)
@@ -374,14 +412,54 @@ namespace Fossick.Runtime.Views
                 return 0;
             }
 
-            var active = new List<RewardBackgroundRegion>();
-            var finished = new List<RewardBackgroundRegion>();
+            var finished = BuildRewardBackgroundRegions(rows, currentWidth, rows.Count);
 
-            for (var y = 0; y < rows.Count; y++)
+            var used = 0;
+            for (var i = 0; i < finished.Count; i++)
             {
-                var spans = CollectRewardBackgroundSpans(rows[y], y);
-                var nextActive = new List<RewardBackgroundRegion>();
+                var region = finished[i];
+                var sprite = FossickArtLibrary.GetBackgroundSprite(region.id);
+                used = RenderOptionalSprite(
+                    rewardBackgroundImages,
+                    rewardBackgroundRoot,
+                    "Reward Background Region",
+                    used,
+                    sprite,
+                    sprite != null,
+                    region.startX * cellSize,
+                    GetRenderTop(region.startY, cellSize),
+                    (region.endX - region.startX + 1) * cellSize,
+                    (region.endY - region.startY + 1) * cellSize,
+                    false);
+            }
 
+            DisableUnused(rewardBackgroundImages, used);
+            return used;
+        }
+
+        private static List<RewardBackgroundRegion> BuildRewardBackgroundRegions(IReadOnlyList<FossickCellState[]> rows, int width, int height)
+        {
+            var fixedRegions = BuildFixedRewardBackgroundRegions(rows, width, height);
+            var covered = new bool[Mathf.Max(0, height), Mathf.Max(0, width)];
+            for (var i = 0; i < fixedRegions.Count; i++)
+            {
+                var region = fixedRegions[i];
+                for (var y = region.startY; y <= region.endY && y < height; y++)
+                {
+                    for (var x = region.startX; x <= region.endX && x < width; x++)
+                    {
+                        covered[y, x] = true;
+                    }
+                }
+            }
+
+            var active = new List<RewardBackgroundRegion>();
+            var finished = new List<RewardBackgroundRegion>(fixedRegions);
+
+            for (var y = 0; y < height; y++)
+            {
+                var spans = CollectRewardBackgroundSpans(rows, width, y, covered);
+                var nextActive = new List<RewardBackgroundRegion>();
                 for (var i = 0; i < spans.Count; i++)
                 {
                     var span = spans[i];
@@ -404,45 +482,91 @@ namespace Fossick.Runtime.Views
             }
 
             finished.AddRange(active);
-
-            var used = 0;
-            for (var i = 0; i < finished.Count; i++)
-            {
-                var region = finished[i];
-                var sprite = FossickArtLibrary.GetBackgroundSprite(region.id);
-                used = RenderOptionalSprite(
-                    rewardBackgroundImages,
-                    rewardBackgroundRoot,
-                    "Reward Background Region",
-                    used,
-                    sprite,
-                    sprite != null,
-                    region.startX * cellSize,
-                    region.startY * cellSize,
-                    (region.endX - region.startX + 1) * cellSize,
-                    (region.endY - region.startY + 1) * cellSize,
-                    false);
-            }
-
-            DisableUnused(rewardBackgroundImages, used);
-            return used;
+            return finished;
         }
 
-        private List<RewardBackgroundRegion> CollectRewardBackgroundSpans(FossickCellState[] row, int y)
+        private static List<RewardBackgroundRegion> BuildFixedRewardBackgroundRegions(IReadOnlyList<FossickCellState[]> rows, int width, int height)
+        {
+            var regions = new List<RewardBackgroundRegion>();
+            var covered = new bool[Mathf.Max(0, height), Mathf.Max(0, width)];
+            for (var y = 0; y < height; y++)
+            {
+                for (var x = 0; x < width; x++)
+                {
+                    if (covered[y, x])
+                    {
+                        continue;
+                    }
+
+                    var id = GetVisibleRewardBackgroundId(rows, x, y);
+                    if (!TryGetRewardBackgroundSize(id, out var roomWidth, out var roomHeight))
+                    {
+                        continue;
+                    }
+
+                    if (x + roomWidth > width || y + roomHeight > height)
+                    {
+                        continue;
+                    }
+
+                    if (!HasRewardBackgroundArea(rows, x, y, roomWidth, roomHeight, id))
+                    {
+                        continue;
+                    }
+
+                    var region = new RewardBackgroundRegion
+                    {
+                        id = id,
+                        startX = x,
+                        endX = x + roomWidth - 1,
+                        startY = y,
+                        endY = y + roomHeight - 1
+                    };
+                    regions.Add(region);
+                    for (var markY = region.startY; markY <= region.endY; markY++)
+                    {
+                        for (var markX = region.startX; markX <= region.endX; markX++)
+                        {
+                            covered[markY, markX] = true;
+                        }
+                    }
+                }
+            }
+
+            return regions;
+        }
+
+        private static bool HasRewardBackgroundArea(IReadOnlyList<FossickCellState[]> rows, int startX, int startY, int width, int height, string id)
+        {
+            for (var y = startY; y < startY + height; y++)
+            {
+                for (var x = startX; x < startX + width; x++)
+                {
+                    if (GetVisibleRewardBackgroundId(rows, x, y) != id)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static List<RewardBackgroundRegion> CollectRewardBackgroundSpans(IReadOnlyList<FossickCellState[]> rows, int width, int y, bool[,] covered)
         {
             var spans = new List<RewardBackgroundRegion>();
             var x = 0;
-            while (x < currentWidth)
+            while (x < width)
             {
-                var id = GetVisibleRewardBackgroundId(row, x);
-                if (string.IsNullOrEmpty(id))
+                var id = covered[y, x] ? null : GetVisibleRewardBackgroundId(rows, x, y);
+                if (string.IsNullOrEmpty(id) || IsFixedRewardBackgroundId(id))
                 {
                     x++;
                     continue;
                 }
 
                 var startX = x;
-                while (x + 1 < currentWidth && GetVisibleRewardBackgroundId(row, x + 1) == id)
+                while (x + 1 < width && !covered[y, x + 1] && GetVisibleRewardBackgroundId(rows, x + 1, y) == id)
                 {
                     x++;
                 }
@@ -461,6 +585,16 @@ namespace Fossick.Runtime.Views
             return spans;
         }
 
+        private static string GetVisibleRewardBackgroundId(IReadOnlyList<FossickCellState[]> rows, int x, int y)
+        {
+            if (rows == null || y < 0 || y >= rows.Count)
+            {
+                return null;
+            }
+
+            return GetVisibleRewardBackgroundId(rows[y], x);
+        }
+
         private static string GetVisibleRewardBackgroundId(FossickCellState[] row, int x)
         {
             if (row == null || x < 0 || x >= row.Length)
@@ -470,6 +604,35 @@ namespace Fossick.Runtime.Views
 
             var cell = row[x];
             return cell != null && cell.IsContentVisible ? cell.rewardBackgroundId : null;
+        }
+
+        private static bool IsFixedRewardBackgroundId(string id)
+        {
+            return TryGetRewardBackgroundSize(id, out _, out _);
+        }
+
+        private static bool TryGetRewardBackgroundSize(string id, out int width, out int height)
+        {
+            width = 0;
+            height = 0;
+            switch (id)
+            {
+                case TreasureRoomSmallId:
+                    width = 3;
+                    height = 2;
+                    return true;
+                case TreasureRoomMediumId:
+                    width = 5;
+                    height = 2;
+                    return true;
+                case TreasureRoomLargeId:
+                case "treasure_room_7x2":
+                    width = 7;
+                    height = 2;
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private static int FindMatchingRewardBackgroundRegion(List<RewardBackgroundRegion> regions, RewardBackgroundRegion span)
@@ -535,14 +698,19 @@ namespace Fossick.Runtime.Views
                     BindSprite(image, sprite);
                     SetTopLeft(
                         image.rectTransform,
-                        (cornerX - 0.5f) * cellSize - SmoothTileOverlap * 0.5f,
-                        (cornerY - 0.5f) * cellSize - SmoothTileOverlap * 0.5f,
-                        cellSize + SmoothTileOverlap,
-                        cellSize + SmoothTileOverlap);
+                        (cornerX - 0.5f) * cellSize - FogTileOverlap * 0.5f,
+                        GetRenderTop(cornerY - 0.5f, cellSize) - FogTileOverlap * 0.5f,
+                        cellSize + FogTileOverlap,
+                        cellSize + FogTileOverlap);
                 }
             }
 
             DisableUnused(fogImages, used);
+        }
+
+        private float GetRenderTop(float renderedRowPosition, float cellSize)
+        {
+            return (renderedRowPosition - currentVisibleRowOffset + visualRowOffset) * cellSize;
         }
 
         private void RenderPreviewLayer(int width, int height, float cellSize)
@@ -570,12 +738,12 @@ namespace Fossick.Runtime.Views
             DisableUnused(previewImages, used);
         }
 
-        private void RenderInteractionRows(FossickBoard board, IReadOnlyList<FossickCellState[]> rows, float cellSize)
+        private void RenderInteractionRows(FossickBoard board, IReadOnlyList<FossickCellState[]> rows, float cellSize, int visibleRowOffset)
         {
-            EnsureRowLabels(rows.Count);
-            EnsureCellViews(currentWidth * rows.Count);
+            EnsureRowLabels(currentHeight);
+            EnsureCellViews(currentWidth * currentHeight);
 
-            for (var y = 0; y < rows.Count; y++)
+            for (var y = 0; y < currentHeight; y++)
             {
                 var rowLabel = rowLabels[y];
                 rowLabel.gameObject.SetActive(true);
@@ -587,14 +755,15 @@ namespace Fossick.Runtime.Views
                 rowLabel.color = new Color(0.68f, 0.72f, 0.76f);
                 SetTopLeft(rowLabel.rectTransform, 0f, y * cellSize, labelWidth, cellSize);
 
-                var row = rows[y];
+                var sourceY = visibleRowOffset + y;
+                var row = rows != null && sourceY >= 0 && sourceY < rows.Count ? rows[sourceY] : null;
                 for (var x = 0; x < currentWidth; x++)
                 {
                     var cellView = cellViews[y * currentWidth + x];
                     cellView.gameObject.SetActive(true);
                     SetTopLeft(cellView.RectTransform, x * cellSize, y * cellSize, cellSize, cellSize);
                     cellView.Bind(
-                        row[x],
+                        row == null || x < 0 || x >= row.Length ? null : row[x],
                         x,
                         y,
                         font,

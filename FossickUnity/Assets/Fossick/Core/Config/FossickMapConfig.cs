@@ -94,6 +94,9 @@ namespace Fossick.Core.Config
         };
         public int rewardInsertMin = 4;
         public int rewardInsertMax = 6;
+        public int prefetchVisibleScreens = 4;
+        public int minimumRowsAhead = 24;
+        public int retainRowsBehind = 12;
         public List<FossickSequenceOverrideConfig> sequenceOverrides = new List<FossickSequenceOverrideConfig>();
         public List<FossickRowOverrideConfig> rowOverrides = new List<FossickRowOverrideConfig>();
     }

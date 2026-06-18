@@ -9,7 +9,7 @@ namespace Fossick.Core.Visual
     public sealed class FossickArtCatalog : ScriptableObject
     {
         public Color emptyCellColor = new Color(0.08f, 0.18f, 0.22f);
-        public Color fogColor = new Color(0.16f, 0.17f, 0.19f, 0.88f);
+        public Color fogColor = new Color(0.08f, 0.06f, 0.045f, 0.58f);
         public Color previewColor = new Color(0.32f, 0.9f, 0.48f, 0.95f);
         public Color fallbackDirtColor = new Color(0.56f, 0.38f, 0.25f);
         public Color fallbackStoneColor = new Color(0.48f, 0.53f, 0.58f);

@@ -78,7 +78,7 @@ namespace Fossick.Preview.Controllers
             }
 
             seed = savedState.seed;
-            BuildBoard(savedState.topVisibleRow + config.visibleHeight * 3, savedState);
+            BuildBoard(savedState.topVisibleRow + config.visibleHeight, savedState);
             AddLog("已重载保存进度。");
         }
 
@@ -92,7 +92,7 @@ namespace Fossick.Preview.Controllers
 
         private void BuildBoard(int minimumRows = -1, FossickSaveState restore = null)
         {
-            var rows = minimumRows < 0 ? config.visibleHeight * 3 : minimumRows;
+            var rows = minimumRows < 0 ? config.visibleHeight : minimumRows;
             session = restore == null
                 ? new FossickGameplaySession(config, seed, rows, UnlimitedTools)
                 : FossickGameplaySession.Restore(config, restore, rows, UnlimitedTools);

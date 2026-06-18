@@ -532,7 +532,7 @@ namespace Fossick.Core.Visual
 
         public static Color GetFogColor()
         {
-            return ActiveCatalog == null ? new Color(0.16f, 0.17f, 0.19f, 0.88f) : ActiveCatalog.fogColor;
+            return ActiveCatalog == null ? new Color(0.08f, 0.06f, 0.045f, 0.58f) : ActiveCatalog.fogColor;
         }
 
         public static Color GetPreviewColor()
@@ -660,7 +660,7 @@ namespace Fossick.Core.Visual
             }
 
             var cell = row[x];
-            return cell != null && cell.IsContentVisible && cell.terrain == terrain;
+            return cell != null && cell.terrain == terrain;
         }
 
         private static bool RuntimeCellIsFogged(IReadOnlyList<FossickCellState[]> rows, int x, int y)

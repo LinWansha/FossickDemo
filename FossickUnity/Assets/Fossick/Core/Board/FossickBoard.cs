@@ -17,11 +17,14 @@ namespace Fossick.Core.Board
     public sealed class FossickBoard
     {
         private readonly List<FossickCellState[]> rows = new List<FossickCellState[]>();
+        private int firstLoadedRow;
 
         public FossickBoardSpec Spec { get; }
         public int TopVisibleRow { get; private set; }
         public int Depth { get; private set; }
-        public int RowCount => rows.Count;
+        public int FirstLoadedRow => firstLoadedRow;
+        public int LoadedRowCount => rows.Count;
+        public int RowCount => firstLoadedRow + rows.Count;
 
         public FossickBoard(FossickBoardSpec spec)
         {
@@ -37,7 +40,8 @@ namespace Fossick.Core.Board
 
             for (var y = 0; y < fragment.height; y++)
             {
-                var row = CreateEmptyRow(rows.Count);
+                var absoluteRow = RowCount;
+                var row = CreateEmptyRow(absoluteRow);
                 for (var i = 0; i < fragment.cells.Count; i++)
                 {
                     var cellConfig = fragment.cells[i];
@@ -46,7 +50,7 @@ namespace Fossick.Core.Board
                         continue;
                     }
 
-                    row[cellConfig.x] = CreateCell(cellConfig, cellConfig.x, rows.Count);
+                    row[cellConfig.x] = CreateCell(cellConfig, cellConfig.x, absoluteRow);
                 }
 
                 rows.Add(row);
@@ -60,7 +64,20 @@ namespace Fossick.Core.Board
                 return;
             }
 
-            for (var i = rows.Count; i < mine.rows.Count; i++)
+            for (var i = RowCount; i < mine.rows.Count; i++)
+            {
+                AppendGeneratedRow(mine.rows[i]);
+            }
+        }
+
+        public void AppendAdditionalGeneratedMine(FossickGeneratedMine mine)
+        {
+            if (mine == null || mine.rows == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < mine.rows.Count; i++)
             {
                 AppendGeneratedRow(mine.rows[i]);
             }
@@ -68,12 +85,13 @@ namespace Fossick.Core.Board
 
         public void AppendGeneratedRow(FossickGeneratedMineRow generatedRow)
         {
-            var row = CreateEmptyRow(rows.Count);
+            var absoluteRow = RowCount;
+            var row = CreateEmptyRow(absoluteRow);
             if (generatedRow != null && generatedRow.cells != null)
             {
                 for (var x = 0; x < Spec.width && x < generatedRow.cells.Length; x++)
                 {
-                    row[x] = CreateCell(generatedRow.cells[x], x, rows.Count);
+                    row[x] = CreateCell(generatedRow.cells[x], x, absoluteRow);
                 }
             }
 
@@ -82,21 +100,32 @@ namespace Fossick.Core.Board
 
         public IReadOnlyList<FossickCellState[]> GetVisibleRows()
         {
-            var visible = new List<FossickCellState[]>();
-            for (var offset = 0; offset < Spec.visibleHeight; offset++)
+            return GetRowsWindow(TopVisibleRow, Spec.visibleHeight);
+        }
+
+        public IReadOnlyList<FossickCellState[]> GetRowsWindow(int startRow, int rowCount)
+        {
+            var window = new List<FossickCellState[]>();
+            if (rowCount <= 0)
             {
-                var rowIndex = TopVisibleRow + offset;
-                if (rowIndex >= rows.Count)
+                return window;
+            }
+
+            for (var offset = 0; offset < rowCount; offset++)
+            {
+                var rowIndex = startRow + offset;
+                var localRow = rowIndex - firstLoadedRow;
+                if (localRow < 0 || localRow >= rows.Count)
                 {
-                    visible.Add(CreateEmptyRow(rowIndex));
+                    window.Add(CreateEmptyRow(rowIndex));
                 }
                 else
                 {
-                    visible.Add(rows[rowIndex]);
+                    window.Add(rows[localRow]);
                 }
             }
 
-            return visible;
+            return window;
         }
 
         public FossickCellState GetCell(int x, int y)
@@ -107,19 +136,20 @@ namespace Fossick.Core.Board
 
         public FossickCellState GetCellAtAbsoluteRow(int x, int rowIndex)
         {
-            if (x < 0 || x >= Spec.width || rowIndex < 0 || rowIndex >= rows.Count)
+            var localRow = rowIndex - firstLoadedRow;
+            if (x < 0 || x >= Spec.width || localRow < 0 || localRow >= rows.Count)
             {
                 return null;
             }
 
-            return rows[rowIndex][x];
+            return rows[localRow][x];
         }
 
         public IEnumerable<FossickCellState> EnumerateCells()
         {
-            for (var y = 0; y < rows.Count; y++)
+            for (var localY = 0; localY < rows.Count; localY++)
             {
-                var row = rows[y];
+                var row = rows[localY];
                 if (row == null)
                 {
                     continue;
@@ -141,6 +171,7 @@ namespace Fossick.Core.Board
             {
                 schemaVersion = FossickSaveState.CurrentSchemaVersion,
                 seed = seed,
+                loadedStartRow = firstLoadedRow,
                 topVisibleRow = TopVisibleRow,
                 depth = Depth
             };
@@ -152,14 +183,16 @@ namespace Fossick.Core.Board
                 save.toolUsed = progress.toolUsed;
             }
 
-            for (var y = 0; y < rows.Count; y++)
+            for (var localY = 0; localY < rows.Count; localY++)
             {
-                var row = rows[y];
+                var row = rows[localY];
                 if (row == null)
                 {
                     continue;
                 }
 
+                var absoluteY = firstLoadedRow + localY;
+                save.loadedRows.Add(CreateSavedRow(row, absoluteY));
                 for (var x = 0; x < row.Length; x++)
                 {
                     var cell = row[x];
@@ -168,7 +201,7 @@ namespace Fossick.Core.Board
                         continue;
                     }
 
-                    var key = GetCellSaveKey(x, y);
+                    var key = GetCellSaveKey(x, absoluteY);
                     if (cell.generatedWithObstacle && cell.terrain == FossickTerrainType.Empty)
                     {
                         save.destroyedCells.Add(key);
@@ -188,6 +221,24 @@ namespace Fossick.Core.Board
             }
 
             return save;
+        }
+
+        public void LoadSavedRows(List<FossickSavedMineRow> savedRows, int loadedStartRow)
+        {
+            rows.Clear();
+            firstLoadedRow = loadedStartRow < 0 ? 0 : loadedStartRow;
+            if (savedRows == null || savedRows.Count == 0)
+            {
+                firstLoadedRow = 0;
+                return;
+            }
+
+            savedRows.Sort((a, b) => a.rowIndex.CompareTo(b.rowIndex));
+            firstLoadedRow = savedRows[0].rowIndex < 0 ? 0 : savedRows[0].rowIndex;
+            for (var i = 0; i < savedRows.Count; i++)
+            {
+                rows.Add(CreateRowFromSave(savedRows[i]));
+            }
         }
 
         public void ApplySaveState(FossickSaveState save)
@@ -218,7 +269,7 @@ namespace Fossick.Core.Board
 
         public bool CanScrollDown()
         {
-            if (rows.Count < Spec.visibleHeight + 1)
+            if (RowCount < TopVisibleRow + Spec.visibleHeight + 1)
             {
                 return false;
             }
@@ -229,12 +280,18 @@ namespace Fossick.Core.Board
         private bool BottomVisibleRowHasVisibleEmptyCell()
         {
             var rowIndex = TopVisibleRow + Spec.visibleHeight - 1;
-            if (rowIndex < 0 || rowIndex >= rows.Count)
+            if (rowIndex < 0 || rowIndex >= RowCount)
             {
                 return false;
             }
 
-            var row = rows[rowIndex];
+            var localRow = rowIndex - firstLoadedRow;
+            if (localRow < 0 || localRow >= rows.Count)
+            {
+                return false;
+            }
+
+            var row = rows[localRow];
             for (var x = 0; x < row.Length; x++)
             {
                 var cell = row[x];
@@ -256,18 +313,19 @@ namespace Fossick.Core.Board
             }
 
             var visibleBottom = TopVisibleRow + Spec.visibleHeight - 1;
-            var maxRow = visibleBottom + 1 < rows.Count ? visibleBottom + 1 : rows.Count - 1;
-            var visited = new bool[maxRow + 1, Spec.width];
+            var maxRow = visibleBottom + 1 < RowCount ? visibleBottom + 1 : RowCount - 1;
+            var visitStartRow = TopVisibleRow;
+            var visited = new bool[maxRow - visitStartRow + 1, Spec.width];
             var queue = new Queue<FossickCellState>();
 
-            for (var y = TopVisibleRow; y <= visibleBottom && y < rows.Count; y++)
+            for (var y = TopVisibleRow; y <= visibleBottom && y < RowCount; y++)
             {
                 for (var x = 0; x < Spec.width; x++)
                 {
                     var cell = GetCellAtAbsoluteRow(x, y);
                     if (cell != null && !cell.HasObstacle && cell.fog == FossickFogType.None)
                     {
-                        EnqueueOpenCell(x, y, maxRow, visited, queue);
+                        EnqueueOpenCell(x, y, visitStartRow, maxRow, visited, queue);
                     }
                 }
             }
@@ -277,19 +335,42 @@ namespace Fossick.Core.Board
                 var cell = queue.Dequeue();
                 RevealCell(cell, reveals);
 
-                VisitNeighbor(cell.x - 1, cell.y, maxRow, visited, queue, reveals);
-                VisitNeighbor(cell.x + 1, cell.y, maxRow, visited, queue, reveals);
-                VisitNeighbor(cell.x, cell.y - 1, maxRow, visited, queue, reveals);
-                VisitNeighbor(cell.x, cell.y + 1, maxRow, visited, queue, reveals);
+                VisitNeighbor(cell.x - 1, cell.y, visitStartRow, maxRow, visited, queue, reveals);
+                VisitNeighbor(cell.x + 1, cell.y, visitStartRow, maxRow, visited, queue, reveals);
+                VisitNeighbor(cell.x, cell.y - 1, visitStartRow, maxRow, visited, queue, reveals);
+                VisitNeighbor(cell.x, cell.y + 1, visitStartRow, maxRow, visited, queue, reveals);
             }
 
             return reveals;
         }
 
-        private void VisitNeighbor(int x, int y, int maxRow, bool[,] visited, Queue<FossickCellState> queue, List<FossickFogReveal> reveals)
+        public void PruneRowsBefore(int rowIndex)
+        {
+            if (rowIndex <= firstLoadedRow || rows.Count == 0)
+            {
+                return;
+            }
+
+            var pruneBefore = rowIndex > TopVisibleRow ? TopVisibleRow : rowIndex;
+            var removeCount = pruneBefore - firstLoadedRow;
+            if (removeCount <= 0)
+            {
+                return;
+            }
+
+            if (removeCount > rows.Count)
+            {
+                removeCount = rows.Count;
+            }
+
+            rows.RemoveRange(0, removeCount);
+            firstLoadedRow += removeCount;
+        }
+
+        private void VisitNeighbor(int x, int y, int visitStartRow, int maxRow, bool[,] visited, Queue<FossickCellState> queue, List<FossickFogReveal> reveals)
         {
             var cell = GetCellAtAbsoluteRow(x, y);
-            if (cell == null || y < TopVisibleRow || y > maxRow)
+            if (cell == null || y < visitStartRow || y > maxRow)
             {
                 return;
             }
@@ -300,18 +381,19 @@ namespace Fossick.Core.Board
                 return;
             }
 
-            EnqueueOpenCell(x, y, maxRow, visited, queue);
+            EnqueueOpenCell(x, y, visitStartRow, maxRow, visited, queue);
         }
 
-        private void EnqueueOpenCell(int x, int y, int maxRow, bool[,] visited, Queue<FossickCellState> queue)
+        private void EnqueueOpenCell(int x, int y, int visitStartRow, int maxRow, bool[,] visited, Queue<FossickCellState> queue)
         {
             var cell = GetCellAtAbsoluteRow(x, y);
-            if (cell == null || y < TopVisibleRow || y > maxRow || cell.HasObstacle || visited[y, x])
+            var localVisitY = y - visitStartRow;
+            if (cell == null || y < visitStartRow || y > maxRow || localVisitY < 0 || localVisitY >= visited.GetLength(0) || cell.HasObstacle || visited[localVisitY, x])
             {
                 return;
             }
 
-            visited[y, x] = true;
+            visited[localVisitY, x] = true;
             queue.Enqueue(cell);
         }
 
@@ -354,6 +436,91 @@ namespace Fossick.Core.Board
             }
 
             return row;
+        }
+
+        private FossickSavedMineRow CreateSavedRow(FossickCellState[] row, int absoluteY)
+        {
+            var saved = new FossickSavedMineRow
+            {
+                rowIndex = absoluteY
+            };
+
+            for (var x = 0; x < Spec.width; x++)
+            {
+                saved.cells.Add(CreateSavedCell(row == null ? null : row[x], x, absoluteY));
+            }
+
+            return saved;
+        }
+
+        private FossickSavedCellState CreateSavedCell(FossickCellState cell, int x, int absoluteY)
+        {
+            if (cell == null)
+            {
+                return new FossickSavedCellState
+                {
+                    x = x,
+                    y = absoluteY,
+                    terrain = FossickTerrainType.Empty,
+                    fog = FossickFogType.None
+                };
+            }
+
+            return new FossickSavedCellState
+            {
+                x = x,
+                y = absoluteY,
+                backgroundId = cell.backgroundId,
+                rewardBackgroundId = cell.rewardBackgroundId,
+                terrain = cell.terrain,
+                hp = cell.hp,
+                reward = cell.reward,
+                decorations = cell.decorations == null ? new List<string>() : new List<string>(cell.decorations),
+                fog = cell.fog,
+                collected = cell.collected,
+                generatedWithObstacle = cell.generatedWithObstacle
+            };
+        }
+
+        private FossickCellState[] CreateRowFromSave(FossickSavedMineRow savedRow)
+        {
+            var absoluteY = savedRow == null ? RowCount : savedRow.rowIndex;
+            var row = CreateEmptyRow(absoluteY);
+            if (savedRow == null || savedRow.cells == null)
+            {
+                return row;
+            }
+
+            for (var i = 0; i < savedRow.cells.Count; i++)
+            {
+                var savedCell = savedRow.cells[i];
+                if (savedCell == null || savedCell.x < 0 || savedCell.x >= Spec.width)
+                {
+                    continue;
+                }
+
+                row[savedCell.x] = CreateCellFromSave(savedCell, absoluteY);
+            }
+
+            return row;
+        }
+
+        private FossickCellState CreateCellFromSave(FossickSavedCellState savedCell, int absoluteY)
+        {
+            return new FossickCellState
+            {
+                x = savedCell.x,
+                y = absoluteY,
+                backgroundId = savedCell.backgroundId,
+                rewardBackgroundId = savedCell.rewardBackgroundId,
+                terrain = savedCell.terrain,
+                hp = savedCell.hp,
+                reward = savedCell.reward,
+                decorations = savedCell.decorations == null ? new string[0] : savedCell.decorations.ToArray(),
+                fog = savedCell.fog,
+                collected = savedCell.collected,
+                generatedWithObstacle = savedCell.generatedWithObstacle
+            };
         }
 
         private FossickCellState CreateCell(FossickCellConfig config, int x, int absoluteY)
@@ -463,10 +630,15 @@ namespace Fossick.Core.Board
 
             if (rowIndex < 0)
             {
-                return 0;
+                return firstLoadedRow;
             }
 
-            return rowIndex >= rows.Count ? rows.Count - 1 : rowIndex;
+            if (rowIndex < firstLoadedRow)
+            {
+                return firstLoadedRow;
+            }
+
+            return rowIndex >= RowCount ? RowCount - 1 : rowIndex;
         }
 
         private static string GetCellSaveKey(int x, int y)

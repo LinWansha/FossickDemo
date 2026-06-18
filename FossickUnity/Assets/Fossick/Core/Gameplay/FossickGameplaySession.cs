@@ -13,6 +13,7 @@ namespace Fossick.Core.Gameplay
         private readonly int seed;
         private readonly FossickActionResolver actionResolver;
         private readonly bool unlimitedTools;
+        private FossickGenerationState generationState;
 
         public FossickBoard Board { get; }
         public FossickInventoryState Inventory { get; }
@@ -29,24 +30,48 @@ namespace Fossick.Core.Gameplay
             this.config = config ?? FossickSampleMapFactory.CreateDefaultConfig();
             this.seed = seed;
             this.unlimitedTools = unlimitedTools;
+            generationState = new FossickGenerationState(seed);
             actionResolver = new FossickActionResolver(this.config.tools);
             Inventory = FossickInventoryState.FromConfig(this.config.gameplay);
             Rewards = new FossickRewardState();
             Progress = new FossickProgressState();
             Board = new FossickBoard(this.config.BoardSpec);
             EnsureRows(initialRows);
+            EnsureGeneratedRowsAhead();
             StabilizeInitialBoard();
+            PruneRowsBehind();
         }
 
         private FossickGameplaySession(FossickMapConfig config, FossickSaveState save, int initialRows, bool unlimitedTools)
-            : this(config, save == null ? 0 : save.seed, initialRows, unlimitedTools)
         {
+            this.config = config ?? FossickSampleMapFactory.CreateDefaultConfig();
+            seed = save == null ? 0 : save.seed;
+            this.unlimitedTools = unlimitedTools;
+            generationState = save != null && save.generationState != null ? save.generationState.Clone() : new FossickGenerationState(seed);
+            actionResolver = new FossickActionResolver(this.config.tools);
+            Inventory = FossickInventoryState.FromConfig(this.config.gameplay);
+            Rewards = new FossickRewardState();
+            Progress = new FossickProgressState();
+            Board = new FossickBoard(this.config.BoardSpec);
             if (save == null)
             {
+                EnsureRows(initialRows);
+                EnsureGeneratedRowsAhead();
+                StabilizeInitialBoard();
+                PruneRowsBehind();
                 return;
             }
 
-            EnsureRows(save.topVisibleRow + this.config.visibleHeight * 3);
+            if (save.loadedRows != null && save.loadedRows.Count > 0)
+            {
+                Board.LoadSavedRows(save.loadedRows, save.loadedStartRow);
+            }
+            else
+            {
+                generationState = new FossickGenerationState(seed);
+                EnsureRows(save.topVisibleRow + GetGenerationBufferRows());
+            }
+
             Board.ApplySaveState(save);
             Inventory.pickaxes = save.pickaxes;
             Inventory.dynamite = save.dynamite;
@@ -59,8 +84,9 @@ namespace Fossick.Core.Gameplay
             Progress.oreFound = save.oreFound;
             Progress.collectionFound = save.collectionFound;
             Progress.toolUsed = save.toolUsed;
-            EnsureRows(Board.TopVisibleRow + this.config.visibleHeight * 3);
+            EnsureGeneratedRowsAhead();
             Board.RefreshFogFromOpenSpace();
+            PruneRowsBehind();
         }
 
         public static FossickGameplaySession Restore(FossickMapConfig config, FossickSaveState save, int initialRows)
@@ -88,6 +114,7 @@ namespace Fossick.Core.Gameplay
                 return result;
             }
 
+            EnsureGeneratedRowsAhead();
             var action = actionResolver.ResolveTool(Board, toolType, x, y);
             result.action = action;
             result.actionWasApplied = action != null && action.toolConsumed;
@@ -101,10 +128,13 @@ namespace Fossick.Core.Gameplay
                 Inventory.ConsumeTool(toolType);
             }
 
+            EnsureGeneratedRowsAhead();
+            ContinueScrollAfterGeneration(action);
             Progress.Apply(action);
             ApplyRewards(action);
             result.scoreAfter = Rewards.score;
-            EnsureRows(Board.TopVisibleRow + config.visibleHeight * 3);
+            EnsureGeneratedRowsAhead();
+            PruneRowsBehind();
             return result;
         }
 
@@ -118,6 +148,10 @@ namespace Fossick.Core.Gameplay
             save.score = Rewards.score;
             save.coins = Rewards.coins;
             save.collectionItems = Rewards.CreateCollectionSaveList();
+            save.generationState = generationState.Clone();
+            save.generatedFragmentIds = generationState.generatedFragmentIds == null
+                ? new System.Collections.Generic.List<int>()
+                : new System.Collections.Generic.List<int>(generationState.generatedFragmentIds);
             return save;
         }
 
@@ -171,7 +205,74 @@ namespace Fossick.Core.Gameplay
                 return;
             }
 
-            Board.AppendGeneratedMine(FossickMineLayoutBuilder.Build(config, seed, targetRows));
+            var additionalRows = targetRows - Board.RowCount;
+            var mine = FossickMineLayoutBuilder.BuildAdditional(config, generationState, additionalRows, Board.RowCount, null);
+            Board.AppendAdditionalGeneratedMine(mine);
+        }
+
+        private void EnsureGeneratedRowsAhead()
+        {
+            EnsureRows(Board.TopVisibleRow + GetGenerationBufferRows());
+        }
+
+        private void PruneRowsBehind()
+        {
+            Board.PruneRowsBefore(Board.TopVisibleRow - GetRetentionRowsBehind());
+        }
+
+        private void ContinueScrollAfterGeneration(FossickActionResult action)
+        {
+            if (action == null)
+            {
+                return;
+            }
+
+            while (Board.TryScrollDown())
+            {
+                Board.RefreshFogFromOpenSpace();
+                EnsureGeneratedRowsAhead();
+                action.scrolled = true;
+                action.scrollCount++;
+                action.depthAfterAction = Board.Depth;
+            }
+        }
+
+        private int GetGenerationBufferRows()
+        {
+            var generation = config == null ? null : config.generation;
+            var visibleHeight = config == null ? FossickBoardSpec.DefaultVisibleHeight : config.visibleHeight;
+            var screenCount = generation == null ? 4 : generation.prefetchVisibleScreens;
+            var minimumRowsAhead = generation == null ? 24 : generation.minimumRowsAhead;
+            if (screenCount < 1)
+            {
+                screenCount = 1;
+            }
+
+            if (minimumRowsAhead < visibleHeight)
+            {
+                minimumRowsAhead = visibleHeight;
+            }
+
+            var rowsAhead = visibleHeight * screenCount;
+            if (rowsAhead < minimumRowsAhead)
+            {
+                rowsAhead = minimumRowsAhead;
+            }
+
+            return visibleHeight + rowsAhead;
+        }
+
+        private int GetRetentionRowsBehind()
+        {
+            var generation = config == null ? null : config.generation;
+            var visibleHeight = config == null ? FossickBoardSpec.DefaultVisibleHeight : config.visibleHeight;
+            var retainRowsBehind = generation == null ? visibleHeight * 2 : generation.retainRowsBehind;
+            if (retainRowsBehind < 0)
+            {
+                return 0;
+            }
+
+            return retainRowsBehind;
         }
 
         private void StabilizeInitialBoard()
@@ -179,11 +280,13 @@ namespace Fossick.Core.Gameplay
             Board.RefreshFogFromOpenSpace();
             while (Board.TryScrollDown())
             {
+                EnsureGeneratedRowsAhead();
                 Board.RefreshFogFromOpenSpace();
             }
 
             Progress.depth = Board.Depth;
-            EnsureRows(Board.TopVisibleRow + config.visibleHeight * 3);
+            EnsureGeneratedRowsAhead();
+            PruneRowsBehind();
         }
 
     }
