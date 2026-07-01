@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980">
+  <defs>
+    <style>
+      .bg{fill:#111817}
+      .panel{fill:#20262b}
+      .panel2{fill:#252c33}
+      .bar{fill:#1b2026}
+      .muted{fill:#363d46}
+      .blue{fill:#3d78ba}
+      .green{fill:#2d504f}
+      .gold{fill:#8a612f}
+      .orange{fill:#8a4934}
+      .text{fill:#eef2f5;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Arial,sans-serif}
+      .big{font-size:30px;font-weight:800}
+      .mid{font-size:22px;font-weight:800}
+      .small{font-size:18px}
+      .tiny{font-size:15px}
+      .hint{fill:#bac4cc;font-size:16px;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Arial,sans-serif}
+      .subtle{fill:#87929c;font-size:14px;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Arial,sans-serif}
+      .line{stroke:#48515b;stroke-width:2}
+      .accent{stroke:#66a9ff;stroke-width:3;fill:none}
+      .bad{stroke:#ff5555;stroke-width:4;fill:none}
+    </style>
+  </defs>
+
+  <rect class="bg" width="1600" height="980"/>
+
+  <rect class="bar" x="0" y="0" width="1600" height="72"/>
+  <text class="text big" x="28" y="45">Fossick 矿井编辑器：统一上下文面板方案</text>
+  <text class="hint" x="620" y="43">中间只负责编辑，右侧负责解释当前上下文和操作</text>
+  <rect class="muted" x="1060" y="18" width="150" height="38"/>
+  <text class="text small" x="1092" y="43">生成地图实例</text>
+  <rect class="muted" x="1224" y="18" width="110" height="38"/>
+  <text class="text small" x="1260" y="43">校验</text>
+  <rect class="muted" x="1348" y="18" width="130" height="38"/>
+  <text class="text small" x="1382" y="43">导出 JSON</text>
+
+  <!-- left menu -->
+  <rect class="panel" x="28" y="96" width="250" height="840"/>
+  <text class="text mid" x="52" y="136">菜单栏</text>
+  <text class="hint" x="52" y="170">模板、规则、地图实例入口</text>
+
+  <text class="text small" x="52" y="230">当前状态</text>
+  <rect class="blue" x="52" y="250" width="202" height="64"/>
+  <text class="text small" x="72" y="276">模板编辑</text>
+  <text class="hint" x="72" y="300">编辑模板库内容</text>
+
+  <text class="text small" x="52" y="368">模板管理</text>
+  <text class="hint" x="52" y="400">共 5 个模板</text>
+  <text class="hint" x="52" y="424">当前模板：2002 常规</text>
+  <rect class="muted" x="52" y="446" width="202" height="38"/>
+  <text class="text small" x="98" y="471">打开模板库</text>
+
+  <text class="text small" x="52" y="548">生成配置</text>
+  <rect class="muted" x="52" y="570" width="202" height="38"/>
+  <text class="text small" x="108" y="595">生成规则</text>
+
+  <text class="text small" x="52" y="680">地图实例</text>
+  <rect class="muted" x="52" y="704" width="202" height="38"/>
+  <text class="text small" x="92" y="729">生成地图实例</text>
+  <rect class="muted" x="52" y="752" width="202" height="38"/>
+  <text class="text small" x="108" y="777">随机种子</text>
+  <rect class="muted" x="52" y="800" width="202" height="38"/>
+  <text class="text small" x="108" y="825">清空实例</text>
+
+  <!-- center editor -->
+  <rect class="panel" x="306" y="96" width="880" height="840"/>
+  <text class="text mid" x="330" y="136">主编辑区</text>
+  <text class="hint" x="330" y="168">这里只放“绘制和编辑动作”，不放属性 Inspector</text>
+  <text class="text small" x="330" y="212">当前模板 2002　常规模板　编辑层 地形　画笔 土　已保存</text>
+
+  <text class="text small" x="330" y="266">分层画笔</text>
+  <rect class="muted" x="330" y="286" width="118" height="38"/>
+  <text class="text small" x="374" y="311">藏宝阁</text>
+  <rect class="blue" x="456" y="286" width="118" height="38"/>
+  <text class="text small" x="500" y="311">地形</text>
+  <rect class="muted" x="582" y="286" width="118" height="38"/>
+  <text class="text small" x="626" y="311">奖励</text>
+  <rect class="muted" x="708" y="286" width="118" height="38"/>
+  <text class="text small" x="752" y="311">道具</text>
+  <rect class="muted" x="834" y="286" width="118" height="38"/>
+  <text class="text small" x="878" y="311">装饰</text>
+  <rect class="muted" x="960" y="286" width="118" height="38"/>
+  <text class="text small" x="1004" y="311">阴影</text>
+
+  <rect class="gold" x="330" y="346" width="66" height="66"/>
+  <text class="text tiny" x="354" y="386">土</text>
+  <rect class="muted" x="408" y="346" width="66" height="66"/>
+  <text class="text tiny" x="429" y="386">石</text>
+  <rect class="muted" x="486" y="346" width="66" height="66"/>
+  <text class="text tiny" x="507" y="386">基岩</text>
+
+  <rect class="muted" x="330" y="438" width="112" height="36"/>
+  <text class="text tiny" x="356" y="462">批量行操作</text>
+  <rect class="muted" x="452" y="438" width="92" height="36"/>
+  <text class="text tiny" x="478" y="462">减少行</text>
+  <rect class="muted" x="554" y="438" width="92" height="36"/>
+  <text class="text tiny" x="580" y="462">向下预览</text>
+
+  <rect class="bg" x="410" y="510" width="690" height="350"/>
+  <rect fill="#294850" x="462" y="532" width="610" height="310"/>
+  <rect fill="#b87838" x="508" y="588" width="520" height="226"/>
+  <rect fill="#71808e" x="508" y="702" width="76" height="76"/>
+  <rect fill="#142832" x="742" y="738" width="76" height="76"/>
+  <text class="text tiny" x="424" y="580">000</text>
+  <text class="text tiny" x="424" y="656">001</text>
+  <text class="text tiny" x="424" y="732">002</text>
+  <text class="text tiny" x="424" y="808">003</text>
+  <rect class="accent" x="462" y="532" width="610" height="310"/>
+
+  <!-- right context panel -->
+  <rect class="panel" x="1214" y="96" width="358" height="840"/>
+  <text class="text mid" x="1238" y="136">上下文面板</text>
+  <text class="hint" x="1238" y="168">随当前模式自动切换内容</text>
+
+  <rect class="panel2" x="1238" y="204" width="310" height="86"/>
+  <text class="text small" x="1260" y="238">当前模式：模板编辑</text>
+  <text class="hint" x="1260" y="266">编辑的是模板库，不是当前地图实例</text>
+
+  <rect class="panel2" x="1238" y="314" width="310" height="176"/>
+  <text class="text small" x="1260" y="348">模板属性</text>
+  <text class="hint" x="1260" y="378">ID：2002</text>
+  <rect class="muted" x="1260" y="398" width="76" height="34"/>
+  <text class="text tiny" x="1286" y="421">新手</text>
+  <rect class="blue" x="1346" y="398" width="76" height="34"/>
+  <text class="text tiny" x="1372" y="421">常规</text>
+  <rect class="muted" x="1432" y="398" width="76" height="34"/>
+  <text class="text tiny" x="1458" y="421">奖励</text>
+  <text class="hint" x="1260" y="462">常规模板进入难度池</text>
+
+  <rect class="panel2" x="1238" y="512" width="310" height="122"/>
+  <text class="text small" x="1260" y="546">难度与尺寸</text>
+  <rect class="muted" x="1260" y="566" width="56" height="34"/>
+  <text class="text tiny" x="1282" y="589">1</text>
+  <rect class="blue" x="1326" y="566" width="56" height="34"/>
+  <text class="text tiny" x="1348" y="589">2</text>
+  <rect class="muted" x="1392" y="566" width="56" height="34"/>
+  <text class="text tiny" x="1414" y="589">3</text>
+  <rect class="muted" x="1260" y="608" width="56" height="0"/>
+  <text class="hint" x="1260" y="618">高度：6 行　　宽度：7 格固定</text>
+
+  <rect class="panel2" x="1238" y="656" width="310" height="158"/>
+  <text class="text small" x="1260" y="690">模板动作</text>
+  <rect class="blue" x="1260" y="712" width="252" height="34"/>
+  <text class="text tiny" x="1348" y="735">保存模板</text>
+  <rect class="orange" x="1260" y="756" width="252" height="34"/>
+  <text class="text tiny" x="1340" y="779">放弃修改</text>
+  <rect class="muted" x="1260" y="800" width="252" height="34"/>
+  <text class="text tiny" x="1340" y="823">应用到地图</text>
+
+  <line class="line" x1="1214" y1="862" x2="1572" y2="862"/>
+  <text class="subtle" x="1238" y="894">地图实例编辑时，这里改显示地图段信息、规则摘要、校验、拼接顺序。</text>
+  <text class="subtle" x="1238" y="918">中间顶部不再堆字段，保持画布和画笔清爽。</text>
+</svg>

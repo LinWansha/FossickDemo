@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="760" viewBox="0 0 1440 760">
+  <defs>
+    <style>
+      .bg { fill: #151c1c; }
+      .panel { fill: #21272c; stroke: #2f3940; stroke-width: 2; }
+      .panel-soft { fill: #262e35; }
+      .card { fill: #1a2225; stroke: #354048; stroke-width: 2; }
+      .button { fill: #39424d; }
+      .primary { fill: #3d78b8; }
+      .muted { fill: #2c343b; }
+      .ok { fill: #24563e; }
+      .warn { fill: #5b4930; }
+      .text { fill: #eef2f6; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+      .sub { fill: #c4ccd4; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+      .dim { fill: #89949f; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+      .title { font-size: 26px; font-weight: 800; }
+      .h2 { font-size: 20px; font-weight: 800; }
+      .h3 { font-size: 16px; font-weight: 800; }
+      .body { font-size: 14px; }
+      .small { font-size: 12px; }
+      .buttonText { fill: #ffffff; font-size: 14px; font-weight: 800; text-anchor: middle; dominant-baseline: middle; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+      .label { fill: #dfe5eb; font-size: 13px; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+      .tag { fill: #8ebcf0; font-size: 13px; font-weight: 800; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1440" height="760"/>
+  <text class="text title" x="48" y="56">Fossick MapStudio 左侧「生成预览」栏布局方案</text>
+  <text class="sub body" x="48" y="86">目标：把生成参数和生成预览入口归纳到同一个栏里，让策划能直接理解“用这个种子生成/查看预览”。</text>
+
+  <!-- Option B1 -->
+  <g transform="translate(48,130)">
+    <text class="tag" x="0" y="-18">B1 · 紧凑参数卡</text>
+    <rect class="panel" x="0" y="0" width="400" height="560" rx="0"/>
+    <text class="text h2" x="24" y="42">菜单栏</text>
+    <text class="sub body" x="24" y="72">模板、生成规则和预览分开管理。</text>
+
+    <rect class="card" x="24" y="116" width="352" height="352" rx="0"/>
+    <text class="text h2" x="48" y="154">生成预览</text>
+    <text class="sub small" x="48" y="184">用当前模板和规则生成矿井。</text>
+
+    <text class="label" x="48" y="228">当前种子</text>
+    <rect class="panel-soft" x="48" y="244" width="210" height="42" rx="0"/>
+    <text class="text h3" x="66" y="271">12345</text>
+    <rect class="button" x="266" y="244" width="86" height="42" rx="0"/>
+    <text class="buttonText" x="309" y="266">换一个</text>
+
+    <rect class="ok" x="48" y="314" width="304" height="44" rx="0"/>
+    <text class="text small" x="66" y="340">当前预览：已生成 75 行 / 7 x 6</text>
+
+    <text class="dim small" x="48" y="388">规则：难度包 + 藏宝阁插入</text>
+    <text class="dim small" x="48" y="410">模板和规则与当前预览一致</text>
+
+    <rect class="primary" x="48" y="438" width="144" height="38" rx="0"/>
+    <text class="buttonText" x="120" y="457">生成地图预览</text>
+    <rect class="button" x="208" y="438" width="144" height="38" rx="0"/>
+    <text class="buttonText" x="280" y="457">查看生成预览</text>
+
+    <text class="dim small" x="24" y="516">优点：紧凑，信息都在一块。</text>
+    <text class="dim small" x="24" y="538">缺点：按钮偏密，主次稍弱。</text>
+  </g>
+
+  <!-- Option B2 -->
+  <g transform="translate(520,130)">
+    <text class="tag" x="0" y="-18">B2 · 参数与操作分组</text>
+    <rect class="panel" x="0" y="0" width="400" height="560" rx="0"/>
+    <text class="text h2" x="24" y="42">菜单栏</text>
+    <text class="sub body" x="24" y="72">模板、生成规则和预览分开管理。</text>
+
+    <rect class="card" x="24" y="116" width="352" height="378" rx="0"/>
+    <text class="text h2" x="48" y="154">生成预览</text>
+
+    <text class="label" x="48" y="198">生成参数</text>
+    <rect class="panel-soft" x="48" y="214" width="304" height="88" rx="0"/>
+    <text class="sub small" x="66" y="242">种子</text>
+    <text class="text h3" x="66" y="270">12345</text>
+    <rect class="button" x="238" y="232" width="94" height="42" rx="0"/>
+    <text class="buttonText" x="285" y="253">换一个</text>
+
+    <text class="label" x="48" y="344">预览操作</text>
+    <rect class="primary" x="48" y="360" width="144" height="38" rx="0"/>
+    <text class="buttonText" x="120" y="379">生成预览</text>
+    <rect class="button" x="208" y="360" width="144" height="38" rx="0"/>
+    <text class="buttonText" x="280" y="379">查看预览</text>
+
+    <rect class="warn" x="48" y="424" width="304" height="42" rx="0"/>
+    <text class="text small" x="66" y="450">状态：模板或规则已修改</text>
+
+    <text class="dim small" x="24" y="516">优点：参数、操作、状态分得清楚。</text>
+    <text class="dim small" x="24" y="538">缺点：占高更多，有一点表单感。</text>
+  </g>
+
+  <!-- Option D -->
+  <g transform="translate(992,130)">
+    <text class="tag" x="0" y="-18">D · 推荐 · 功能面板</text>
+    <rect class="panel" x="0" y="0" width="400" height="560" rx="0"/>
+    <text class="text h2" x="24" y="42">菜单栏</text>
+    <text class="sub body" x="24" y="72">模板、生成规则和预览分开管理。</text>
+
+    <rect class="card" x="24" y="116" width="352" height="342" rx="0"/>
+    <text class="text h2" x="48" y="154">生成预览</text>
+    <text class="sub small" x="48" y="184">用当前模板和规则生成矿井。</text>
+
+    <rect class="panel-soft" x="48" y="218" width="304" height="74" rx="0"/>
+    <text class="sub small" x="66" y="244">种子</text>
+    <text class="text h3" x="66" y="270">12345</text>
+    <rect class="button" x="178" y="236" width="76" height="38" rx="0"/>
+    <text class="buttonText" x="216" y="255">换一个</text>
+    <rect class="primary" x="262" y="236" width="76" height="38" rx="0"/>
+    <text class="buttonText" x="300" y="255">生成</text>
+
+    <text class="label" x="48" y="334">状态</text>
+    <rect class="ok" x="48" y="350" width="304" height="50" rx="0"/>
+    <text class="text small" x="66" y="374">预览 75 行 / 可视窗口 7 x 6</text>
+    <text class="text small" x="66" y="392">模板和规则已同步</text>
+
+    <rect class="button" x="48" y="424" width="304" height="38" rx="0"/>
+    <text class="buttonText" x="200" y="443">查看生成预览</text>
+
+    <text class="dim small" x="24" y="516">优点：种子和生成动作天然绑定。</text>
+    <text class="dim small" x="24" y="538">缺点：需要控制按钮宽度，避免拥挤。</text>
+  </g>
+</svg>

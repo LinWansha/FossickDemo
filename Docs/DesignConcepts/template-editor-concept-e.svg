@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+  <defs>
+    <style>
+      .bg{fill:#111817}.panel{fill:#20262b}.panel2{fill:#252c33}.bar{fill:#1b2026}.muted{fill:#343b44}.blue{fill:#3d78ba}.green{fill:#2d504f}.gold{fill:#8a612f}.text{fill:#eef2f5;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Arial,sans-serif}.small{font-size:18px}.mid{font-size:22px;font-weight:700}.big{font-size:28px;font-weight:800}.hint{fill:#bac4cc;font-size:16px}.accent{stroke:#66a9ff;stroke-width:3;fill:none}.step{fill:#2c3640}.stepOn{fill:#3d78ba}
+    </style>
+  </defs>
+  <rect class="bg" width="1440" height="900"/>
+  <rect class="bar" x="0" y="0" width="1440" height="72"/>
+  <text class="text big" x="28" y="45">方案 E：顶部步骤条 + 画布主编辑 + 右侧上下文面板</text>
+  <rect class="muted" x="1030" y="18" width="110" height="38"/><text class="text small" x="1068" y="43">撤销</text>
+  <rect class="muted" x="1152" y="18" width="110" height="38"/><text class="text small" x="1190" y="43">重做</text>
+  <rect class="blue" x="1274" y="18" width="120" height="38"/><text class="text small" x="1306" y="43">保存</text>
+
+  <rect class="panel" x="28" y="96" width="238" height="760"/>
+  <text class="text mid" x="52" y="135">菜单</text>
+  <rect class="blue" x="52" y="184" width="190" height="42"/><text class="text small" x="84" y="211">模板编辑</text>
+  <rect class="muted" x="52" y="236" width="190" height="42"/><text class="text small" x="84" y="263">模板库</text>
+  <rect class="muted" x="52" y="288" width="190" height="42"/><text class="text small" x="84" y="315">生成规则</text>
+  <rect class="muted" x="52" y="340" width="190" height="42"/><text class="text small" x="84" y="367">地图实例</text>
+  <rect class="panel2" x="52" y="470" width="190" height="160"/>
+  <text class="text small" x="72" y="502">当前模板</text>
+  <text class="hint" x="72" y="536">1001 新手</text>
+  <text class="hint" x="72" y="566">高度 6</text>
+  <text class="hint" x="72" y="596">未保存修改</text>
+
+  <rect class="panel" x="290" y="96" width="820" height="760"/>
+  <rect class="panel2" x="314" y="120" width="772" height="74"/>
+  <rect class="stepOn" x="338" y="140" width="146" height="34"/><text class="text small" x="370" y="163">1 信息</text>
+  <rect class="stepOn" x="500" y="140" width="146" height="34"/><text class="text small" x="532" y="163">2 绘制</text>
+  <rect class="step" x="662" y="140" width="146" height="34"/><text class="text small" x="694" y="163">3 应用</text>
+  <text class="hint" x="834" y="163">当前：绘制内容</text>
+
+  <text class="text mid" x="314" y="236">模板画布</text>
+  <rect class="panel2" x="314" y="260" width="772" height="82"/>
+  <rect class="blue" x="338" y="284" width="100" height="36"/><text class="text small" x="370" y="308">地形</text>
+  <rect class="muted" x="450" y="284" width="100" height="36"/><text class="text small" x="482" y="308">奖励</text>
+  <rect class="muted" x="562" y="284" width="100" height="36"/><text class="text small" x="594" y="308">道具</text>
+  <rect class="gold" x="720" y="272" width="58" height="58"/><text class="text small" x="740" y="306">土</text>
+  <rect class="muted" x="790" y="272" width="58" height="58"/><text class="text small" x="810" y="306">石</text>
+  <rect class="muted" x="860" y="272" width="58" height="58"/><text class="text small" x="880" y="306">基</text>
+
+  <rect class="bg" x="344" y="382" width="736" height="430"/>
+  <rect fill="#294850" x="392" y="412" width="640" height="370"/>
+  <rect fill="#b87838" x="440" y="488" width="544" height="246"/>
+  <rect fill="#71808e" x="440" y="610" width="82" height="82"/>
+  <rect fill="#142832" x="686" y="652" width="82" height="82"/>
+  <text class="text small" x="360" y="482">000</text><text class="text small" x="360" y="564">001</text><text class="text small" x="360" y="646">002</text><text class="text small" x="360" y="728">003</text>
+  <rect class="accent" x="392" y="412" width="640" height="370"/>
+
+  <rect class="panel" x="1134" y="96" width="278" height="760"/>
+  <text class="text mid" x="1158" y="135">当前步骤</text>
+  <text class="hint" x="1158" y="166">上下文随步骤变化</text>
+  <rect class="panel2" x="1158" y="204" width="230" height="196"/>
+  <text class="text small" x="1180" y="236">绘制设置</text>
+  <text class="hint" x="1180" y="270">编辑层：地形</text>
+  <text class="hint" x="1180" y="300">画笔：土</text>
+  <text class="hint" x="1180" y="330">拖动可连续绘制</text>
+  <rect class="muted" x="1180" y="350" width="184" height="34"/><text class="text small" x="1210" y="373">批量行操作</text>
+
+  <rect class="panel2" x="1158" y="430" width="230" height="154"/>
+  <text class="text small" x="1180" y="462">模板信息摘要</text>
+  <text class="hint" x="1180" y="496">ID：1001</text>
+  <text class="hint" x="1180" y="526">类型：新手</text>
+  <text class="hint" x="1180" y="556">高度：6</text>
+
+  <rect class="panel2" x="1158" y="620" width="230" height="124"/>
+  <text class="text small" x="1180" y="652">下一步</text>
+  <rect class="blue" x="1180" y="676" width="184" height="36"/><text class="text small" x="1214" y="700">应用到地图</text>
+  <text class="hint" x="1158" y="806">特点：C 的流程感更轻，不打断老手绘制。</text>
+</svg>

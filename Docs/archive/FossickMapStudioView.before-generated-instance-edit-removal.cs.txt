@@ -1,0 +1,4932 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Fossick.Core.Config;
+using Fossick.Core.Generation;
+using Fossick.Core.Serialization;
+using Fossick.Core.Validation;
+using Fossick.Core.Visual;
+using Fossick.MapStudio.Controllers;
+using Fossick.MapStudio.ImportExport;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
+namespace Fossick.MapStudio.Views
+{
+    [RequireComponent(typeof(FossickMapStudioController))]
+    public sealed partial class FossickMapStudioView : MonoBehaviour
+    {
+        private const float HeaderHeight = 56f;
+        private const float LeftWidth = 270f;
+        private const float CenterWidth = 1442f;
+        private const float ColumnGap = 24f;
+        private const float CellSize = 64f;
+        private const float MineCellSize = 96f;
+        private const float BrushTileWidth = 76f;
+        private const float BrushTileHeight = 78f;
+        private const float SmoothTileOverlap = 2f;
+        private const float GridLabelWidth = 50f;
+        private const float LeftButtonWidth = 222f;
+        private const string MapConfigFolderAssetPath = "Assets/Fossick/MapStudio/Maps";
+
+        private FossickMapStudioController controller;
+        private FossickBrushPaletteView brushPaletteView;
+        private GameObject canvasObject;
+        private RectTransform root;
+        private Font font;
+        private int selectedFragmentIndex;
+        private int selectedMineSequenceIndex = -1;
+        private MapStudioEditMode editMode = MapStudioEditMode.MineInstance;
+        private int minePreviewRows = 72;
+        private float mineScrollNormalizedPosition = 1f;
+        private FossickTerrainType selectedTerrain = FossickTerrainType.Dirt;
+        private string exportStatus;
+        private string editNotice
+        {
+            get => currentEditNotice;
+            set
+            {
+                currentEditNotice = value;
+                RecordConsoleLog(value, "操作");
+            }
+        }
+        private int pendingPaintFragmentId = -1;
+        private int pendingPaintX = -1;
+        private int pendingPaintY = -1;
+        private bool isDragPainting;
+        private FossickCellLayer selectedLayer = FossickCellLayer.Terrain;
+        private FossickElementType selectedRewardType = FossickElementType.Coin;
+        private string selectedRewardId = "coin_pile";
+        private string selectedRewardBackgroundId = string.Empty;
+        private int selectedRewardBackgroundWidth;
+        private int selectedRewardBackgroundHeight;
+        private string selectedDecorationId = string.Empty;
+        private FossickFogType selectedFog = FossickFogType.Covered;
+        private bool templateLibraryOpen;
+        private bool generationRulesOpen;
+        private bool consoleOpen;
+        private FossickFragmentConfig templateEditDraft;
+        private int templateEditSourceIndex = -1;
+        private bool templateEditDirty;
+        private FossickMapConfig mineInstanceSourceConfig;
+        private int mineInstanceSeed;
+        private bool mineInstanceGenerated;
+        private bool generationRulesDirty;
+        private bool waitingForReplacementTarget;
+        private int pendingReplacementStartRow = -1;
+        private int selectedRowStart = -1;
+        private int selectedRowEnd = -1;
+        private int rowSelectionAnchor = -1;
+        private bool isRowSelecting;
+        private readonly Dictionary<int, FossickFragmentConfig> mineOccurrenceOverrides = new Dictionary<int, FossickFragmentConfig>();
+        private readonly List<string> templateUndoStack = new List<string>();
+        private readonly List<string> templateRedoStack = new List<string>();
+        private readonly HashSet<string> selectedPaintCells = new HashSet<string>();
+        private readonly Dictionary<string, RectTransform> selectedPaintCellRects = new Dictionary<string, RectTransform>();
+        private readonly Dictionary<string, GameObject> selectedPaintCellHighlights = new Dictionary<string, GameObject>();
+
+        private static readonly Color Background = new Color(0.09f, 0.1f, 0.11f);
+        private static readonly Color Panel = new Color(0.14f, 0.15f, 0.17f);
+        private static readonly Color TextColor = new Color(0.92f, 0.93f, 0.94f);
+        private const string TreasureRoomSmallId = "treasure_room_3x2";
+        private const string TreasureRoomMediumId = "treasure_room_5x2";
+        private const string TreasureRoomLargeId = "treasure_room";
+
+        private enum MapStudioEditMode
+        {
+            Template,
+            MineInstance,
+            RowBatch
+        }
+
+        private struct RewardBackgroundRegion
+        {
+            public string id;
+            public int startX;
+            public int endX;
+            public int startY;
+            public int endY;
+        }
+
+        private bool IsGeneratedMineEditingEnabled => false;
+
+        private bool IsApplyingTemplate =>
+            IsGeneratedMineEditingEnabled
+            && editMode == MapStudioEditMode.MineInstance
+            && waitingForReplacementTarget
+            && !templateLibraryOpen
+            && GetSelectedFragment() != null;
+
+        private bool IsRowBatchMode =>
+            IsGeneratedMineEditingEnabled
+            && editMode == MapStudioEditMode.RowBatch
+            && !waitingForReplacementTarget
+            && !templateLibraryOpen;
+
+        private void Awake()
+        {
+            controller = GetComponent<FossickMapStudioController>();
+            font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            brushPaletteView = new FossickBrushPaletteView(font);
+        }
+
+        private void Start()
+        {
+            if (controller != null && controller.CurrentConfig != null && controller.CurrentConfig.visual == null)
+            {
+                controller.CurrentConfig.visual = new FossickVisualConfig();
+            }
+
+            LoadMineOccurrenceOverrides();
+            GenerateMineInstance(false, "已按当前模板、半随机规则和种子生成默认地图预览。");
+            Build();
+        }
+
+        private void Update()
+        {
+            if (isDragPainting && !Input.GetMouseButton(0))
+            {
+                FinishDragPainting();
+            }
+
+            if (isRowSelecting && !Input.GetMouseButton(0))
+            {
+                FinishRowSelection();
+            }
+        }
+
+        private void Build()
+        {
+            EnsureEventSystem();
+
+            if (canvasObject != null)
+            {
+                canvasObject.SetActive(false);
+                Destroy(canvasObject);
+            }
+
+            selectedPaintCellRects.Clear();
+            selectedPaintCellHighlights.Clear();
+
+            canvasObject = new GameObject("Fossick MapStudio Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            canvasObject.transform.SetParent(transform, false);
+
+            var canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 10;
+
+            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            root = CreateRect("Root", canvasObject.transform);
+            Stretch(root);
+            AddImage(root.gameObject, Background);
+
+            DrawHeader();
+            DrawFragmentList();
+            DrawMineEditor();
+            DrawMinePreviewPanel();
+            if (templateLibraryOpen)
+            {
+                DrawTemplateLibraryWindow();
+            }
+            if (generationRulesOpen)
+            {
+                DrawGenerationRulesWindow();
+            }
+            if (consoleOpen)
+            {
+                DrawConsoleWindow();
+            }
+            if (operationDialogOpen)
+            {
+                DrawOperationDialog();
+            }
+
+        }
+
+        private void DrawHeader()
+        {
+            var header = CreatePanel("Header", root, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -HeaderHeight), Vector2.zero);
+            AddHorizontalLayout(header.gameObject, 12, TextAnchor.MiddleLeft);
+
+            AddText(header, "Fossick 矿井编辑器", 22, FontStyle.Bold, new Vector2(260f, 40f));
+
+            var config = controller.CurrentConfig;
+            AddText(header, $"棋盘 {config.boardWidth} x {config.visibleHeight}", 16, FontStyle.Normal, new Vector2(140f, 40f));
+            AddText(header, $"碎片 {config.fragments.Count}", 16, FontStyle.Normal, new Vector2(120f, 40f));
+            AddText(header, $"种子 {controller.Seed}", 16, FontStyle.Normal, new Vector2(120f, 40f));
+
+            AddSpacer(header, 1f);
+            AddButton(header, "生成地图预览", new Vector2(150f, 36f), () =>
+            {
+                GenerateMineInstance(true, "已按当前模板、半随机规则和种子生成地图预览；矿井会按需无限向下延展。");
+                Build();
+            });
+            AddButton(header, "校验", new Vector2(120f, 36f), () =>
+            {
+                controller.Validate();
+                Build();
+            });
+            AddButton(header, "导出 JSON", new Vector2(140f, 36f), ExportJson);
+        }
+
+        private void DrawFragmentList()
+        {
+            var panel = CreatePanel("Fragments Panel", root, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(12f, 12f), new Vector2(LeftWidth, -HeaderHeight - 24f));
+            var mask = panel.gameObject.AddComponent<Mask>();
+            mask.showMaskGraphic = true;
+
+            const float x = 14f;
+            var y = 14f;
+
+            var title = AddText(panel, "菜单栏", 20, FontStyle.Bold, new Vector2(LeftButtonWidth, 30f));
+            SetTopLeft(title.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 30f);
+            y += 34f;
+
+            var description = AddText(panel, "模板、生成规则和预览分开管理。", 12, FontStyle.Normal, new Vector2(LeftButtonWidth, 38f));
+            SetTopLeft(description.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 38f);
+            y += 64f;
+
+            var stateTitle = AddText(panel, "当前状态", 16, FontStyle.Bold, new Vector2(LeftButtonWidth, 22f));
+            SetTopLeft(stateTitle.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 22f);
+            y += 28f;
+
+            var stateCard = CreateRect("Mode Summary Card", panel);
+            SetTopLeft(stateCard, x, y, LeftButtonWidth, 58f);
+            AddImage(stateCard.gameObject, GetCurrentModeColor());
+
+            var stateCardTitle = AddText(stateCard, GetCurrentModeTitle(), 14, FontStyle.Bold, new Vector2(LeftButtonWidth - 16f, 20f));
+            SetTopLeft(stateCardTitle.GetComponent<RectTransform>(), 8f, 6f, LeftButtonWidth - 16f, 20f);
+
+            var stateDetail = AddText(stateCard, GetCurrentModeDescription(), 12, FontStyle.Normal, new Vector2(LeftButtonWidth - 16f, 26f));
+            SetTopLeft(stateDetail.GetComponent<RectTransform>(), 8f, 29f, LeftButtonWidth - 16f, 26f);
+            y += 86f;
+
+            var templateTitle = AddText(panel, "模板管理", 17, FontStyle.Bold, new Vector2(LeftButtonWidth, 24f));
+            SetTopLeft(templateTitle.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 24f);
+            y += 28f;
+
+            var fragments = controller.CurrentConfig.fragments;
+            var templateCounts = AddText(panel, FormatTemplateCounts(fragments), 12, FontStyle.Normal, new Vector2(LeftButtonWidth, 40f));
+            SetTopLeft(templateCounts.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 40f);
+            y += 46f;
+
+            var selected = GetSelectedFragment();
+            var selectedTemplate = AddText(
+                panel,
+                selected == null ? "当前模板：未选择" : $"当前模板：{selected.id}  {FormatFragmentType(selected.type)}",
+                12,
+                FontStyle.Bold,
+                new Vector2(LeftButtonWidth, 22f));
+            SetTopLeft(selectedTemplate.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 22f);
+            y += 28f;
+
+            var templateButton = AddButton(panel, "打开模板库", new Vector2(LeftButtonWidth, 32f), OpenTemplateLibrary, templateLibraryOpen);
+            SetTopLeft(templateButton, x, y, LeftButtonWidth, 32f);
+            y += 78f;
+
+            var generationTitle = AddText(panel, "生成配置", 17, FontStyle.Bold, new Vector2(LeftButtonWidth, 24f));
+            SetTopLeft(generationTitle.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 24f);
+            y += 30f;
+
+            var generationButton = AddButton(panel, "生成规则", new Vector2(LeftButtonWidth, 32f), OpenGenerationRules, generationRulesOpen);
+            SetTopLeft(generationButton, x, y, LeftButtonWidth, 32f);
+            y += 40f;
+
+            var generationStatus = AddText(
+                panel,
+                generationRulesDirty ? "模板或规则已修改，需要重新生成预览。" : "模板和规则与当前预览一致。",
+                12,
+                generationRulesDirty ? FontStyle.Bold : FontStyle.Normal,
+                new Vector2(LeftButtonWidth, 36f));
+            SetTopLeft(generationStatus.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 36f);
+            y += 78f;
+
+            var mineTitle = AddText(panel, "生成预览", 17, FontStyle.Bold, new Vector2(LeftButtonWidth, 24f));
+            SetTopLeft(mineTitle.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 24f);
+            y += 30f;
+
+            var mineSummary = AddText(panel, FormatMineInstanceSummary(), 12, FontStyle.Normal, new Vector2(LeftButtonWidth, 54f));
+            SetTopLeft(mineSummary.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 54f);
+            y += 62f;
+
+            var generateMineButton = AddButton(panel, "生成地图预览", new Vector2(LeftButtonWidth, 32f), () =>
+            {
+                GenerateMineInstance(true, "已按当前模板、半随机规则和种子生成地图预览；矿井会按需无限向下延展。");
+                Build();
+            });
+            SetTopLeft(generateMineButton, x, y, LeftButtonWidth, 32f);
+            y += 40f;
+
+            var randomSeedButton = AddButton(panel, "随机种子", new Vector2(LeftButtonWidth, 32f), () =>
+            {
+                controller.RandomizeSeed();
+                generationRulesDirty = true;
+                editNotice = "已生成随机种子，点击“生成地图预览”后会刷新当前预览。";
+                Build();
+            });
+            SetTopLeft(randomSeedButton, x, y, LeftButtonWidth, 32f);
+            y += 40f;
+
+            var clearMineButton = AddButton(panel, "关闭预览", new Vector2(LeftButtonWidth, 32f), () =>
+            {
+                ClearMineInstance("已关闭当前生成预览。");
+                Build();
+            });
+            SetTopLeft(clearMineButton, x, y, LeftButtonWidth, 32f);
+        }
+
+        private void DrawPalette(RectTransform parent)
+        {
+            AddText(parent, "分层画笔", 16, FontStyle.Bold, new Vector2(620f, 24f));
+            var row = CreateRow(parent, "Brush Row", 900f, BrushTileHeight + 8f);
+            DrawBrushPalette(row);
+        }
+
+        private void DrawGrid(RectTransform parent, FossickFragmentConfig fragment)
+        {
+            var gridRoot = CreateRect("Grid", parent);
+            gridRoot.sizeDelta = new Vector2(GridLabelWidth + fragment.width * CellSize, fragment.height * CellSize);
+
+            var terrainRoot = CreateRect("Terrain Visuals", gridRoot);
+            SetTopLeft(terrainRoot, GridLabelWidth, 0f, fragment.width * CellSize, fragment.height * CellSize);
+            AddImage(terrainRoot.gameObject, GetTerrainColor(FossickTerrainType.Empty)).raycastTarget = false;
+            terrainRoot.gameObject.AddComponent<RectMask2D>();
+
+            var clickRoot = CreateRect("Grid Clicks", gridRoot);
+            SetTopLeft(clickRoot, GridLabelWidth, 0f, fragment.width * CellSize, fragment.height * CellSize);
+
+            var labelRoot = CreateRect("Grid Labels", gridRoot);
+            SetTopLeft(labelRoot, 0f, 0f, GridLabelWidth, fragment.height * CellSize);
+
+            DrawTerrainSmoothGrid(terrainRoot, BuildConfigRows(fragment), fragment.width, fragment.height, CellSize);
+
+            for (var y = 0; y < fragment.height; y++)
+            {
+                var rowLabelRect = CreateRect($"Row Label {y}", labelRoot);
+                SetTopLeft(rowLabelRect, 0f, y * CellSize, GridLabelWidth - 6f, CellSize);
+                var rowLabel = rowLabelRect.gameObject.AddComponent<Text>();
+                rowLabel.text = y.ToString("00");
+                rowLabel.font = font;
+                rowLabel.fontSize = 13;
+                rowLabel.color = TextColor;
+                rowLabel.alignment = TextAnchor.MiddleLeft;
+
+                for (var x = 0; x < fragment.width; x++)
+                {
+                    var cell = FindOrCreateCell(fragment, x, y);
+                    AddCellClickArea(clickRoot, fragment, cell);
+                }
+            }
+        }
+
+        private void DrawMineEditor()
+        {
+            if (editMode == MapStudioEditMode.Template)
+            {
+                DrawTemplateEditorPanel();
+                return;
+            }
+
+            DrawGeneratedMineEditorPanel();
+        }
+
+        private void DrawTemplateEditorPanel()
+        {
+            var panelLeft = LeftWidth + 24f;
+            var panelRight = CenterWidth;
+            var panelWidth = panelRight - panelLeft;
+            var panel = CreatePanel("Template Editor Panel", root, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(panelLeft, 12f), new Vector2(panelRight, -HeaderHeight - 24f));
+
+            var fragment = GetTemplateEditFragment();
+            const float padding = 16f;
+            var editorWidth = panelWidth - padding * 2f;
+
+            var title = AddText(panel, "模板编辑", 20, FontStyle.Bold, new Vector2(panelWidth - 32f, 30f));
+            SetTopLeft(title.GetComponent<RectTransform>(), 16f, 14f, panelWidth - 32f, 30f);
+
+            var actionRow = CreateRow(panel, "Template Global Actions", 508f, 34f);
+            SetTopLeft(actionRow, Mathf.Max(16f, panelWidth - 524f), 14f, 508f, 34f);
+            AddButton(actionRow, "撤销", new Vector2(76f, 30f), UndoTemplateEdit, templateUndoStack.Count > 0);
+            AddButton(actionRow, "重做", new Vector2(76f, 30f), RedoTemplateEdit, templateRedoStack.Count > 0);
+            AddButton(actionRow, "保存模板", new Vector2(112f, 30f), SaveTemplateEdit, false, new Color(0.24f, 0.47f, 0.72f));
+            AddButton(actionRow, "返回地图", new Vector2(112f, 30f), ReturnFromTemplateEdit);
+
+            var summary = AddText(panel, fragment == null
+                ? "当前模板 未选择"
+                : $"当前模板 {fragment.id}   {FormatTemplatePool(fragment)}   编辑层 {FormatLayer(selectedLayer)}   画笔 {FormatCurrentBrush()}   {(templateEditDirty ? "有未保存修改" : "已保存")}",
+                14, FontStyle.Normal, new Vector2(editorWidth, 26f));
+            SetTopLeft(summary.GetComponent<RectTransform>(), padding, 54f, editorWidth, 26f);
+
+            if (!string.IsNullOrEmpty(editNotice))
+            {
+                var notice = AddText(panel, editNotice, 13, FontStyle.Bold, new Vector2(editorWidth, 24f));
+                SetTopLeft(notice.GetComponent<RectTransform>(), padding, 84f, editorWidth, 24f);
+            }
+
+            if (fragment == null)
+            {
+                return;
+            }
+
+            var brushTitle = AddText(panel, "分层画笔", 16, FontStyle.Bold, new Vector2(240f, 24f));
+            SetTopLeft(brushTitle.GetComponent<RectTransform>(), padding, 126f, 240f, 24f);
+            var layerRow = CreateRow(panel, "Template Layer Row", Mathf.Min(790f, editorWidth), 38f);
+            SetTopLeft(layerRow, padding, 156f, Mathf.Min(790f, editorWidth), 38f);
+            DrawBrushLayerTabs(layerRow);
+
+            var palette = CreateRow(panel, "Template Brush Row", editorWidth, BrushTileHeight + 8f);
+            SetTopLeft(palette, padding, 206f, editorWidth, BrushTileHeight + 8f);
+            DrawBrushPalette(palette);
+
+            DrawTemplateGridEditor(panel, fragment, padding, editorWidth, 326f);
+        }
+
+        private void SetTemplateDraftType(FossickFragmentType type)
+        {
+            var fragment = GetTemplateEditFragment();
+            if (fragment == null || fragment.type == type)
+            {
+                return;
+            }
+
+            RecordTemplateUndoSnapshot();
+            fragment.type = type;
+            NormalizeFragmentDifficulty(fragment);
+            MarkTemplateDraftChanged();
+            ClearPendingPaint();
+            editNotice = $"已把模板 {fragment.id} 设为{FormatFragmentType(fragment.type)}，保存后生效。";
+            Build();
+        }
+
+        private void SetTemplateDraftDifficulty(int difficulty)
+        {
+            var fragment = GetTemplateEditFragment();
+            if (fragment == null || fragment.type != FossickFragmentType.Regular || fragment.difficulty == difficulty)
+            {
+                return;
+            }
+
+            RecordTemplateUndoSnapshot();
+            fragment.difficulty = Mathf.Clamp(difficulty, 1, 3);
+            MarkTemplateDraftChanged();
+            ClearPendingPaint();
+            editNotice = $"已把模板 {fragment.id} 难度设为 {fragment.difficulty}，保存后生效。";
+            Build();
+        }
+
+        private void ResizeTemplateDraft(int height)
+        {
+            var fragment = GetTemplateEditFragment();
+            if (fragment == null || fragment.height == height)
+            {
+                return;
+            }
+
+            RecordTemplateUndoSnapshot();
+            ResizeFragment(fragment, height);
+            MarkTemplateDraftChanged();
+            ClearPendingPaint();
+            editNotice = $"已调整模板 {fragment.id} 高度为 {fragment.height}，保存后生效。";
+            Build();
+        }
+
+        private void DrawGeneratedMineEditorPanel()
+        {
+            var panelLeft = LeftWidth + 24f;
+            var panelRight = CenterWidth;
+            var panelWidth = panelRight - panelLeft;
+            var panel = CreatePanel("Mine Editor Panel", root, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(panelLeft, 12f), new Vector2(panelRight, -HeaderHeight - 24f));
+
+            var mine = BuildPreviewMine();
+
+            var title = AddText(panel, "生成预览", 20, FontStyle.Bold, new Vector2(panelWidth - 32f, 30f));
+            SetTopLeft(title.GetComponent<RectTransform>(), 16f, 14f, panelWidth - 32f, 30f);
+            DrawModeBadge(panel, panelWidth, 14f);
+
+            var summaryText = "只读预览：由模板库和生成规则实时拼接矿井；点击格子可查看来源碎片，模板内容请回到模板库编辑。";
+            var summary = AddText(panel, summaryText, 14, FontStyle.Normal, new Vector2(panelWidth - 32f, 26f));
+            SetTopLeft(summary.GetComponent<RectTransform>(), 16f, 54f, panelWidth - 32f, 26f);
+            if (!string.IsNullOrEmpty(editNotice))
+            {
+                var notice = AddText(panel, editNotice, 13, FontStyle.Bold, new Vector2(panelWidth - 32f, 24f));
+                SetTopLeft(notice.GetComponent<RectTransform>(), 16f, 84f, panelWidth - 32f, 24f);
+            }
+
+            if (!mineInstanceGenerated || mine.rows.Count == 0)
+            {
+                var emptyText = AddText(panel, "当前没有预览矿井。请点击顶部或左侧的“生成地图预览”。", 16, FontStyle.Bold, new Vector2(panelWidth - 32f, 32f));
+                SetTopLeft(emptyText.GetComponent<RectTransform>(), 16f, 130f, panelWidth - 32f, 32f);
+                var generateButton = AddButton(panel, "生成地图预览", new Vector2(180f, 40f), () =>
+                {
+                    GenerateMineInstance(true, "已按当前模板、半随机规则和种子生成地图预览；矿井会按需无限向下延展。");
+                    Build();
+                });
+                SetTopLeft(generateButton, 16f, 176f, 180f, 40f);
+                return;
+            }
+
+            var previewHint = AddText(panel, "预览不会写入模板库；需要调整内容时，请编辑对应模板或修改生成规则后重新生成。", 13, FontStyle.Normal, new Vector2(panelWidth - 32f, 24f));
+            SetTopLeft(previewHint.GetComponent<RectTransform>(), 16f, 118f, panelWidth - 32f, 24f);
+
+            const float controlsTop = 158f;
+            const float controlsHeight = 38f;
+            const float stageGap = 24f;
+            var controls = CreateRow(panel, "Mine Preview Controls", 260f, controlsHeight);
+            SetTopLeft(controls, 16f, controlsTop, 360f, controlsHeight);
+            AddButton(controls, "减少行数", new Vector2(100f, 32f), () =>
+            {
+                minePreviewRows = Mathf.Max(controller.CurrentConfig.visibleHeight * 2, minePreviewRows - controller.CurrentConfig.visibleHeight);
+                mineScrollNormalizedPosition = 1f;
+                ClearPendingPaint();
+                Build();
+            });
+            AddButton(controls, "向下预览", new Vector2(100f, 32f), () =>
+            {
+                minePreviewRows = Mathf.Max(controller.CurrentConfig.visibleHeight * 2, minePreviewRows + controller.CurrentConfig.visibleHeight);
+                mineScrollNormalizedPosition = 1f;
+                ClearPendingPaint();
+                Build();
+            });
+
+            var gridWidth = GridLabelWidth + controller.CurrentConfig.boardWidth * MineCellSize;
+            var viewportHeight = controller.CurrentConfig.visibleHeight * MineCellSize;
+            var scrollViewWidth = gridWidth + 28f;
+            var mineStage = CreateRect("Mine Stage", panel);
+            SetTopLeft(mineStage, 16f, controlsTop + controlsHeight + stageGap, panelWidth - 32f, viewportHeight + 40f);
+
+            var scrollView = CreateRect("Mine Preview Scroll View", mineStage);
+            SetTopLeft(scrollView, Mathf.Max(0f, (panelWidth - 32f - scrollViewWidth) * 0.5f), 20f, scrollViewWidth, viewportHeight);
+            AddImage(scrollView.gameObject, new Color(0.08f, 0.1f, 0.1f));
+
+            var viewport = CreateRect("Viewport", scrollView);
+            SetTopLeft(viewport, 0f, 0f, gridWidth, viewportHeight);
+            var viewportImage = AddImage(viewport.gameObject, GetTerrainColor(FossickTerrainType.Empty));
+            viewportImage.raycastTarget = true;
+            var mask = viewport.gameObject.AddComponent<Mask>();
+            mask.showMaskGraphic = true;
+
+            var content = CreateRect("Content", viewport);
+            SetTopLeft(content, 0f, 0f, gridWidth, mine.rows.Count * MineCellSize);
+
+            var mineCellRows = BuildConfigRows(mine);
+            var rewardBackgroundRoot = CreateRect("Mine Reward Background Regions", content);
+            SetTopLeft(rewardBackgroundRoot, GridLabelWidth, 0f, controller.CurrentConfig.boardWidth * MineCellSize, mine.rows.Count * MineCellSize);
+            DrawRewardBackgroundRegions(rewardBackgroundRoot, mineCellRows, controller.CurrentConfig.boardWidth, mine.rows.Count, MineCellSize);
+
+            var terrainRoot = CreateRect("Mine Terrain Visuals", content);
+            SetTopLeft(terrainRoot, GridLabelWidth, 0f, controller.CurrentConfig.boardWidth * MineCellSize, mine.rows.Count * MineCellSize);
+            terrainRoot.gameObject.AddComponent<RectMask2D>();
+            DrawTerrainSmoothGrid(terrainRoot, mineCellRows, controller.CurrentConfig.boardWidth, mine.rows.Count, MineCellSize);
+
+            for (var i = 0; i < mine.rows.Count; i++)
+            {
+                DrawMinePreviewRow(content, mineCellRows, mine.rows[i], i);
+            }
+
+            var scrollbar = CreateVerticalScrollbar(scrollView, gridWidth + 8f, 0f, 16f, viewportHeight);
+            var scrollRect = scrollView.gameObject.AddComponent<ScrollRect>();
+            scrollRect.viewport = viewport;
+            scrollRect.content = content;
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = MineCellSize;
+            scrollRect.verticalScrollbar = scrollbar;
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+            scrollRect.verticalNormalizedPosition = mineScrollNormalizedPosition;
+            scrollRect.onValueChanged.AddListener(position =>
+            {
+                mineScrollNormalizedPosition = position.y;
+            });
+
+            DrawMineViewportOverlay(viewport, controller.CurrentConfig.boardWidth, controller.CurrentConfig.visibleHeight);
+        }
+
+        private void DrawMinePreviewPanel()
+        {
+            var panel = CreatePanel("Context Panel", root, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(CenterWidth + ColumnGap, 12f), new Vector2(-12f, -HeaderHeight - 24f));
+            AddVerticalLayout(panel.gameObject, 10, TextAnchor.UpperLeft);
+
+            var mine = BuildPreviewMine();
+            AddText(panel, "上下文面板", 18, FontStyle.Bold, new Vector2(380f, 28f));
+            AddText(panel, "这里显示当前模式的关键信息；长日志请打开 Console。", 13, FontStyle.Normal, new Vector2(380f, 38f));
+            AddButton(panel, "打开 Console", new Vector2(380f, 34f), () =>
+            {
+                consoleOpen = true;
+                Build();
+            });
+
+            AddVerticalSpace(panel, 8f);
+            if (editMode == MapStudioEditMode.Template)
+            {
+                DrawTemplateContext(panel);
+            }
+            else
+            {
+                DrawMineInstanceContext(panel, mine);
+            }
+        }
+
+        private void DrawTemplateContext(RectTransform parent)
+        {
+            var fragment = GetTemplateEditFragment();
+            AddText(parent, "当前模式：模板编辑", 16, FontStyle.Bold, new Vector2(380f, 26f));
+            AddText(parent, "编辑的是模板库，保存后才会影响后续地图生成。", 13, FontStyle.Normal, new Vector2(380f, 40f));
+
+            if (fragment == null)
+            {
+                AddText(parent, "当前没有选中模板。", 13, FontStyle.Normal, new Vector2(380f, 24f));
+                return;
+            }
+
+            DrawTemplateContextInfo(parent, fragment);
+            DrawTemplateContextDifficulty(parent, fragment);
+            DrawTemplateContextSize(parent, fragment);
+            DrawTemplateContextActions(parent);
+        }
+
+        private void DrawTemplateContextInfo(RectTransform parent, FossickFragmentConfig fragment)
+        {
+            var section = CreateContextSection(parent, "模板属性", 144f);
+            AddTextAt(section, "模板属性", 15, FontStyle.Bold, 12f, 10f, 330f, 24f);
+            AddTextAt(section, $"ID {fragment.id}", 13, FontStyle.Bold, 12f, 40f, 330f, 24f);
+            var typeRow = CreateRow(section, "Context Template Type Row", 330f, 34f);
+            SetTopLeft(typeRow, 12f, 68f, 330f, 34f);
+            AddButton(typeRow, "新手", new Vector2(76f, 30f), () => SetTemplateDraftType(FossickFragmentType.Tutorial), fragment.type == FossickFragmentType.Tutorial);
+            AddButton(typeRow, "常规", new Vector2(76f, 30f), () => SetTemplateDraftType(FossickFragmentType.Regular), fragment.type == FossickFragmentType.Regular);
+            AddButton(typeRow, "奖励", new Vector2(76f, 30f), () => SetTemplateDraftType(FossickFragmentType.Reward), fragment.type == FossickFragmentType.Reward);
+            var poolText = fragment.type == FossickFragmentType.Regular
+                ? "常规模板进入难度池。"
+                : $"{FormatFragmentType(fragment.type)}模板不参与常规难度池。";
+            AddTextAt(section, poolText, 12, FontStyle.Normal, 12f, 112f, 330f, 22f);
+        }
+
+        private void DrawTemplateContextDifficulty(RectTransform parent, FossickFragmentConfig fragment)
+        {
+            var section = CreateContextSection(parent, "难度", 104f);
+            AddTextAt(section, "难度", 15, FontStyle.Bold, 12f, 10f, 330f, 24f);
+            if (fragment.type != FossickFragmentType.Regular)
+            {
+                AddTextAt(section, "当前类型不需要设置难度。", 13, FontStyle.Normal, 12f, 48f, 330f, 28f);
+                return;
+            }
+
+            var difficultyRow = CreateRow(section, "Context Difficulty Row", 330f, 34f);
+            SetTopLeft(difficultyRow, 12f, 48f, 330f, 34f);
+            AddButton(difficultyRow, "1", new Vector2(58f, 30f), () => SetTemplateDraftDifficulty(1), fragment.difficulty == 1);
+            AddButton(difficultyRow, "2", new Vector2(58f, 30f), () => SetTemplateDraftDifficulty(2), fragment.difficulty == 2);
+            AddButton(difficultyRow, "3", new Vector2(58f, 30f), () => SetTemplateDraftDifficulty(3), fragment.difficulty == 3);
+        }
+
+        private void DrawTemplateContextSize(RectTransform parent, FossickFragmentConfig fragment)
+        {
+            var section = CreateContextSection(parent, "尺寸", 104f);
+            AddTextAt(section, "尺寸", 15, FontStyle.Bold, 12f, 10f, 330f, 24f);
+            var sizeRow = CreateRow(section, "Context Size Row", 330f, 34f);
+            SetTopLeft(sizeRow, 12f, 48f, 330f, 34f);
+            AddButton(sizeRow, "-", new Vector2(52f, 30f), () => ResizeTemplateDraft(Mathf.Max(1, fragment.height - 1)));
+            AddButton(sizeRow, $"高度 {fragment.height}", new Vector2(100f, 30f), () => { }, true);
+            AddButton(sizeRow, "+", new Vector2(52f, 30f), () => ResizeTemplateDraft(Mathf.Min(24, fragment.height + 1)));
+        }
+
+        private void DrawTemplateContextActions(RectTransform parent)
+        {
+            var section = CreateContextSection(parent, "模板动作", 114f);
+            AddTextAt(section, "模板动作", 15, FontStyle.Bold, 12f, 10f, 330f, 24f);
+            var save = AddButton(section, "保存模板", new Vector2(330f, 32f), SaveTemplateEdit, false, new Color(0.24f, 0.47f, 0.72f));
+            SetTopLeft(save, 12f, 42f, 330f, 32f);
+            var discard = AddButton(section, "放弃修改", new Vector2(330f, 32f), DiscardTemplateEdit, templateEditDirty, new Color(0.45f, 0.27f, 0.22f));
+            SetTopLeft(discard, 12f, 82f, 330f, 32f);
+        }
+
+        private void DrawMineInstanceContext(RectTransform parent, FossickGeneratedMine mine)
+        {
+            AddText(parent, "当前模式：生成预览", 16, FontStyle.Bold, new Vector2(380f, 26f));
+            AddText(parent, $"预览种子 {mineInstanceSeed} | 当前预览 {mine.rows.Count} 行 | 可视窗口 {controller.CurrentConfig.boardWidth} x {controller.CurrentConfig.visibleHeight}", 13, FontStyle.Normal, new Vector2(380f, 40f));
+            DrawMineSelectionInfo(parent, mine);
+            DrawGenerationRulesSummary(parent);
+            DrawValidationSummary(parent);
+        }
+
+        private void DrawGenerationRulesSummary(RectTransform parent)
+        {
+            var generation = mineInstanceSourceConfig == null ? null : mineInstanceSourceConfig.generation;
+            if (generation == null)
+            {
+                AddText(parent, "当前预览：未生成", 14, FontStyle.Bold, new Vector2(380f, 24f));
+                return;
+            }
+
+            AddText(parent, generationRulesDirty ? "当前预览规则（有未应用修改）" : "当前预览规则", 16, FontStyle.Bold, new Vector2(380f, 24f));
+            AddText(parent, $"半随机：每轮 {generation.regularGroupSize} 段按难度配比组包，再用种子洗牌。", 13, FontStyle.Normal, new Vector2(380f, 22f));
+            AddText(parent, $"难度分布 {FormatDifficultyDistribution(generation)}；每隔 {generation.rewardInsertMin}-{generation.rewardInsertMax} 段插入藏宝阁。", 13, FontStyle.Normal, new Vector2(380f, 22f));
+            AddText(parent, "预览矿井按需无限向下追加；中间只展示当前预览行。", 13, FontStyle.Normal, new Vector2(380f, 22f));
+        }
+
+        private void DrawGenerationRulesEditor(RectTransform parent)
+        {
+            var generation = controller.CurrentConfig.generation;
+            if (generation == null)
+            {
+                controller.CurrentConfig.generation = new FossickGenerationConfig();
+                generation = controller.CurrentConfig.generation;
+            }
+
+            AddText(parent, "半随机生成规则", 16, FontStyle.Bold, new Vector2(380f, 24f));
+            AddText(parent, "先拼接新手矿井；之后每轮按难度配比组包并洗牌，定期插入藏宝阁，运行时按需无限追加。", 12, FontStyle.Normal, new Vector2(380f, 44f));
+
+            var groupRow = CreateRow(parent, "Generation Group Row", 380f, 30f);
+            AddButton(groupRow, "本轮-", new Vector2(56f, 28f), () =>
+            {
+                generation.regularGroupSize = Mathf.Max(1, generation.regularGroupSize - 1);
+                MarkGenerationRulesChanged();
+            });
+            AddButton(groupRow, $"一轮 {generation.regularGroupSize} 段普通矿井", new Vector2(160f, 28f), () => { });
+            AddButton(groupRow, "本轮+", new Vector2(56f, 28f), () =>
+            {
+                generation.regularGroupSize++;
+                MarkGenerationRulesChanged();
+            });
+            AddText(groupRow, $"已分配 {GetDifficultyCountTotal(generation)} 段", 12, FontStyle.Normal, new Vector2(108f, 28f), TextAnchor.MiddleLeft);
+
+            for (var difficulty = 1; difficulty <= 3; difficulty++)
+            {
+                DrawDifficultyRuleRow(parent, generation, difficulty);
+            }
+
+            var rewardRow = CreateRow(parent, "Reward Interval Row", 380f, 30f);
+            AddButton(rewardRow, "下限-", new Vector2(52f, 28f), () =>
+            {
+                generation.rewardInsertMin = Mathf.Max(1, generation.rewardInsertMin - 1);
+                if (generation.rewardInsertMin > generation.rewardInsertMax)
+                {
+                    generation.rewardInsertMax = generation.rewardInsertMin;
+                }
+
+                MarkGenerationRulesChanged();
+            });
+            AddButton(rewardRow, $"每隔 {generation.rewardInsertMin}-{generation.rewardInsertMax} 段插藏宝阁", new Vector2(154f, 28f), () => { });
+            AddButton(rewardRow, "下限+", new Vector2(52f, 28f), () =>
+            {
+                generation.rewardInsertMin++;
+                if (generation.rewardInsertMin > generation.rewardInsertMax)
+                {
+                    generation.rewardInsertMax = generation.rewardInsertMin;
+                }
+
+                MarkGenerationRulesChanged();
+            });
+            AddButton(rewardRow, "上限+", new Vector2(52f, 28f), () =>
+            {
+                generation.rewardInsertMax++;
+                MarkGenerationRulesChanged();
+            });
+            AddButton(rewardRow, "上限-", new Vector2(52f, 28f), () =>
+            {
+                generation.rewardInsertMax = Mathf.Max(generation.rewardInsertMin, generation.rewardInsertMax - 1);
+                MarkGenerationRulesChanged();
+            });
+        }
+
+        private void DrawDifficultyRuleRow(RectTransform parent, FossickGenerationConfig generation, int difficulty)
+        {
+            var row = CreateRow(parent, $"Difficulty {difficulty} Rule Row", 380f, 30f);
+            AddButton(row, $"难度{difficulty}-", new Vector2(64f, 28f), () =>
+            {
+                SetDifficultyCount(generation, difficulty, Mathf.Max(0, GetDifficultyCount(generation, difficulty) - 1));
+                MarkGenerationRulesChanged();
+            });
+            AddButton(row, $"本轮放 {GetDifficultyCount(generation, difficulty)} 段", new Vector2(112f, 28f), () => { });
+            AddButton(row, $"难度{difficulty}+", new Vector2(64f, 28f), () =>
+            {
+                SetDifficultyCount(generation, difficulty, GetDifficultyCount(generation, difficulty) + 1);
+                MarkGenerationRulesChanged();
+            });
+            AddText(row, GetRegularPoolSummary(difficulty), 12, FontStyle.Normal, new Vector2(140f, 28f), TextAnchor.MiddleLeft);
+        }
+
+        private int GetDifficultyCountTotal(FossickGenerationConfig generation)
+        {
+            if (generation == null || generation.difficultyCounts == null)
+            {
+                return 0;
+            }
+
+            var total = 0;
+            for (var i = 0; i < generation.difficultyCounts.Count; i++)
+            {
+                var entry = generation.difficultyCounts[i];
+                if (entry != null && entry.count > 0)
+                {
+                    total += entry.count;
+                }
+            }
+
+            return total;
+        }
+
+        private string FormatDifficultyDistribution(FossickGenerationConfig generation)
+        {
+            if (generation == null)
+            {
+                return "未配置";
+            }
+
+            var d1 = GetDifficultyCount(generation, 1);
+            var d2 = GetDifficultyCount(generation, 2);
+            var d3 = GetDifficultyCount(generation, 3);
+            return $"难度1:{d1} / 难度2:{d2} / 难度3:{d3}";
+        }
+
+        private void MarkGenerationRulesChanged()
+        {
+            generationRulesDirty = true;
+            editNotice = "生成规则已修改，点击“生成地图预览”后会刷新当前预览。";
+            controller.Validate();
+            Build();
+        }
+
+        private void MarkTemplateLibraryChanged()
+        {
+            generationRulesDirty = true;
+        }
+
+        private void BeginTemplateEdit(int index, string notice)
+        {
+            var fragments = controller.CurrentConfig.fragments;
+            if (fragments == null || fragments.Count == 0)
+            {
+                return;
+            }
+
+            selectedFragmentIndex = Mathf.Clamp(index, 0, fragments.Count - 1);
+            templateEditSourceIndex = selectedFragmentIndex;
+            templateEditDraft = CloneFragmentForMineOccurrence(fragments[templateEditSourceIndex]);
+            NormalizeFragmentDifficulty(templateEditDraft);
+            templateEditDirty = false;
+            templateUndoStack.Clear();
+            templateRedoStack.Clear();
+            editMode = MapStudioEditMode.Template;
+            templateLibraryOpen = false;
+            generationRulesOpen = false;
+            ClearPendingPaint();
+            editNotice = notice;
+            Build();
+        }
+
+        private FossickFragmentConfig GetTemplateEditFragment()
+        {
+            if (editMode != MapStudioEditMode.Template)
+            {
+                return null;
+            }
+
+            var source = GetSelectedFragment();
+            if (source == null)
+            {
+                templateEditDraft = null;
+                templateEditSourceIndex = -1;
+                templateEditDirty = false;
+                templateUndoStack.Clear();
+                templateRedoStack.Clear();
+                return null;
+            }
+
+            if (templateEditDraft == null || templateEditSourceIndex != selectedFragmentIndex)
+            {
+                templateEditSourceIndex = selectedFragmentIndex;
+                templateEditDraft = CloneFragmentForMineOccurrence(source);
+                NormalizeFragmentDifficulty(templateEditDraft);
+                templateEditDirty = false;
+                templateUndoStack.Clear();
+                templateRedoStack.Clear();
+            }
+
+            return templateEditDraft;
+        }
+
+        private void RecordTemplateUndoSnapshot()
+        {
+            if (templateEditDraft == null)
+            {
+                return;
+            }
+
+            templateUndoStack.Add(JsonUtility.ToJson(templateEditDraft));
+            if (templateUndoStack.Count > 50)
+            {
+                templateUndoStack.RemoveAt(0);
+            }
+
+            templateRedoStack.Clear();
+        }
+
+        private void MarkTemplateDraftChanged()
+        {
+            templateEditDirty = true;
+        }
+
+        private void UndoTemplateEdit()
+        {
+            if (templateUndoStack.Count == 0 || templateEditDraft == null)
+            {
+                return;
+            }
+
+            templateRedoStack.Add(JsonUtility.ToJson(templateEditDraft));
+            var last = templateUndoStack[templateUndoStack.Count - 1];
+            templateUndoStack.RemoveAt(templateUndoStack.Count - 1);
+            templateEditDraft = JsonUtility.FromJson<FossickFragmentConfig>(last);
+            NormalizeFragmentDifficulty(templateEditDraft);
+            templateEditDirty = true;
+            ClearPendingPaint();
+            editNotice = "已撤销上一步模板编辑。";
+            Build();
+        }
+
+        private void RedoTemplateEdit()
+        {
+            if (templateRedoStack.Count == 0 || templateEditDraft == null)
+            {
+                return;
+            }
+
+            templateUndoStack.Add(JsonUtility.ToJson(templateEditDraft));
+            var next = templateRedoStack[templateRedoStack.Count - 1];
+            templateRedoStack.RemoveAt(templateRedoStack.Count - 1);
+            templateEditDraft = JsonUtility.FromJson<FossickFragmentConfig>(next);
+            NormalizeFragmentDifficulty(templateEditDraft);
+            templateEditDirty = true;
+            ClearPendingPaint();
+            editNotice = "已重做模板编辑。";
+            Build();
+        }
+
+        private void SaveTemplateEdit()
+        {
+            SaveTemplateEditInternal(true);
+        }
+
+        private bool SaveTemplateEditInternal(bool rebuild)
+        {
+            var fragments = controller.CurrentConfig.fragments;
+            if (templateEditDraft == null || fragments == null || templateEditSourceIndex < 0 || templateEditSourceIndex >= fragments.Count)
+            {
+                return false;
+            }
+
+            NormalizeFragmentDifficulty(templateEditDraft);
+            fragments[templateEditSourceIndex] = CloneFragmentForMineOccurrence(templateEditDraft);
+            selectedFragmentIndex = templateEditSourceIndex;
+            templateEditDraft = CloneFragmentForMineOccurrence(fragments[templateEditSourceIndex]);
+            templateEditDirty = false;
+            templateUndoStack.Clear();
+            templateRedoStack.Clear();
+            MarkTemplateLibraryChanged();
+            controller.Validate();
+            ClearPendingPaint();
+            editNotice = $"已保存模板 {templateEditDraft.id}。重新生成地图预览后可看到新模板参与拼接。";
+            if (rebuild)
+            {
+                Build();
+            }
+
+            return true;
+        }
+
+        private void DiscardTemplateEdit()
+        {
+            DiscardTemplateEditInternal(true);
+        }
+
+        private bool DiscardTemplateEditInternal(bool rebuild)
+        {
+            var fragments = controller.CurrentConfig.fragments;
+            if (fragments == null || templateEditSourceIndex < 0 || templateEditSourceIndex >= fragments.Count)
+            {
+                editMode = MapStudioEditMode.MineInstance;
+                if (rebuild)
+                {
+                    Build();
+                }
+
+                return false;
+            }
+
+            selectedFragmentIndex = templateEditSourceIndex;
+            templateEditDraft = CloneFragmentForMineOccurrence(fragments[templateEditSourceIndex]);
+            NormalizeFragmentDifficulty(templateEditDraft);
+            templateEditDirty = false;
+            templateUndoStack.Clear();
+            templateRedoStack.Clear();
+            ClearPendingPaint();
+            editNotice = $"已放弃模板 {templateEditDraft.id} 的未保存修改。";
+            if (rebuild)
+            {
+                Build();
+            }
+
+            return true;
+        }
+
+        private void ReturnFromTemplateEdit()
+        {
+            if (templateEditDirty)
+            {
+                ShowUnsavedTemplateDialog("返回生成预览", "当前模板有未保存修改，请选择保存或丢弃。", ReturnToMineInstanceAfterTemplateDecision);
+                return;
+            }
+
+            ReturnToMineInstanceAfterTemplateDecision();
+        }
+
+        private void ReturnToMineInstanceAfterTemplateDecision()
+        {
+            editMode = MapStudioEditMode.MineInstance;
+            ClearPendingPaint();
+            Build();
+        }
+
+        private void GenerateMineInstance(bool clearEdits, string notice)
+        {
+            if (controller == null || controller.CurrentConfig == null)
+            {
+                return;
+            }
+
+            if (clearEdits)
+            {
+                ClearMineInstanceEdits();
+            }
+
+            mineInstanceSourceConfig = CloneMapConfig(controller.CurrentConfig);
+            StripInstanceOverrides(mineInstanceSourceConfig);
+            mineInstanceSeed = controller.Seed;
+            mineInstanceGenerated = true;
+            generationRulesDirty = false;
+            selectedMineSequenceIndex = -1;
+            mineScrollNormalizedPosition = 1f;
+            ClearPendingPaint();
+            editNotice = notice;
+            controller.Validate();
+        }
+
+        private void ClearMineInstance(string notice)
+        {
+            ClearMineInstanceEdits();
+            mineInstanceSourceConfig = null;
+            mineInstanceSeed = controller == null ? 0 : controller.Seed;
+            mineInstanceGenerated = false;
+            generationRulesDirty = false;
+            selectedMineSequenceIndex = -1;
+            ClearPendingPaint();
+            editNotice = notice;
+            controller.Validate();
+        }
+
+        private void ClearMineInstanceEdits()
+        {
+            mineOccurrenceOverrides.Clear();
+            var generation = controller == null || controller.CurrentConfig == null ? null : controller.CurrentConfig.generation;
+            if (generation == null)
+            {
+                return;
+            }
+
+            if (generation.sequenceOverrides != null)
+            {
+                generation.sequenceOverrides.Clear();
+            }
+
+            if (generation.rowOverrides != null)
+            {
+                generation.rowOverrides.Clear();
+            }
+        }
+
+        private static void StripInstanceOverrides(FossickMapConfig config)
+        {
+            if (config == null || config.generation == null)
+            {
+                return;
+            }
+
+            config.generation.sequenceOverrides = new List<FossickSequenceOverrideConfig>();
+            config.generation.rowOverrides = new List<FossickRowOverrideConfig>();
+        }
+
+        private static FossickMapConfig CloneMapConfig(FossickMapConfig source)
+        {
+            if (source == null)
+            {
+                return null;
+            }
+
+            return FossickMapJsonUtility.FromJson(FossickMapJsonUtility.ToJson(source));
+        }
+
+        private int GetDifficultyCount(FossickGenerationConfig generation, int difficulty)
+        {
+            if (generation == null || generation.difficultyCounts == null)
+            {
+                return 0;
+            }
+
+            for (var i = 0; i < generation.difficultyCounts.Count; i++)
+            {
+                var entry = generation.difficultyCounts[i];
+                if (entry != null && entry.difficulty == difficulty)
+                {
+                    return Mathf.Max(0, entry.count);
+                }
+            }
+
+            return 0;
+        }
+
+        private void SetDifficultyCount(FossickGenerationConfig generation, int difficulty, int count)
+        {
+            if (generation == null)
+            {
+                return;
+            }
+
+            if (generation.difficultyCounts == null)
+            {
+                generation.difficultyCounts = new List<FossickDifficultyCount>();
+            }
+
+            for (var i = generation.difficultyCounts.Count - 1; i >= 0; i--)
+            {
+                var entry = generation.difficultyCounts[i];
+                if (entry == null)
+                {
+                    generation.difficultyCounts.RemoveAt(i);
+                    continue;
+                }
+
+                if (entry.difficulty == difficulty)
+                {
+                    if (count <= 0)
+                    {
+                        generation.difficultyCounts.RemoveAt(i);
+                    }
+                    else
+                    {
+                        entry.count = count;
+                    }
+
+                    return;
+                }
+            }
+
+            if (count > 0)
+            {
+                generation.difficultyCounts.Add(new FossickDifficultyCount
+                {
+                    difficulty = difficulty,
+                    count = count
+                });
+            }
+        }
+
+        private string GetRegularPoolSummary(int difficulty)
+        {
+            var count = 0;
+            var fragments = controller.CurrentConfig.fragments;
+            for (var i = 0; i < fragments.Count; i++)
+            {
+                var fragment = fragments[i];
+                if (fragment != null && fragment.type == FossickFragmentType.Regular && fragment.difficulty == difficulty)
+                {
+                    count++;
+                }
+            }
+
+            return $"池内常规碎片 {count}";
+        }
+
+        private void DrawMineSelectionInfo(RectTransform parent, FossickGeneratedMine mine)
+        {
+            var span = FindGeneratedSpan(mine, selectedMineSequenceIndex);
+            AddText(parent, "当前预览段", 18, FontStyle.Bold, new Vector2(380f, 28f));
+            if (span == null)
+            {
+                AddText(parent, "未选择。点击中间矿井格子后，这里会显示来源模板。", 13, FontStyle.Normal, new Vector2(380f, 40f));
+                return;
+            }
+
+            AddText(parent, $"预览段 #{span.sequenceIndex:00} | 来源模板 {span.fragmentId} | {FormatFragmentType(span.fragmentType)} | 行 {span.startRow:000}-{span.startRow + span.height - 1:000}", 13, FontStyle.Normal, new Vector2(380f, 44f));
+        }
+
+        private void DrawValidationSummary(RectTransform parent)
+        {
+            var validation = controller.LastValidation;
+            var issueCount = validation == null || validation.issues == null ? 0 : validation.issues.Count;
+            AddText(parent, validation != null && validation.HasErrors ? "校验：有错误" : "校验：通过", 16, FontStyle.Bold, new Vector2(380f, 26f));
+            AddText(parent, issueCount == 0 ? "没有发现问题。" : $"发现 {issueCount} 个问题，详情请打开 Console。", 13, FontStyle.Normal, new Vector2(380f, 28f));
+        }
+
+        private void DrawMiniFragment(RectTransform parent, FossickFragmentConfig fragment)
+        {
+            var mini = CreateRect($"Mini Fragment {fragment.id}", parent);
+            var miniCell = 16f;
+            mini.sizeDelta = new Vector2(fragment.width * miniCell, fragment.height * miniCell);
+
+            for (var y = 0; y < fragment.height; y++)
+            {
+                for (var x = 0; x < fragment.width; x++)
+                {
+                    var cell = FindOrCreateCell(fragment, x, y);
+                    var tile = CreateRect($"Mini {x},{y}", mini);
+                    SetTopLeft(tile, x * miniCell, y * miniCell, miniCell, miniCell);
+                    var image = AddImage(tile.gameObject, GetTerrainColor(cell.terrain));
+                }
+            }
+        }
+
+        private FossickGeneratedMine BuildPreviewMine()
+        {
+            try
+            {
+                var config = BuildMineInstanceConfig();
+                if (config == null)
+                {
+                    return new FossickGeneratedMine();
+                }
+
+                return FossickMineLayoutBuilder.Build(config, mineInstanceSeed, minePreviewRows, mineOccurrenceOverrides);
+            }
+            catch (Exception)
+            {
+                return new FossickGeneratedMine();
+            }
+        }
+
+        private FossickMapConfig BuildMineInstanceConfig()
+        {
+            if (!mineInstanceGenerated || mineInstanceSourceConfig == null)
+            {
+                return null;
+            }
+
+            var config = CloneMapConfig(mineInstanceSourceConfig);
+            if (config == null)
+            {
+                return null;
+            }
+
+            if (config.generation == null)
+            {
+                config.generation = new FossickGenerationConfig();
+            }
+
+            return config;
+        }
+
+        private void DrawMineViewportOverlay(RectTransform parent, int width, int visibleHeight)
+        {
+            var rect = CreateRect("Visible Window Overlay", parent);
+            SetTopLeft(rect, GridLabelWidth, 0f, width * MineCellSize, visibleHeight * MineCellSize);
+            var image = AddImage(rect.gameObject, new Color(0.1f, 0.32f, 0.5f, 0.18f));
+            image.raycastTarget = false;
+        }
+
+        private void DrawMinePreviewRow(RectTransform parent, IReadOnlyList<FossickCellConfig[]> mineCellRows, FossickGeneratedMineRow row, int displayY)
+        {
+            if (row == null || row.cells == null)
+            {
+                return;
+            }
+
+            for (var x = 0; x < row.cells.Length; x++)
+            {
+                DrawMinePreviewCell(parent, mineCellRows, row, x, displayY);
+            }
+
+            if ((IsApplyingTemplate || IsRowBatchMode) && IsSelectedRow(row.rowIndex))
+            {
+                DrawMineRowOverlay(parent, $"Selected Mine Row {row.rowIndex}", displayY, row.cells.Length, IsApplyingTemplate ? new Color(1f, 0.72f, 0.16f, 0.38f) : new Color(0.24f, 0.55f, 0.86f, 0.34f));
+            }
+
+            var rowLabelRect = CreateRect($"Mine Row Label {row.rowIndex}", parent);
+            SetTopLeft(rowLabelRect, 0f, displayY * MineCellSize, GridLabelWidth - 4f, MineCellSize);
+            var rowBackground = AddImage(rowLabelRect.gameObject, GetRowBarColor(row.rowIndex));
+            rowBackground.raycastTarget = IsApplyingTemplate || IsRowBatchMode;
+            if (IsApplyingTemplate || IsRowBatchMode)
+            {
+                AddRowBarEvents(rowLabelRect.gameObject, row.rowIndex);
+            }
+
+            var rowTextRect = CreateRect("Row Number", rowLabelRect);
+            Stretch(rowTextRect);
+            var rowLabel = rowTextRect.gameObject.AddComponent<Text>();
+            rowLabel.text = row.rowIndex.ToString("000");
+            rowLabel.font = font;
+            rowLabel.fontSize = 15;
+            rowLabel.color = TextColor;
+            rowLabel.alignment = TextAnchor.MiddleCenter;
+            rowLabel.raycastTarget = false;
+
+            if (IsApplyingTemplate && row.localRow == 0)
+            {
+                var boundary = CreateRect($"Fragment Boundary {row.rowIndex}", parent);
+                SetTopLeft(boundary, GridLabelWidth, displayY * MineCellSize, row.cells.Length * MineCellSize, 3f);
+                AddImage(boundary.gameObject, row.fragment.insertedAsReward ? new Color(0.95f, 0.68f, 0.18f, 0.95f) : new Color(0.3f, 0.45f, 0.7f, 0.95f)).raycastTarget = false;
+            }
+        }
+
+        private void DrawMineRowOverlay(RectTransform parent, string name, int displayY, int width, Color color)
+        {
+            var overlay = CreateRect(name, parent);
+            SetTopLeft(overlay, GridLabelWidth, displayY * MineCellSize, width * MineCellSize, MineCellSize);
+            AddImage(overlay.gameObject, color).raycastTarget = false;
+        }
+
+        private void DrawMinePreviewCell(RectTransform parent, IReadOnlyList<FossickCellConfig[]> mineCellRows, FossickGeneratedMineRow row, int x, int displayY)
+        {
+            var cell = row.cells[x];
+            var rect = CreateRect($"Mine Cell {x},{displayY}", parent);
+            SetTopLeft(rect, GridLabelWidth + x * MineCellSize, displayY * MineCellSize, MineCellSize, MineCellSize);
+
+            var image = AddImage(rect.gameObject, GetCellInteractionColor(cell));
+            image.raycastTarget = true;
+
+            var layerRoot = CreateRect("Dynamic Cell Layers", rect);
+            Stretch(layerRoot);
+            DrawCellLayerPreview(layerRoot, cell, MineCellSize, false);
+
+            var textRect = CreateRect("Mine Cell Label", rect);
+            Stretch(textRect);
+            var text = textRect.gameObject.AddComponent<Text>();
+            text.text = GetMiniCellLabel(cell);
+            text.font = font;
+            text.fontSize = 14;
+            text.fontStyle = FontStyle.Bold;
+            text.color = TextColor;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.raycastTarget = false;
+
+            AddMineCellInspectEvents(rect.gameObject, row, x);
+        }
+
+        private void DrawTemplateGridEditor(RectTransform panel, FossickFragmentConfig fragment, float left, float width, float top)
+        {
+            var gridWidth = GridLabelWidth + fragment.width * MineCellSize;
+            var viewportHeight = Mathf.Min(fragment.height, controller.CurrentConfig.visibleHeight) * MineCellSize;
+            var scrollViewWidth = gridWidth + 28f;
+            var stage = CreateRect("Template Stage", panel);
+            SetTopLeft(stage, left, top, width, viewportHeight + 40f);
+
+            var scrollView = CreateRect("Template Scroll View", stage);
+            SetTopLeft(scrollView, Mathf.Max(0f, (width - scrollViewWidth) * 0.5f), 20f, scrollViewWidth, viewportHeight);
+            AddImage(scrollView.gameObject, new Color(0.08f, 0.1f, 0.1f));
+
+            var viewport = CreateRect("Template Viewport", scrollView);
+            SetTopLeft(viewport, 0f, 0f, gridWidth, viewportHeight);
+            var viewportImage = AddImage(viewport.gameObject, GetTerrainColor(FossickTerrainType.Empty));
+            viewportImage.raycastTarget = true;
+            var mask = viewport.gameObject.AddComponent<Mask>();
+            mask.showMaskGraphic = true;
+
+            var content = CreateRect("Template Content", viewport);
+            SetTopLeft(content, 0f, 0f, gridWidth, fragment.height * MineCellSize);
+
+            var rows = BuildConfigRows(fragment);
+            var rewardBackgroundRoot = CreateRect("Template Reward Background Regions", content);
+            SetTopLeft(rewardBackgroundRoot, GridLabelWidth, 0f, fragment.width * MineCellSize, fragment.height * MineCellSize);
+            DrawRewardBackgroundRegions(rewardBackgroundRoot, rows, fragment.width, fragment.height, MineCellSize);
+
+            var terrainRoot = CreateRect("Template Terrain Visuals", content);
+            SetTopLeft(terrainRoot, GridLabelWidth, 0f, fragment.width * MineCellSize, fragment.height * MineCellSize);
+            terrainRoot.gameObject.AddComponent<RectMask2D>();
+            DrawTerrainSmoothGrid(terrainRoot, rows, fragment.width, fragment.height, MineCellSize);
+
+            for (var y = 0; y < fragment.height; y++)
+            {
+                DrawTemplateGridRow(content, fragment, y);
+            }
+
+            var scrollbar = CreateVerticalScrollbar(scrollView, gridWidth + 8f, 0f, 16f, viewportHeight);
+            var scrollRect = scrollView.gameObject.AddComponent<ScrollRect>();
+            scrollRect.viewport = viewport;
+            scrollRect.content = content;
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = MineCellSize;
+            scrollRect.verticalScrollbar = scrollbar;
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+            scrollRect.verticalNormalizedPosition = mineScrollNormalizedPosition;
+            scrollRect.onValueChanged.AddListener(position =>
+            {
+                mineScrollNormalizedPosition = position.y;
+            });
+        }
+
+        private void DrawTemplateGridRow(RectTransform parent, FossickFragmentConfig fragment, int y)
+        {
+            var rowLabelRect = CreateRect($"Template Row Label {y}", parent);
+            SetTopLeft(rowLabelRect, 0f, y * MineCellSize, GridLabelWidth - 4f, MineCellSize);
+            var rowLabel = rowLabelRect.gameObject.AddComponent<Text>();
+            rowLabel.text = y.ToString("000");
+            rowLabel.font = font;
+            rowLabel.fontSize = 15;
+            rowLabel.color = TextColor;
+            rowLabel.alignment = TextAnchor.MiddleLeft;
+
+            for (var x = 0; x < fragment.width; x++)
+            {
+                DrawTemplateGridCell(parent, fragment, x, y);
+            }
+        }
+
+        private void DrawTemplateGridCell(RectTransform parent, FossickFragmentConfig fragment, int x, int y)
+        {
+            var cell = FindOrCreateCell(fragment, x, y);
+            var rect = CreateRect($"Template Cell {x},{y}", parent);
+            SetTopLeft(rect, GridLabelWidth + x * MineCellSize, y * MineCellSize, MineCellSize, MineCellSize);
+
+            var image = AddImage(rect.gameObject, GetCellInteractionColor(cell));
+            image.raycastTarget = true;
+
+            var layerRoot = CreateRect("Dynamic Cell Layers", rect);
+            Stretch(layerRoot);
+            DrawCellLayerPreview(layerRoot, cell, MineCellSize, false);
+
+            var textRect = CreateRect("Template Cell Label", rect);
+            Stretch(textRect);
+            var text = textRect.gameObject.AddComponent<Text>();
+            text.text = GetMiniCellLabel(cell);
+            text.font = font;
+            text.fontSize = 14;
+            text.fontStyle = FontStyle.Bold;
+            text.color = TextColor;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.raycastTarget = false;
+
+            RegisterCellSelectionRect(GetTemplateSelectionKey(fragment.id, x, y), rect);
+
+            AddTemplateCellPaintEvents(rect.gameObject, fragment, cell, image, text, layerRoot);
+        }
+
+        private static FossickCellConfig[][] BuildConfigRows(FossickGeneratedMine mine)
+        {
+            if (mine == null || mine.rows == null)
+            {
+                return new FossickCellConfig[0][];
+            }
+
+            var rows = new FossickCellConfig[mine.rows.Count][];
+            for (var y = 0; y < mine.rows.Count; y++)
+            {
+                var source = mine.rows[y];
+                rows[y] = source == null || source.cells == null ? new FossickCellConfig[0] : source.cells;
+            }
+
+            return rows;
+        }
+
+        private static FossickCellConfig[][] BuildConfigRows(FossickFragmentConfig fragment)
+        {
+            if (fragment == null || fragment.width <= 0 || fragment.height <= 0)
+            {
+                return new FossickCellConfig[0][];
+            }
+
+            var rows = new FossickCellConfig[fragment.height][];
+            for (var y = 0; y < fragment.height; y++)
+            {
+                rows[y] = new FossickCellConfig[fragment.width];
+            }
+
+            if (fragment.cells != null)
+            {
+                for (var i = 0; i < fragment.cells.Count; i++)
+                {
+                    var cell = fragment.cells[i];
+                    if (cell != null && cell.x >= 0 && cell.x < fragment.width && cell.y >= 0 && cell.y < fragment.height)
+                    {
+                        rows[cell.y][cell.x] = cell;
+                    }
+                }
+            }
+
+            return rows;
+        }
+
+        private void AddTemplateCellPaintEvents(GameObject target, FossickFragmentConfig fragment, FossickCellConfig cell, Image image, Text text, RectTransform layerRoot)
+        {
+            var trigger = target.AddComponent<EventTrigger>();
+            AddEventTriggerEntry(trigger, EventTriggerType.PointerDown, _ =>
+            {
+                isDragPainting = true;
+                BeginPaintSelection();
+                SelectTemplateCell(fragment, cell, target.transform);
+                if (!PaintTemplateCell(fragment, cell, image, text, layerRoot))
+                {
+                    isDragPainting = false;
+                }
+            });
+            AddEventTriggerEntry(trigger, EventTriggerType.PointerEnter, _ =>
+            {
+                if (isDragPainting && Input.GetMouseButton(0))
+                {
+                    SelectTemplateCell(fragment, cell, target.transform);
+                    PaintTemplateCell(fragment, cell, image, text, layerRoot);
+                }
+            });
+            AddEventTriggerEntry(trigger, EventTriggerType.PointerUp, _ =>
+            {
+                FinishDragPainting();
+            });
+        }
+
+        private void AddMineCellPaintEvents(GameObject target, FossickGeneratedMineRow row, int x, Image image, Text text, RectTransform layerRoot)
+        {
+            var trigger = target.AddComponent<EventTrigger>();
+            AddEventTriggerEntry(trigger, EventTriggerType.PointerDown, _ =>
+            {
+                isDragPainting = true;
+                BeginPaintSelection();
+                SelectMineCell(row, x, target.transform);
+                if (!PaintMineCell(row, x, image, text, layerRoot))
+                {
+                    isDragPainting = false;
+                }
+            });
+            AddEventTriggerEntry(trigger, EventTriggerType.PointerEnter, _ =>
+            {
+                if (isDragPainting && Input.GetMouseButton(0))
+                {
+                    SelectMineCell(row, x, target.transform);
+                    PaintMineCell(row, x, image, text, layerRoot);
+                }
+            });
+            AddEventTriggerEntry(trigger, EventTriggerType.PointerUp, _ =>
+            {
+                FinishDragPainting();
+            });
+        }
+
+        private void AddMineCellInspectEvents(GameObject target, FossickGeneratedMineRow row, int x)
+        {
+            var trigger = target.AddComponent<EventTrigger>();
+            AddEventTriggerEntry(trigger, EventTriggerType.PointerDown, _ =>
+            {
+                selectedMineSequenceIndex = row == null || row.fragment == null ? -1 : row.fragment.sequenceIndex;
+                var fragmentId = row == null || row.fragment == null ? 0 : row.fragment.fragmentId;
+                editNotice = row == null
+                    ? "未选中有效预览格。"
+                    : $"当前格 ({x},{row.rowIndex:000}) 来自碎片 {fragmentId}，预览内容不可直接编辑。";
+                Build();
+            });
+        }
+
+        private void AddRowBarEvents(GameObject target, int rowIndex)
+        {
+            var trigger = target.AddComponent<EventTrigger>();
+            AddEventTriggerEntry(trigger, EventTriggerType.PointerDown, _ =>
+            {
+                BeginRowSelection(rowIndex);
+            });
+            AddEventTriggerEntry(trigger, EventTriggerType.PointerEnter, _ =>
+            {
+                if (isRowSelecting && Input.GetMouseButton(0))
+                {
+                    ExtendRowSelection(rowIndex);
+                }
+            });
+            AddEventTriggerEntry(trigger, EventTriggerType.PointerUp, _ =>
+            {
+                FinishRowSelection();
+            });
+        }
+
+        private static void AddEventTriggerEntry(EventTrigger trigger, EventTriggerType eventType, Action<BaseEventData> callback)
+        {
+            var entry = new EventTrigger.Entry
+            {
+                eventID = eventType
+            };
+            entry.callback.AddListener(data => callback(data));
+            trigger.triggers.Add(entry);
+        }
+
+        private void SelectMineCell(FossickGeneratedMineRow row, int x, Transform target)
+        {
+            if (row == null)
+            {
+                return;
+            }
+
+            AddPaintSelection(GetMineSelectionKey(row.rowIndex, x), target);
+        }
+
+        private void SelectTemplateCell(FossickFragmentConfig fragment, FossickCellConfig cell, Transform target)
+        {
+            if (fragment == null || cell == null)
+            {
+                return;
+            }
+
+            AddPaintSelection(GetTemplateSelectionKey(fragment.id, cell.x, cell.y), target);
+        }
+
+        private void BeginPaintSelection()
+        {
+            selectedPaintCells.Clear();
+            ClearLiveSelectionHighlights();
+        }
+
+        private void AddPaintSelection(string key, Transform target)
+        {
+            if (string.IsNullOrEmpty(key) || target == null)
+            {
+                return;
+            }
+
+            if (target is RectTransform rect)
+            {
+                selectedPaintCellRects[key] = rect;
+            }
+
+            selectedPaintCells.Add(key);
+            RedrawLiveSelectionHighlights();
+        }
+
+        private void RegisterCellSelectionRect(string key, RectTransform rect)
+        {
+            if (string.IsNullOrEmpty(key) || rect == null)
+            {
+                return;
+            }
+
+            selectedPaintCellRects[key] = rect;
+
+            if (selectedPaintCells.Contains(key))
+            {
+                selectedPaintCellHighlights[key] = DrawSelectionHighlight(rect, key);
+            }
+        }
+
+        private void RedrawLiveSelectionHighlights()
+        {
+            ClearLiveSelectionHighlights();
+
+            foreach (var key in selectedPaintCells)
+            {
+                if (selectedPaintCellRects.TryGetValue(key, out var rect) && rect != null)
+                {
+                    selectedPaintCellHighlights[key] = DrawSelectionHighlight(rect, key);
+                }
+            }
+        }
+
+        private void ClearLiveSelectionHighlights()
+        {
+            foreach (var item in selectedPaintCellHighlights)
+            {
+                DestroySelectionObject(item.Value);
+            }
+
+            selectedPaintCellHighlights.Clear();
+        }
+
+        private GameObject DrawSelectionHighlight(RectTransform parent, string key)
+        {
+            var rootRect = CreateRect("Selected Cell Highlight", parent);
+            Stretch(rootRect);
+            rootRect.SetAsLastSibling();
+
+            if (ShouldDrawSelectionEdge(key, 0, -1))
+            {
+                AddSelectionEdge(rootRect, "Top", 0f, 0f, MineCellSize, 4f);
+            }
+
+            if (ShouldDrawSelectionEdge(key, 0, 1))
+            {
+                AddSelectionEdge(rootRect, "Bottom", 0f, MineCellSize - 4f, MineCellSize, 4f);
+            }
+
+            if (ShouldDrawSelectionEdge(key, -1, 0))
+            {
+                AddSelectionEdge(rootRect, "Left", 0f, 0f, 4f, MineCellSize);
+            }
+
+            if (ShouldDrawSelectionEdge(key, 1, 0))
+            {
+                AddSelectionEdge(rootRect, "Right", MineCellSize - 4f, 0f, 4f, MineCellSize);
+            }
+
+            return rootRect.gameObject;
+        }
+
+        private bool ShouldDrawSelectionEdge(string key, int dx, int dy)
+        {
+            return !TryGetNeighborSelectionKey(key, dx, dy, out var neighborKey) || !selectedPaintCells.Contains(neighborKey);
+        }
+
+        private static bool TryGetNeighborSelectionKey(string key, int dx, int dy, out string neighborKey)
+        {
+            neighborKey = null;
+            if (string.IsNullOrEmpty(key))
+            {
+                return false;
+            }
+
+            var parts = key.Split(':');
+            if (parts.Length == 3 && parts[0] == "m")
+            {
+                if (int.TryParse(parts[1], out var row) && int.TryParse(parts[2], out var x))
+                {
+                    neighborKey = GetMineSelectionKey(row + dy, x + dx);
+                    return true;
+                }
+            }
+
+            if (parts.Length == 4 && parts[0] == "t")
+            {
+                if (int.TryParse(parts[1], out var id) && int.TryParse(parts[2], out var x) && int.TryParse(parts[3], out var y))
+                {
+                    neighborKey = GetTemplateSelectionKey(id, x + dx, y + dy);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static string GetMineSelectionKey(int rowIndex, int x)
+        {
+            return $"m:{rowIndex}:{x}";
+        }
+
+        private static string GetTemplateSelectionKey(int fragmentId, int x, int y)
+        {
+            return $"t:{fragmentId}:{x}:{y}";
+        }
+
+        private static void DestroySelectionObject(GameObject go)
+        {
+            if (go == null)
+            {
+                return;
+            }
+
+            go.SetActive(false);
+            if (Application.isPlaying)
+            {
+                Destroy(go);
+            }
+            else
+            {
+                DestroyImmediate(go);
+            }
+        }
+
+        private void AddSelectionEdge(RectTransform parent, string name, float x, float y, float width, float height)
+        {
+            var rect = CreateRect($"Selected Cell Edge {name}", parent);
+            SetTopLeft(rect, x, y, width, height);
+            AddImage(rect.gameObject, new Color(1f, 0.78f, 0.14f, 0.96f)).raycastTarget = false;
+        }
+
+        private void DrawCellLayerPreview(RectTransform parent, FossickCellConfig cell, float size, bool compact)
+        {
+            var reward = GetReward(cell);
+            if (reward != null && reward.type != FossickElementType.None)
+            {
+                var rect = CreateRect("Reward Layer", parent);
+                var inset = size * 0.2f;
+                SetTopLeft(rect, inset, inset, size - inset * 2f, size - inset * 2f);
+                var sprite = cell.terrain == FossickTerrainType.Empty
+                    ? FossickArtLibrary.GetRewardSprite(reward)
+                    : FossickArtLibrary.GetTerrainAttachmentSprite(reward, cell.terrain);
+                var image = AddImage(rect.gameObject, sprite == null ? GetRewardColor(reward.type) : Color.white);
+                image.raycastTarget = false;
+                if (sprite != null)
+                {
+                    image.sprite = sprite;
+                    image.preserveAspect = true;
+                }
+            }
+
+            if (HasDecoration(cell))
+            {
+                var rect = CreateRect("Decoration Layer", parent);
+                var inset = size * 0.08f;
+                SetTopLeft(rect, size - size * 0.35f - inset, inset, size * 0.28f, size * 0.28f);
+                AddImage(rect.gameObject, new Color(0.18f, 0.55f, 0.24f, 0.85f)).raycastTarget = false;
+            }
+
+            if (cell.fog == FossickFogType.Covered)
+            {
+                var rect = CreateRect("Fog Layer", parent);
+                SetTopLeft(rect, 0f, 0f, size, size);
+                AddImage(rect.gameObject, new Color(0f, 0f, 0f, compact ? 0.22f : 0.28f)).raycastTarget = false;
+            }
+        }
+
+        private void DrawRewardBackgroundRegions(RectTransform parent, IReadOnlyList<FossickCellConfig[]> rows, int width, int height, float cellSize)
+        {
+            if (parent == null || rows == null || width <= 0 || height <= 0)
+            {
+                return;
+            }
+
+            var regions = BuildRewardBackgroundRegions(rows, width, height);
+            for (var i = 0; i < regions.Count; i++)
+            {
+                var region = regions[i];
+                var rect = CreateRect($"Reward Background Region {region.id}", parent);
+                var left = region.startX * cellSize;
+                var top = region.startY * cellSize;
+                var regionWidth = (region.endX - region.startX + 1) * cellSize;
+                var regionHeight = (region.endY - region.startY + 1) * cellSize;
+                SetTopLeft(rect, left, top, regionWidth, regionHeight);
+
+                var sprite = FossickArtLibrary.GetBackgroundSprite(region.id);
+                var image = AddImage(rect.gameObject, sprite == null ? new Color(0.8f, 0.55f, 0.12f, 0.28f) : Color.white);
+                image.raycastTarget = false;
+                if (sprite != null)
+                {
+                    image.sprite = sprite;
+                    image.type = Image.Type.Simple;
+                    image.preserveAspect = false;
+                }
+            }
+        }
+
+        private static List<RewardBackgroundRegion> BuildRewardBackgroundRegions(IReadOnlyList<FossickCellConfig[]> rows, int width, int height)
+        {
+            var fixedRegions = BuildFixedRewardBackgroundRegions(rows, width, height);
+            var covered = new bool[Mathf.Max(0, height), Mathf.Max(0, width)];
+            for (var i = 0; i < fixedRegions.Count; i++)
+            {
+                var region = fixedRegions[i];
+                for (var y = region.startY; y <= region.endY && y < height; y++)
+                {
+                    for (var x = region.startX; x <= region.endX && x < width; x++)
+                    {
+                        covered[y, x] = true;
+                    }
+                }
+            }
+
+            var active = new List<RewardBackgroundRegion>();
+            var finished = new List<RewardBackgroundRegion>(fixedRegions);
+
+            for (var y = 0; y < height; y++)
+            {
+                var spans = CollectRewardBackgroundSpans(rows, width, y, covered);
+                var nextActive = new List<RewardBackgroundRegion>();
+                for (var i = 0; i < spans.Count; i++)
+                {
+                    var span = spans[i];
+                    var activeIndex = FindMatchingRewardBackgroundRegion(active, span);
+                    if (activeIndex >= 0)
+                    {
+                        var region = active[activeIndex];
+                        region.endY = y;
+                        nextActive.Add(region);
+                        active.RemoveAt(activeIndex);
+                    }
+                    else
+                    {
+                        nextActive.Add(span);
+                    }
+                }
+
+                finished.AddRange(active);
+                active = nextActive;
+            }
+
+            finished.AddRange(active);
+            return finished;
+        }
+
+        private static List<RewardBackgroundRegion> BuildFixedRewardBackgroundRegions(IReadOnlyList<FossickCellConfig[]> rows, int width, int height)
+        {
+            var regions = new List<RewardBackgroundRegion>();
+            var covered = new bool[Mathf.Max(0, height), Mathf.Max(0, width)];
+            for (var y = 0; y < height; y++)
+            {
+                for (var x = 0; x < width; x++)
+                {
+                    if (covered[y, x])
+                    {
+                        continue;
+                    }
+
+                    var id = GetRewardBackgroundId(rows, x, y);
+                    if (!TryGetRewardBackgroundSize(id, out var roomWidth, out var roomHeight))
+                    {
+                        continue;
+                    }
+
+                    if (x + roomWidth > width || y + roomHeight > height)
+                    {
+                        continue;
+                    }
+
+                    if (!HasRewardBackgroundArea(rows, x, y, roomWidth, roomHeight, id))
+                    {
+                        continue;
+                    }
+
+                    var region = new RewardBackgroundRegion
+                    {
+                        id = id,
+                        startX = x,
+                        endX = x + roomWidth - 1,
+                        startY = y,
+                        endY = y + roomHeight - 1
+                    };
+                    regions.Add(region);
+                    for (var markY = region.startY; markY <= region.endY; markY++)
+                    {
+                        for (var markX = region.startX; markX <= region.endX; markX++)
+                        {
+                            covered[markY, markX] = true;
+                        }
+                    }
+                }
+            }
+
+            return regions;
+        }
+
+        private static bool TryGetRewardBackgroundSize(string id, out int width, out int height)
+        {
+            width = 0;
+            height = 0;
+            switch (id)
+            {
+                case TreasureRoomSmallId:
+                    width = 3;
+                    height = 2;
+                    return true;
+                case TreasureRoomMediumId:
+                    width = 5;
+                    height = 2;
+                    return true;
+                case TreasureRoomLargeId:
+                case "treasure_room_7x2":
+                    width = 7;
+                    height = 2;
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool HasRewardBackgroundArea(IReadOnlyList<FossickCellConfig[]> rows, int startX, int startY, int width, int height, string id)
+        {
+            for (var y = startY; y < startY + height; y++)
+            {
+                for (var x = startX; x < startX + width; x++)
+                {
+                    if (GetRewardBackgroundId(rows, x, y) != id)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static List<RewardBackgroundRegion> CollectRewardBackgroundSpans(IReadOnlyList<FossickCellConfig[]> rows, int width, int y, bool[,] covered)
+        {
+            var spans = new List<RewardBackgroundRegion>();
+            var x = 0;
+            while (x < width)
+            {
+                if (covered != null && y >= 0 && y < covered.GetLength(0) && x >= 0 && x < covered.GetLength(1) && covered[y, x])
+                {
+                    x++;
+                    continue;
+                }
+
+                var id = GetRewardBackgroundId(rows, x, y);
+                if (string.IsNullOrEmpty(id) || TryGetRewardBackgroundSize(id, out _, out _))
+                {
+                    x++;
+                    continue;
+                }
+
+                var startX = x;
+                while (x + 1 < width
+                    && (covered == null || y < 0 || y >= covered.GetLength(0) || x + 1 < 0 || x + 1 >= covered.GetLength(1) || !covered[y, x + 1])
+                    && GetRewardBackgroundId(rows, x + 1, y) == id)
+                {
+                    x++;
+                }
+
+                spans.Add(new RewardBackgroundRegion
+                {
+                    id = id,
+                    startX = startX,
+                    endX = x,
+                    startY = y,
+                    endY = y
+                });
+                x++;
+            }
+
+            return spans;
+        }
+
+        private static string GetRewardBackgroundId(IReadOnlyList<FossickCellConfig[]> rows, int x, int y)
+        {
+            if (rows == null || y < 0 || y >= rows.Count)
+            {
+                return null;
+            }
+
+            var row = rows[y];
+            if (row == null || x < 0 || x >= row.Length)
+            {
+                return null;
+            }
+
+            return row[x] == null ? null : row[x].rewardBackgroundId;
+        }
+
+        private static int FindMatchingRewardBackgroundRegion(List<RewardBackgroundRegion> regions, RewardBackgroundRegion span)
+        {
+            for (var i = 0; i < regions.Count; i++)
+            {
+                var region = regions[i];
+                if (region.id == span.id && region.startX == span.startX && region.endX == span.endX)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private void DrawBrushLayerTabs(RectTransform parent)
+        {
+            brushPaletteView.DrawLayerTabs(parent, CreateBrushPaletteState(), CreateBrushPaletteCallbacks());
+        }
+
+        private void DrawBrushPalette(RectTransform parent)
+        {
+            brushPaletteView.DrawBrushes(parent, CreateBrushPaletteState(), CreateBrushPaletteCallbacks());
+        }
+
+        private FossickBrushPaletteView.State CreateBrushPaletteState()
+        {
+            return new FossickBrushPaletteView.State
+            {
+                selectedLayer = selectedLayer,
+                selectedTerrain = selectedTerrain,
+                selectedRewardType = selectedRewardType,
+                selectedRewardId = selectedRewardId,
+                selectedRewardBackgroundId = selectedRewardBackgroundId,
+                selectedRewardBackgroundWidth = selectedRewardBackgroundWidth,
+                selectedRewardBackgroundHeight = selectedRewardBackgroundHeight,
+                selectedDecorationId = selectedDecorationId,
+                selectedFog = selectedFog
+            };
+        }
+
+        private FossickBrushPaletteView.Callbacks CreateBrushPaletteCallbacks()
+        {
+            return new FossickBrushPaletteView.Callbacks
+            {
+                selectLayer = SelectBrushLayer,
+                selectTerrain = SelectTerrainBrush,
+                selectReward = SelectRewardBrush,
+                selectRewardBackground = SelectRewardBackgroundBrush,
+                selectDecoration = SelectDecorationBrush,
+                selectFog = SelectFogBrush
+            };
+        }
+
+        private void SelectBrushLayer(FossickCellLayer layer)
+        {
+            CancelBlockingEditModes();
+            selectedLayer = layer;
+            EnsureBrushForLayer(layer);
+            ClearPendingPaint();
+            editNotice = $"编辑层已切换为 {FormatLayer(layer)}。";
+            Build();
+        }
+
+        private void SelectTerrainBrush(FossickTerrainType terrain)
+        {
+            CancelBlockingEditModes();
+            selectedLayer = FossickCellLayer.Terrain;
+            selectedTerrain = terrain;
+            ClearPendingPaint();
+            editNotice = $"画笔已切换为 {FormatTerrain(terrain)}。";
+            Build();
+        }
+
+        private void SelectRewardBrush(FossickElementType type, string id, string label)
+        {
+            CancelBlockingEditModes();
+            selectedRewardType = type;
+            selectedRewardId = id;
+            ClearPendingPaint();
+            editNotice = $"{FormatLayer(selectedLayer)}画笔已切换为 {label}。";
+            Build();
+        }
+
+        private void SelectRewardBackgroundBrush(string id, string label, int width, int height)
+        {
+            CancelBlockingEditModes();
+            selectedLayer = FossickCellLayer.RewardBackground;
+            selectedRewardBackgroundId = id;
+            selectedRewardBackgroundWidth = width;
+            selectedRewardBackgroundHeight = height;
+            ClearPendingPaint();
+            editNotice = string.IsNullOrEmpty(id)
+                ? "藏宝阁画笔已切换为清空。"
+                : $"藏宝阁画笔已切换为 {label}，点击左上角格子放置区域。";
+            Build();
+        }
+
+        private void SelectDecorationBrush(string id, string label)
+        {
+            CancelBlockingEditModes();
+            selectedLayer = FossickCellLayer.Decoration;
+            selectedDecorationId = id;
+            ClearPendingPaint();
+            editNotice = $"装饰画笔已切换为 {label}。";
+            Build();
+        }
+
+        private void SelectFogBrush(FossickFogType fog, string label)
+        {
+            CancelBlockingEditModes();
+            selectedLayer = FossickCellLayer.Fog;
+            selectedFog = fog;
+            ClearPendingPaint();
+            editNotice = $"阴影画笔已切换为 {label}。";
+            Build();
+        }
+
+        private void EnsureBrushForLayer(FossickCellLayer layer)
+        {
+            if (layer == FossickCellLayer.Reward && selectedRewardType == FossickElementType.Item)
+            {
+                selectedRewardType = FossickElementType.Coin;
+                selectedRewardId = "coin_pile";
+            }
+            else if (layer == FossickCellLayer.Tool && selectedRewardType != FossickElementType.Item && selectedRewardType != FossickElementType.None)
+            {
+                selectedRewardType = FossickElementType.Item;
+                selectedRewardId = "pickaxe";
+            }
+            else if (layer == FossickCellLayer.RewardBackground && selectedRewardBackgroundWidth <= 0 && !string.IsNullOrEmpty(selectedRewardBackgroundId))
+            {
+                selectedRewardBackgroundId = TreasureRoomLargeId;
+                selectedRewardBackgroundWidth = 7;
+                selectedRewardBackgroundHeight = 2;
+            }
+        }
+
+        private void DrawTerrainSmoothGrid(RectTransform parent, IReadOnlyList<FossickCellConfig[]> rows, int width, int height, float cellSize)
+        {
+            if (rows == null || width <= 0 || height <= 0)
+            {
+                return;
+            }
+
+            DrawTerrainSmoothGridLayer(parent, rows, width, height, cellSize, FossickTerrainType.Dirt);
+            DrawTerrainSmoothGridLayer(parent, rows, width, height, cellSize, FossickTerrainType.Stone);
+            DrawTerrainSmoothGridLayer(parent, rows, width, height, cellSize, FossickTerrainType.Unbreakable);
+        }
+
+        private void DrawTerrainSmoothGridLayer(RectTransform parent, IReadOnlyList<FossickCellConfig[]> rows, int width, int height, float cellSize, FossickTerrainType terrain)
+        {
+            if (!FossickArtLibrary.HasAutoTileSprites(terrain))
+            {
+                return;
+            }
+
+            for (var cornerY = 0; cornerY <= height; cornerY++)
+            {
+                for (var cornerX = 0; cornerX <= width; cornerX++)
+                {
+                    var assetIndex = FossickArtLibrary.ResolveConfigCornerAssetIndex(rows, cornerX, cornerY, terrain);
+                    DrawTerrainSmoothAsset(parent, cornerX, cornerY, assetIndex, terrain, cellSize);
+                }
+            }
+        }
+
+        private void DrawTerrainSmoothAsset(RectTransform parent, int x, int y, int assetIndex, FossickTerrainType terrain, float cellSize)
+        {
+            var spriteIndex = ResolveTerrainVisualVariant(assetIndex, x, y, terrain);
+            var sprite = FossickArtLibrary.GetAutoTileSprite(terrain, spriteIndex);
+            if (spriteIndex <= 0 || sprite == null)
+            {
+                return;
+            }
+
+            var rect = CreateRect($"{terrain} Smooth Corner {x},{y}-{spriteIndex}", parent);
+            SetTopLeft(
+                rect,
+                (x - 0.5f) * cellSize - SmoothTileOverlap * 0.5f,
+                (y - 0.5f) * cellSize - SmoothTileOverlap * 0.5f,
+                cellSize + SmoothTileOverlap,
+                cellSize + SmoothTileOverlap);
+
+            var image = AddImage(rect.gameObject, Color.white);
+            image.raycastTarget = false;
+            image.sprite = sprite;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = false;
+        }
+
+        private int ResolveTerrainVisualVariant(int assetIndex, int x, int y, FossickTerrainType terrain)
+        {
+            return assetIndex;
+        }
+
+        private static Color GetCellInteractionColor(FossickCellConfig cell)
+        {
+            return new Color(1f, 1f, 1f, 0f);
+        }
+
+        private void AddCellClickArea(RectTransform parent, FossickFragmentConfig fragment, FossickCellConfig cell)
+        {
+            var rect = CreateRect($"Cell Click {cell.x},{cell.y}", parent);
+            SetTopLeft(rect, cell.x * CellSize, cell.y * CellSize, CellSize, CellSize);
+
+            var image = AddImage(rect.gameObject, new Color(0f, 0f, 0f, 0f));
+            image.raycastTarget = true;
+
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(() =>
+            {
+                ClearPendingPaint();
+                editNotice = null;
+                PaintCell(cell);
+                Build();
+            });
+
+            AddCellDebugOverlay(rect, fragment, cell);
+        }
+
+        private void AddCellDebugOverlay(RectTransform parent, FossickFragmentConfig fragment, FossickCellConfig cell)
+        {
+            var label = GetCellLabel(cell);
+            var text = AddText(parent, label, 12, FontStyle.Bold, new Vector2(CellSize, CellSize), TextAnchor.MiddleCenter);
+            Stretch(text.GetComponent<RectTransform>());
+            text.raycastTarget = false;
+        }
+
+        private void OpenTemplateLibrary()
+        {
+            templateLibraryOpen = true;
+            generationRulesOpen = false;
+            CancelTemplateApplication(null);
+            ClearPendingPaint();
+            Build();
+        }
+
+        private void CloseTemplateLibrary()
+        {
+            templateLibraryOpen = false;
+            Build();
+        }
+
+        private void OpenGenerationRules()
+        {
+            templateLibraryOpen = false;
+            generationRulesOpen = true;
+            CancelTemplateApplication(null);
+            ClearPendingPaint();
+            Build();
+        }
+
+        private void CloseGenerationRules()
+        {
+            generationRulesOpen = false;
+            Build();
+        }
+
+        private void DrawGenerationRulesWindow()
+        {
+            var shade = CreateRect("Generation Rules Shade", root);
+            Stretch(shade);
+            AddImage(shade.gameObject, new Color(0f, 0f, 0f, 0.46f)).raycastTarget = true;
+
+            var panel = CreatePanel("Generation Rules Window", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            panel.pivot = new Vector2(0.5f, 0.5f);
+            panel.anchoredPosition = new Vector2(0f, 8f);
+            panel.sizeDelta = new Vector2(560f, 430f);
+
+            var title = AddText(panel, "生成规则", 22, FontStyle.Bold, new Vector2(220f, 34f));
+            SetTopLeft(title.GetComponent<RectTransform>(), 28f, 24f, 220f, 34f);
+            var desc = AddText(panel, "这里配置整条矿井的随机拼接规则；右侧栏只展示本次生成结果。", 14, FontStyle.Normal, new Vector2(420f, 24f));
+            SetTopLeft(desc.GetComponent<RectTransform>(), 28f, 62f, 420f, 24f);
+            var close = AddButton(panel, "关闭", new Vector2(96f, 34f), CloseGenerationRules);
+            SetTopLeft(close, 436f, 24f, 96f, 34f);
+
+            var content = CreateRect("Generation Rules Content", panel);
+            SetTopLeft(content, 28f, 112f, 500f, 270f);
+            AddVerticalLayout(content.gameObject, 8, TextAnchor.UpperLeft);
+            DrawGenerationRulesEditor(content);
+        }
+
+        private void DrawConsoleWindow()
+        {
+            var shade = CreateRect("Console Shade", root);
+            Stretch(shade);
+            AddImage(shade.gameObject, new Color(0f, 0f, 0f, 0.46f)).raycastTarget = true;
+
+            var panel = CreatePanel("Console Window", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            panel.pivot = new Vector2(0.5f, 0.5f);
+            panel.anchoredPosition = new Vector2(0f, 8f);
+            panel.sizeDelta = new Vector2(980f, 700f);
+
+            var title = AddText(panel, "Console", 22, FontStyle.Bold, new Vector2(220f, 34f));
+            SetTopLeft(title.GetComponent<RectTransform>(), 28f, 24f, 220f, 34f);
+            var desc = AddText(panel, "校验详情、矿井拼接顺序和抽取预览放在这里，避免右侧上下文面板过载。", 14, FontStyle.Normal, new Vector2(620f, 24f));
+            SetTopLeft(desc.GetComponent<RectTransform>(), 28f, 62f, 620f, 24f);
+            var clear = AddButton(panel, "清空日志", new Vector2(96f, 34f), () =>
+            {
+                ClearConsoleLogs();
+                Build();
+            });
+            SetTopLeft(clear, 748f, 24f, 96f, 34f);
+            var close = AddButton(panel, "关闭", new Vector2(96f, 34f), () =>
+            {
+                consoleOpen = false;
+                Build();
+            });
+            SetTopLeft(close, 856f, 24f, 96f, 34f);
+
+            var scrollPanel = CreatePanel("Console Scroll Panel", panel, new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero, Vector2.zero);
+            SetTopLeft(scrollPanel, 28f, 112f, 924f, 548f);
+            var content = CreateVerticalScrollContent(scrollPanel, "Console");
+
+            DrawConsoleOperationLogs(content);
+            AddVerticalSpace(content, 10f);
+            DrawConsoleValidation(content);
+            AddVerticalSpace(content, 10f);
+            DrawConsoleMineSequence(content);
+            AddVerticalSpace(content, 10f);
+            DrawConsoleGeneratedPreview(content);
+        }
+
+        private void DrawConsoleValidation(RectTransform parent)
+        {
+            AddText(parent, "校验详情", 18, FontStyle.Bold, new Vector2(860f, 28f));
+            var validation = controller.LastValidation;
+            if (validation == null || validation.issues == null || validation.issues.Count == 0)
+            {
+                AddText(parent, "没有发现问题。", 13, FontStyle.Normal, new Vector2(860f, 24f));
+                return;
+            }
+
+            for (var i = 0; i < validation.issues.Count; i++)
+            {
+                AddText(parent, FormatIssue(validation.issues[i]), 12, FontStyle.Normal, new Vector2(860f, 22f));
+            }
+        }
+
+        private void DrawConsoleMineSequence(RectTransform parent)
+        {
+            AddText(parent, "矿井拼接顺序", 18, FontStyle.Bold, new Vector2(860f, 28f));
+            var mine = BuildPreviewMine();
+            if (mine.fragments == null || mine.fragments.Count == 0)
+            {
+                AddText(parent, "当前没有生成预览。", 13, FontStyle.Normal, new Vector2(860f, 24f));
+                return;
+            }
+
+            var regularCounter = 0;
+            for (var i = 0; i < mine.fragments.Count; i++)
+            {
+                var span = mine.fragments[i];
+                var tag = span.insertedAsReward ? "奖励插入" : FormatFragmentType(span.fragmentType);
+                var regularTag = string.Empty;
+                if (span.fragmentType == FossickFragmentType.Regular && !span.insertedAsReward)
+                {
+                    regularCounter++;
+                    var generation = mineInstanceSourceConfig == null ? controller.CurrentConfig.generation : mineInstanceSourceConfig.generation;
+                    var groupSize = Mathf.Max(1, generation == null ? 1 : generation.regularGroupSize);
+                    regularTag = $" | 常规#{regularCounter} 组{((regularCounter - 1) / groupSize) + 1}";
+                }
+
+                AddText(parent, $"#{span.sequenceIndex:00} 行 {span.startRow:000}-{span.startRow + span.height - 1:000}  碎片 {span.fragmentId}  {tag}  难度{span.difficulty}{regularTag}", 12, FontStyle.Normal, new Vector2(860f, 22f));
+            }
+        }
+
+        private void DrawConsoleGeneratedPreview(RectTransform parent)
+        {
+            AddText(parent, "抽取预览", 18, FontStyle.Bold, new Vector2(860f, 28f));
+            try
+            {
+                var generator = new FossickFragmentGenerator(controller.CurrentConfig, controller.Seed);
+                var generated = generator.GenerateInitialFragments();
+                while (generated.Count < 8)
+                {
+                    generated.Add(generator.Next());
+                }
+
+                for (var i = 0; i < generated.Count; i++)
+                {
+                    var item = generated[i];
+                    var fragment = item.config;
+                    var tag = item.insertedAsReward ? "奖励插入" : FormatFragmentType(fragment.type);
+                    AddText(parent, $"#{item.sequenceIndex:00}  碎片 {fragment.id}  {tag}", 13, FontStyle.Normal, new Vector2(860f, 20f));
+                    DrawMiniFragment(parent, fragment);
+                }
+            }
+            catch (Exception ex)
+            {
+                AddText(parent, $"预览不可用：{ex.Message}", 13, FontStyle.Normal, new Vector2(860f, 44f));
+            }
+        }
+
+        private void BeginMapReplacementPick()
+        {
+            if (GetSelectedFragment() == null)
+            {
+                CancelTemplateApplication("需要先在模板库中选择一个模板。");
+                Build();
+                return;
+            }
+
+            templateLibraryOpen = false;
+            waitingForReplacementTarget = true;
+            pendingReplacementStartRow = -1;
+            selectedRowStart = -1;
+            selectedRowEnd = -1;
+            isRowSelecting = false;
+            rowSelectionAnchor = -1;
+            editMode = MapStudioEditMode.MineInstance;
+            editNotice = $"请选择左侧行号栏中的 {GetSelectedFragment().height} 行作为应用目标。";
+            ClearPendingPaint();
+            Build();
+        }
+
+        private void DrawTemplateLibraryWindow()
+        {
+            var shade = CreateRect("Template Library Shade", root);
+            Stretch(shade);
+            AddImage(shade.gameObject, new Color(0f, 0f, 0f, 0.46f)).raycastTarget = true;
+
+            var panel = CreatePanel("Template Library Window", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            panel.pivot = new Vector2(0.5f, 0.5f);
+            panel.anchoredPosition = new Vector2(0f, 8f);
+            panel.sizeDelta = new Vector2(1040f, 650f);
+
+            var title = AddText(panel, "模板库", 22, FontStyle.Bold, new Vector2(500f, 34f));
+            SetTopLeft(title.GetComponent<RectTransform>(), 28f, 24f, 500f, 34f);
+            var desc = AddText(panel, "这里管理可复用碎片模板；生成预览会按规则抽取这些模板，不在这里修改预览结果。", 14, FontStyle.Normal, new Vector2(760f, 24f));
+            SetTopLeft(desc.GetComponent<RectTransform>(), 28f, 62f, 680f, 24f);
+            var close = AddButton(panel, "关闭", new Vector2(96f, 34f), CloseTemplateLibrary);
+            SetTopLeft(close, 916f, 24f, 96f, 34f);
+
+            var existingTitle = AddText(panel, "已有模板", 18, FontStyle.Bold, new Vector2(180f, 28f));
+            SetTopLeft(existingTitle.GetComponent<RectTransform>(), 28f, 104f, 180f, 28f);
+            DrawExistingTemplateCards(panel);
+
+            var presetTitle = AddText(panel, "新建预设", 18, FontStyle.Bold, new Vector2(180f, 28f));
+            SetTopLeft(presetTitle.GetComponent<RectTransform>(), 552f, 104f, 180f, 28f);
+            DrawTemplatePresetCard(panel, 552f, 144f, "空白", CreateBlankFragmentPreview(), AddBlankRegularFragment);
+            DrawTemplatePresetCard(panel, 716f, 144f, "全土", CreateFilledRegularFragmentPreview(), AddFilledRegularFragment);
+            DrawTemplatePresetCard(panel, 880f, 144f, "奖励房", CreateRewardRoomFragmentPreview(), AddRewardFragment);
+        }
+
+        private void DrawExistingTemplateCards(RectTransform parent)
+        {
+            var fragments = controller.CurrentConfig.fragments;
+            if (fragments == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < Mathf.Min(8, fragments.Count); i++)
+            {
+                var index = i;
+                var fragment = fragments[i];
+                if (fragment == null)
+                {
+                    continue;
+                }
+
+                var col = i % 2;
+                var row = i / 2;
+                DrawTemplateCard(parent, 28f + col * 250f, 144f + row * 112f, fragment, selectedFragmentIndex == index, () =>
+                {
+                    selectedFragmentIndex = index;
+                    templateEditDraft = null;
+                    templateEditSourceIndex = -1;
+                    templateEditDirty = false;
+                    templateUndoStack.Clear();
+                    templateRedoStack.Clear();
+                    ClearPendingPaint();
+                    editNotice = $"已选择模板 {fragment.id}。可编辑、复制或删除。";
+                    Build();
+                });
+            }
+
+            var edit = AddButton(parent, "编辑当前模板", new Vector2(150f, 34f), () =>
+            {
+                BeginTemplateEdit(selectedFragmentIndex, "已进入模板编辑。修改会先保存在临时副本中。");
+            });
+            SetTopLeft(edit, 28f, 548f, 150f, 34f);
+
+            var copy = AddButton(parent, "复制当前模板", new Vector2(150f, 34f), () =>
+            {
+                templateLibraryOpen = false;
+                CopySelectedFragment();
+            });
+            SetTopLeft(copy, 188f, 548f, 150f, 34f);
+
+            var delete = AddButton(parent, "删除当前模板", new Vector2(150f, 34f), () =>
+            {
+                templateLibraryOpen = false;
+                DeleteSelectedFragment();
+            });
+            SetTopLeft(delete, 28f, 592f, 150f, 34f);
+        }
+
+        private void DrawTemplateCard(RectTransform parent, float x, float y, FossickFragmentConfig fragment, bool selected, Action select)
+        {
+            var card = CreatePanel($"Template Card {fragment.id}", parent, new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero, Vector2.zero);
+            SetTopLeft(card, x, y, 226f, 96f);
+            card.GetComponent<Image>().color = selected ? new Color(0.23f, 0.47f, 0.72f) : Panel;
+
+            var preview = CreateRect("Template Preview", card);
+            SetTopLeft(preview, 12f, 12f, 112f, 72f);
+            AddImage(preview.gameObject, new Color(0.08f, 0.1f, 0.1f));
+            DrawFragmentThumbnail(preview, fragment, 112f, 72f);
+
+            var label = AddText(card, $"{fragment.id}\n{FormatFragmentType(fragment.type)}{(fragment.type == FossickFragmentType.Regular ? " D" + fragment.difficulty : string.Empty)}", 13, FontStyle.Bold, new Vector2(82f, 48f), TextAnchor.MiddleLeft);
+            SetTopLeft(label.GetComponent<RectTransform>(), 136f, 16f, 82f, 48f);
+
+            var button = card.gameObject.AddComponent<Button>();
+            button.targetGraphic = card.GetComponent<Image>();
+            button.onClick.AddListener(() => select?.Invoke());
+        }
+
+        private void DrawTemplatePresetCard(RectTransform parent, float x, float y, string title, FossickFragmentConfig previewFragment, Action create)
+        {
+            var card = CreatePanel(title, parent, new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero, Vector2.zero);
+            SetTopLeft(card, x, y, 136f, 164f);
+
+            var name = AddText(card, title, 15, FontStyle.Bold, new Vector2(112f, 24f), TextAnchor.MiddleCenter);
+            SetTopLeft(name.GetComponent<RectTransform>(), 12f, 12f, 112f, 24f);
+
+            var preview = CreateRect("Preset Preview", card);
+            SetTopLeft(preview, 12f, 44f, 112f, 72f);
+            AddImage(preview.gameObject, new Color(0.08f, 0.1f, 0.1f));
+            DrawFragmentThumbnail(preview, previewFragment, 112f, 72f);
+
+            var button = AddButton(card, "创建", new Vector2(90f, 30f), () =>
+            {
+                templateLibraryOpen = false;
+                create();
+            }, true);
+            SetTopLeft(button, 23f, 126f, 90f, 30f);
+        }
+
+        private void DrawFragmentThumbnail(RectTransform parent, FossickFragmentConfig fragment, float width, float height)
+        {
+            if (fragment == null || fragment.width <= 0 || fragment.height <= 0)
+            {
+                return;
+            }
+
+            var cell = Mathf.Min(width / fragment.width, height / fragment.height);
+            var left = (width - fragment.width * cell) * 0.5f;
+            var top = (height - fragment.height * cell) * 0.5f;
+            for (var y = 0; y < fragment.height; y++)
+            {
+                for (var x = 0; x < fragment.width; x++)
+                {
+                    var source = FindOrCreateCell(fragment, x, y);
+                    var rect = CreateRect($"Thumbnail {x},{y}", parent);
+                    SetTopLeft(rect, left + x * cell, top + y * cell, Mathf.Max(1f, cell - 1f), Mathf.Max(1f, cell - 1f));
+                    AddImage(rect.gameObject, GetCellBaseColor(source)).raycastTarget = false;
+                    DrawCellLayerPreview(rect, source, Mathf.Max(1f, cell - 1f), true);
+                }
+            }
+        }
+
+        private void AddBlankRegularFragment()
+        {
+            var config = controller.CurrentConfig;
+            var nextId = GetNextFragmentId(2000);
+            config.fragments.Add(CreateBlankFragment(nextId));
+            selectedFragmentIndex = config.fragments.Count - 1;
+            editMode = MapStudioEditMode.Template;
+            ClearPendingPaint();
+            editNotice = $"已从模板库创建空白常规模板 {nextId}。它会进入难度 1 常规池，是否出现在矿井由生成规则决定。";
+            MarkTemplateLibraryChanged();
+            controller.Validate();
+            Build();
+        }
+
+        private FossickFragmentConfig CreateBlankFragmentPreview()
+        {
+            return CreateBlankFragment(-1);
+        }
+
+        private FossickFragmentConfig CreateFilledRegularFragmentPreview()
+        {
+            return CreateFilledRegularFragment(-1);
+        }
+
+        private FossickFragmentConfig CreateRewardRoomFragmentPreview()
+        {
+            return CreateRewardRoomFragment(-1);
+        }
+
+        private void AddFilledRegularFragment()
+        {
+            var config = controller.CurrentConfig;
+            var nextId = GetNextFragmentId(2000);
+            config.fragments.Add(CreateFilledRegularFragment(nextId));
+            selectedFragmentIndex = config.fragments.Count - 1;
+            editMode = MapStudioEditMode.Template;
+            ClearPendingPaint();
+            editNotice = $"已从模板库创建全土常规模板 {nextId}，它会进入难度 1 常规池；是否出现在当前矿井取决于种子和抽取规则。";
+            MarkTemplateLibraryChanged();
+            controller.Validate();
+            Build();
+        }
+
+        private void AddRewardFragment()
+        {
+            var config = controller.CurrentConfig;
+            var nextId = GetNextFragmentId(3000);
+            config.fragments.Add(CreateRewardRoomFragment(nextId));
+            selectedFragmentIndex = config.fragments.Count - 1;
+            editMode = MapStudioEditMode.Template;
+            ClearPendingPaint();
+            editNotice = $"已从模板库创建奖励房模板 {nextId}，它会进入奖励插入池；每隔配置数量的常规碎片后可能被插入。";
+            MarkTemplateLibraryChanged();
+            controller.Validate();
+            Build();
+        }
+
+        private void CopySelectedFragment()
+        {
+            var fragment = GetSelectedFragment();
+            if (fragment == null)
+            {
+                return;
+            }
+
+            var copy = CreateBlankFragment(GetNextFragmentId(fragment.id + 10000));
+            copy.type = fragment.type;
+            copy.difficulty = fragment.difficulty;
+            copy.weight = fragment.weight;
+            copy.height = fragment.height;
+            copy.cells.Clear();
+            for (var i = 0; i < fragment.cells.Count; i++)
+            {
+                var cell = fragment.cells[i];
+                    copy.cells.Add(new FossickCellConfig
+                    {
+                        x = cell.x,
+                        y = cell.y,
+                        backgroundId = cell.backgroundId,
+                        rewardBackgroundId = cell.rewardBackgroundId,
+                        terrain = cell.terrain,
+                        hp = cell.hp,
+                        reward = cell.reward,
+                        decorations = cell.decorations == null ? new List<string>() : new List<string>(cell.decorations),
+                        fog = cell.fog,
+                        element = cell.element,
+                        mask = cell.mask
+                    });
+            }
+
+            controller.CurrentConfig.fragments.Add(copy);
+            selectedFragmentIndex = controller.CurrentConfig.fragments.Count - 1;
+            editMode = MapStudioEditMode.Template;
+            ClearPendingPaint();
+            editNotice = $"已复制为新模板 {copy.id}，用途：{FormatTemplatePool(copy)}。";
+            MarkTemplateLibraryChanged();
+            controller.Validate();
+            Build();
+        }
+
+        private void DeleteSelectedFragment()
+        {
+            var fragments = controller.CurrentConfig.fragments;
+            if (fragments == null || fragments.Count <= 1)
+            {
+                return;
+            }
+
+            fragments.RemoveAt(selectedFragmentIndex);
+            selectedFragmentIndex = Mathf.Clamp(selectedFragmentIndex, 0, fragments.Count - 1);
+            ClearPendingPaint();
+            editNotice = "已删除选中模板。";
+            MarkTemplateLibraryChanged();
+            controller.Validate();
+            Build();
+        }
+
+        private void ExportJson()
+        {
+            var project = FossickMapProjectConfig.FromRuntimeConfig(controller.CurrentConfig, mineInstanceSeed);
+            var absoluteFolder = Path.Combine(Application.dataPath, "Fossick/MapStudio/Maps");
+            FossickMapFileService.SaveSplitProject(absoluteFolder, project);
+            exportStatus = $"已导出：{MapConfigFolderAssetPath}/{FossickMapFileService.FragmentLibraryFileName}、{FossickMapFileService.GenerationRulesFileName}、{FossickMapFileService.MapDefinitionFileName}";
+            ClearPendingPaint();
+            editNotice = exportStatus;
+
+#if UNITY_EDITOR
+            AssetDatabase.Refresh();
+#endif
+
+            Build();
+        }
+
+        private FossickFragmentConfig GetSelectedFragment()
+        {
+            var fragments = controller.CurrentConfig.fragments;
+            if (fragments == null || fragments.Count == 0)
+            {
+                return null;
+            }
+
+            selectedFragmentIndex = Mathf.Clamp(selectedFragmentIndex, 0, fragments.Count - 1);
+            return fragments[selectedFragmentIndex];
+        }
+
+        private FossickFragmentConfig CreateBlankFragment(int id)
+        {
+            var config = controller.CurrentConfig;
+            var fragment = new FossickFragmentConfig
+            {
+                id = id,
+                type = FossickFragmentType.Regular,
+                difficulty = 1,
+                width = config.boardWidth,
+                height = config.visibleHeight
+            };
+
+            ResizeFragment(fragment, fragment.height);
+            return fragment;
+        }
+
+        private FossickFragmentConfig CreateFilledRegularFragment(int id)
+        {
+            var fragment = CreateBlankFragment(id);
+            fragment.type = FossickFragmentType.Regular;
+            fragment.difficulty = 1;
+            FillFragmentTerrain(fragment, FossickTerrainType.Dirt);
+            return fragment;
+        }
+
+        private FossickFragmentConfig CreateRewardRoomFragment(int id)
+        {
+            var config = controller.CurrentConfig;
+            var fragment = new FossickFragmentConfig
+            {
+                id = id,
+                type = FossickFragmentType.Reward,
+                difficulty = 0,
+                width = config.boardWidth,
+                height = 2
+            };
+
+            ResizeFragment(fragment, fragment.height);
+            for (var i = 0; i < fragment.cells.Count; i++)
+            {
+                var cell = fragment.cells[i];
+                cell.rewardBackgroundId = "treasure_room";
+                cell.fog = FossickFogType.None;
+                if (cell.y == fragment.height / 2 && cell.x > 0 && cell.x < fragment.width - 1)
+                {
+                    cell.reward = CreateReward(FossickElementType.Coin);
+                    cell.element = cell.reward;
+                }
+            }
+
+            return fragment;
+        }
+
+        private void FillFragmentTerrain(FossickFragmentConfig fragment, FossickTerrainType terrain)
+        {
+            if (fragment == null)
+            {
+                return;
+            }
+
+            for (var y = 0; y < fragment.height; y++)
+            {
+                for (var x = 0; x < fragment.width; x++)
+                {
+                    var cell = FindOrCreateCell(fragment, x, y);
+                    cell.terrain = terrain;
+                    cell.hp = terrain == FossickTerrainType.Stone ? 2 : terrain == FossickTerrainType.Dirt ? 1 : 0;
+                    cell.mask = terrain != FossickTerrainType.Empty;
+                    cell.fog = terrain == FossickTerrainType.Empty ? FossickFogType.None : FossickFogType.Covered;
+                }
+            }
+        }
+
+        private int GetNextFragmentId(int start)
+        {
+            var id = Mathf.Max(1, start);
+            while (FragmentIdExists(id))
+            {
+                id++;
+            }
+
+            return id;
+        }
+
+        private bool FragmentIdExists(int id)
+        {
+            var fragments = controller.CurrentConfig.fragments;
+            if (fragments == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < fragments.Count; i++)
+            {
+                if (fragments[i] != null && fragments[i].id == id)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void ResizeFragment(FossickFragmentConfig fragment, int newHeight)
+        {
+            fragment.height = newHeight;
+            for (var y = 0; y < fragment.height; y++)
+            {
+                for (var x = 0; x < fragment.width; x++)
+                {
+                    FindOrCreateCell(fragment, x, y);
+                }
+            }
+
+            fragment.cells.RemoveAll(cell => cell == null || cell.y >= fragment.height || cell.x >= fragment.width);
+            controller.Validate();
+        }
+
+        private bool TryPaintRewardBackgroundArea(FossickFragmentConfig fragment, int startX, int startY)
+        {
+            if (!IsRewardBackgroundAreaBrush())
+            {
+                return false;
+            }
+
+            if (fragment == null)
+            {
+                return true;
+            }
+
+            if (!CanPlaceRewardBackgroundArea(startX, startY, fragment.width, fragment.height))
+            {
+                editNotice = $"藏宝阁 {selectedRewardBackgroundWidth}x{selectedRewardBackgroundHeight} 超出当前模板范围，请从更靠左或更靠上的格子开始放置。";
+                return true;
+            }
+
+            var rows = BuildConfigRows(fragment);
+            ClearIntersectingRewardBackgroundRooms(rows, startX, startY, selectedRewardBackgroundWidth, selectedRewardBackgroundHeight);
+            for (var y = startY; y < startY + selectedRewardBackgroundHeight; y++)
+            {
+                for (var x = startX; x < startX + selectedRewardBackgroundWidth; x++)
+                {
+                    ApplyRewardBackgroundCell(FindOrCreateCell(fragment, x, y));
+                }
+            }
+
+            isDragPainting = false;
+            selectedPaintCells.Clear();
+            ClearLiveSelectionHighlights();
+            editNotice = $"已在模板 {fragment.id} 放置 {FormatCurrentBrush()}，范围 ({startX},{startY}) - ({startX + selectedRewardBackgroundWidth - 1},{startY + selectedRewardBackgroundHeight - 1})。";
+            controller.Validate();
+            Build();
+            return true;
+        }
+
+        private bool TryPaintRewardBackgroundArea(FossickGeneratedMineRow row, int startX)
+        {
+            if (!IsRewardBackgroundAreaBrush())
+            {
+                return false;
+            }
+
+            if (row == null || controller == null || controller.CurrentConfig == null)
+            {
+                return true;
+            }
+
+            var startRow = row.rowIndex;
+            var width = controller.CurrentConfig.boardWidth;
+            var mine = BuildPreviewMine();
+            var maxRows = mine == null || mine.rows == null ? 0 : mine.rows.Count;
+            if (!CanPlaceRewardBackgroundArea(startX, startRow, width, maxRows))
+            {
+                editNotice = $"藏宝阁 {selectedRewardBackgroundWidth}x{selectedRewardBackgroundHeight} 超出当前矿井预览范围，请从更靠左或更靠上的格子开始放置。";
+                return true;
+            }
+
+            var rows = BuildConfigRows(mine);
+            var intersectingRooms = FindIntersectingRewardBackgroundRooms(rows, width, maxRows, startX, startRow, selectedRewardBackgroundWidth, selectedRewardBackgroundHeight);
+            var overrideStartRow = startRow;
+            var overrideEndRow = startRow + selectedRewardBackgroundHeight - 1;
+            for (var i = 0; i < intersectingRooms.Count; i++)
+            {
+                overrideStartRow = Mathf.Min(overrideStartRow, intersectingRooms[i].startY);
+                overrideEndRow = Mathf.Max(overrideEndRow, intersectingRooms[i].endY);
+            }
+
+            var fragment = CreateMapContentFragmentFromRows(overrideStartRow, overrideEndRow - overrideStartRow + 1, cell =>
+            {
+                var worldY = overrideStartRow + cell.y;
+                if (IsInsideAnyRegion(cell.x, worldY, intersectingRooms))
+                {
+                    ClearRewardBackgroundCell(cell);
+                }
+
+                if (cell.x >= startX
+                    && cell.x < startX + selectedRewardBackgroundWidth
+                    && worldY >= startRow
+                    && worldY < startRow + selectedRewardBackgroundHeight)
+                {
+                    ApplyRewardBackgroundCell(cell);
+                }
+            });
+            SaveMineRowOverride(overrideStartRow, fragment);
+            selectedMineSequenceIndex = -1;
+            isDragPainting = false;
+            selectedPaintCells.Clear();
+            ClearLiveSelectionHighlights();
+            editNotice = $"已在第 {startRow:000}-{startRow + selectedRewardBackgroundHeight - 1:000} 行放置 {FormatCurrentBrush()}，并清理重叠的旧藏宝阁。";
+            controller.Validate();
+            Build();
+            return true;
+        }
+
+        private bool IsRewardBackgroundAreaBrush()
+        {
+            return selectedLayer == FossickCellLayer.RewardBackground
+                && !string.IsNullOrEmpty(selectedRewardBackgroundId)
+                && selectedRewardBackgroundWidth > 0
+                && selectedRewardBackgroundHeight > 0;
+        }
+
+        private bool CanPlaceRewardBackgroundArea(int startX, int startY, int width, int height)
+        {
+            return startX >= 0
+                && startY >= 0
+                && startX + selectedRewardBackgroundWidth <= width
+                && startY + selectedRewardBackgroundHeight <= height;
+        }
+
+        private void ApplyRewardBackgroundCell(FossickCellConfig cell)
+        {
+            if (cell == null)
+            {
+                return;
+            }
+
+            cell.rewardBackgroundId = selectedRewardBackgroundId;
+            cell.terrain = FossickTerrainType.Empty;
+            cell.hp = 0;
+            cell.fog = FossickFogType.None;
+            cell.mask = false;
+            if (IsOreReward(GetReward(cell)))
+            {
+                cell.reward = null;
+                cell.element = null;
+            }
+        }
+
+        private static void ClearRewardBackgroundCell(FossickCellConfig cell)
+        {
+            if (cell != null)
+            {
+                cell.rewardBackgroundId = null;
+            }
+        }
+
+        private static void ClearIntersectingRewardBackgroundRooms(IReadOnlyList<FossickCellConfig[]> rows, int startX, int startY, int width, int height)
+        {
+            var rooms = FindIntersectingRewardBackgroundRooms(rows, GetRowsWidth(rows), rows == null ? 0 : rows.Count, startX, startY, width, height);
+            for (var i = 0; i < rooms.Count; i++)
+            {
+                var region = rooms[i];
+                for (var y = region.startY; y <= region.endY; y++)
+                {
+                    for (var x = region.startX; x <= region.endX; x++)
+                    {
+                        ClearRewardBackgroundCell(GetCell(rows, x, y));
+                    }
+                }
+            }
+        }
+
+        private static int GetRowsWidth(IReadOnlyList<FossickCellConfig[]> rows)
+        {
+            if (rows == null)
+            {
+                return 0;
+            }
+
+            for (var i = 0; i < rows.Count; i++)
+            {
+                if (rows[i] != null)
+                {
+                    return rows[i].Length;
+                }
+            }
+
+            return 0;
+        }
+
+        private static List<RewardBackgroundRegion> FindIntersectingRewardBackgroundRooms(IReadOnlyList<FossickCellConfig[]> rows, int mapWidth, int mapHeight, int startX, int startY, int width, int height)
+        {
+            var rooms = BuildFixedRewardBackgroundRegions(rows, mapWidth, mapHeight);
+            var result = new List<RewardBackgroundRegion>();
+            var endX = startX + width - 1;
+            var endY = startY + height - 1;
+            for (var i = 0; i < rooms.Count; i++)
+            {
+                var room = rooms[i];
+                if (room.startX <= endX && room.endX >= startX && room.startY <= endY && room.endY >= startY)
+                {
+                    result.Add(room);
+                }
+            }
+
+            return result;
+        }
+
+        private static bool IsInsideAnyRegion(int x, int y, List<RewardBackgroundRegion> regions)
+        {
+            if (regions == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < regions.Count; i++)
+            {
+                var region = regions[i];
+                if (x >= region.startX && x <= region.endX && y >= region.startY && y <= region.endY)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static FossickCellConfig GetCell(IReadOnlyList<FossickCellConfig[]> rows, int x, int y)
+        {
+            if (rows == null || y < 0 || y >= rows.Count)
+            {
+                return null;
+            }
+
+            var row = rows[y];
+            return row == null || x < 0 || x >= row.Length ? null : row[x];
+        }
+
+        private void PaintCell(FossickCellConfig cell, bool validate = true)
+        {
+            if (selectedLayer == FossickCellLayer.Terrain)
+            {
+                cell.terrain = selectedTerrain;
+                cell.hp = selectedTerrain == FossickTerrainType.Stone ? 2 : selectedTerrain == FossickTerrainType.Dirt ? 1 : 0;
+                cell.mask = selectedTerrain != FossickTerrainType.Empty;
+                if (!CanAttachOre(cell) && IsOreReward(GetReward(cell)))
+                {
+                    cell.reward = null;
+                    cell.element = null;
+                    editNotice = "当前格不再是可挖掘地形，已移除矿石。";
+                }
+            }
+            else if (selectedLayer == FossickCellLayer.Reward || selectedLayer == FossickCellLayer.Tool)
+            {
+                var reward = CreateSelectedReward();
+                if (IsOreReward(reward) && !CanAttachOre(cell))
+                {
+                    editNotice = "矿石只能埋在可挖掘地形（土或石头）上，不能放在空格或基岩上。";
+                    return;
+                }
+
+                cell.reward = reward;
+                cell.element = cell.reward;
+            }
+            else if (selectedLayer == FossickCellLayer.Decoration)
+            {
+                cell.decorations = string.IsNullOrEmpty(selectedDecorationId)
+                    ? new List<string>()
+                    : new List<string> { selectedDecorationId };
+                cell.decor = new List<string>(cell.decorations);
+            }
+            else if (selectedLayer == FossickCellLayer.Fog)
+            {
+                cell.fog = selectedFog;
+                cell.mask = selectedFog == FossickFogType.Covered || cell.terrain != FossickTerrainType.Empty;
+            }
+            else if (selectedLayer == FossickCellLayer.RewardBackground)
+            {
+                cell.rewardBackgroundId = string.IsNullOrEmpty(selectedRewardBackgroundId) ? null : selectedRewardBackgroundId;
+            }
+
+            if (validate)
+            {
+                controller.Validate();
+            }
+        }
+
+        private static FossickElementConfig CreateReward(FossickElementType type)
+        {
+            if (type == FossickElementType.None)
+            {
+                return null;
+            }
+
+            return new FossickElementConfig
+            {
+                type = type,
+                id = GetDefaultRewardId(type),
+                amount = GetDefaultRewardAmount(type)
+            };
+        }
+
+        private FossickElementConfig CreateSelectedReward()
+        {
+            if (selectedRewardType == FossickElementType.None)
+            {
+                return null;
+            }
+
+            return new FossickElementConfig
+            {
+                type = selectedRewardType,
+                id = string.IsNullOrEmpty(selectedRewardId) ? GetDefaultRewardId(selectedRewardType) : selectedRewardId,
+                amount = GetDefaultRewardAmount(selectedRewardType, selectedRewardId)
+            };
+        }
+
+        private bool PaintMineCell(FossickGeneratedMineRow row, int x, Image image, Text text, RectTransform layerRoot)
+        {
+            if (row == null || row.fragment == null || row.fragment.config == null)
+            {
+                return false;
+            }
+
+            if (IsApplyingTemplate)
+            {
+                return false;
+            }
+
+            if (IsRowBatchMode)
+            {
+                editNotice = "当前处于批量行操作模式，格子绘制已暂时关闭。";
+                return false;
+            }
+
+            if (TryPaintRewardBackgroundArea(row, x))
+            {
+                return true;
+            }
+
+            if (TryFindRowOverride(row.rowIndex, out var rowOverride, out var overrideLocalRow) && rowOverride.fragment != null)
+            {
+                selectedMineSequenceIndex = row.fragment.sequenceIndex;
+                var overrideCell = FindOrCreateCell(rowOverride.fragment, x, overrideLocalRow);
+                PaintCell(overrideCell, false);
+                CopyCellVisualState(overrideCell, row.cells[x]);
+                UpdateMineCellVisual(image, text, layerRoot, row.cells[x]);
+                editNotice = $"正在编辑第 {row.rowIndex:000} 行的地图格子 ({x},{overrideLocalRow})。";
+                return true;
+            }
+
+            selectedMineSequenceIndex = row.fragment.sequenceIndex;
+            var occurrenceFragment = GetOrCreateMineOccurrenceOverride(row.fragment);
+            var cell = FindOrCreateCell(occurrenceFragment, x, row.localRow);
+            PaintCell(cell, false);
+            CopyCellVisualState(cell, row.cells[x]);
+            UpdateMineCellVisual(image, text, layerRoot, row.cells[x]);
+            editNotice = $"当前格子来自预览段 #{row.fragment.sequenceIndex:00}，预览内容不可直接编辑。";
+            return true;
+        }
+
+        private bool PaintTemplateCell(FossickFragmentConfig fragment, FossickCellConfig cell, Image image, Text text, RectTransform layerRoot)
+        {
+            if (fragment == null || cell == null)
+            {
+                return false;
+            }
+
+            RecordTemplateUndoSnapshot();
+            if (TryPaintRewardBackgroundArea(fragment, cell.x, cell.y))
+            {
+                MarkTemplateDraftChanged();
+                editNotice = $"正在编辑模板 {fragment.id} 的藏宝阁区域。保存后生效。";
+                return true;
+            }
+
+            PaintCell(cell, false);
+            UpdateMineCellVisual(image, text, layerRoot, cell);
+            editNotice = $"正在编辑模板 {fragment.id} 的格子 ({cell.x},{cell.y})。保存前不会改动模板库。";
+            MarkTemplateDraftChanged();
+            return true;
+        }
+
+        private void CancelTemplateApplication(string notice)
+        {
+            waitingForReplacementTarget = false;
+            pendingReplacementStartRow = -1;
+            selectedRowStart = -1;
+            selectedRowEnd = -1;
+            isRowSelecting = false;
+            rowSelectionAnchor = -1;
+            if (!string.IsNullOrEmpty(notice))
+            {
+                editNotice = notice;
+            }
+        }
+
+        private void CancelBlockingEditModes()
+        {
+            CancelTemplateApplication(null);
+            if (editMode == MapStudioEditMode.RowBatch)
+            {
+                editMode = MapStudioEditMode.MineInstance;
+                selectedRowStart = -1;
+                selectedRowEnd = -1;
+                rowSelectionAnchor = -1;
+                isRowSelecting = false;
+            }
+        }
+
+        private void BeginRowSelection(int rowIndex)
+        {
+            if (!IsApplyingTemplate && !IsRowBatchMode)
+            {
+                return;
+            }
+
+            isRowSelecting = true;
+            rowSelectionAnchor = rowIndex;
+            selectedRowStart = rowIndex;
+            selectedRowEnd = IsApplyingTemplate
+                ? rowIndex + Mathf.Max(1, GetSelectedFragment().height) - 1
+                : rowIndex;
+            SyncPendingReplacementFromSelectedRows();
+            editNotice = IsApplyingTemplate
+                ? $"已选择第 {selectedRowStart:000}-{selectedRowEnd:000} 行作为模板应用目标。"
+                : $"已选择第 {selectedRowStart:000} 行，可继续拖选更多行。";
+            Build();
+        }
+
+        private void ExtendRowSelection(int rowIndex)
+        {
+            if ((!IsApplyingTemplate && !IsRowBatchMode) || !isRowSelecting)
+            {
+                return;
+            }
+
+            selectedRowStart = Mathf.Min(rowSelectionAnchor, rowIndex);
+            selectedRowEnd = Mathf.Max(rowSelectionAnchor, rowIndex);
+            SyncPendingReplacementFromSelectedRows();
+            editNotice = IsApplyingTemplate
+                ? $"已拖选第 {selectedRowStart:000}-{selectedRowEnd:000} 行作为模板应用目标。"
+                : $"已拖选第 {selectedRowStart:000}-{selectedRowEnd:000} 行。";
+            Build();
+        }
+
+        private void FinishRowSelection()
+        {
+            if (!isRowSelecting)
+            {
+                return;
+            }
+
+            isRowSelecting = false;
+            rowSelectionAnchor = -1;
+            SyncPendingReplacementFromSelectedRows();
+        }
+
+        private void SyncPendingReplacementFromSelectedRows()
+        {
+            pendingReplacementStartRow = IsApplyingTemplate ? GetSelectedRowMin() : -1;
+        }
+
+        private void BeginRowBatchMode()
+        {
+            CancelTemplateApplication(null);
+            editMode = MapStudioEditMode.RowBatch;
+            selectedRowStart = -1;
+            selectedRowEnd = -1;
+            rowSelectionAnchor = -1;
+            isRowSelecting = false;
+            ClearPendingPaint();
+            editNotice = "已进入批量行操作。请在左侧行号栏点选或拖选行。";
+            Build();
+        }
+
+        private void EndRowBatchMode(string notice)
+        {
+            if (editMode == MapStudioEditMode.RowBatch)
+            {
+                editMode = MapStudioEditMode.MineInstance;
+            }
+
+            selectedRowStart = -1;
+            selectedRowEnd = -1;
+            rowSelectionAnchor = -1;
+            isRowSelecting = false;
+            if (!string.IsNullOrEmpty(notice))
+            {
+                editNotice = notice;
+            }
+        }
+
+        private void ApplySelectedTemplateToMineRows(int startRow)
+        {
+            var fragment = GetSelectedFragment();
+            if (fragment == null)
+            {
+                editNotice = "需要先在模板库中选择要应用的模板。";
+                Build();
+                return;
+            }
+
+            if (!CanApplySelectedRowsToTemplate())
+            {
+                editNotice = $"当前选择 {GetSelectedRowCount()} 行，模板需要 {fragment.height} 行。请在左侧行号栏重新选择。";
+                Build();
+                return;
+            }
+
+            var mine = BuildPreviewMine();
+            if (startRow < 0 || mine == null || mine.rows == null || startRow >= mine.rows.Count)
+            {
+                editNotice = $"第 {startRow:000} 行不存在，无法应用模板。";
+                Build();
+                return;
+            }
+
+            var clone = CloneFragmentForMineOccurrence(fragment);
+            if (clone == null)
+            {
+                return;
+            }
+
+            SaveMineRowOverride(startRow, clone);
+            editMode = MapStudioEditMode.MineInstance;
+            selectedMineSequenceIndex = -1;
+            CancelTemplateApplication(null);
+            selectedRowStart = -1;
+            selectedRowEnd = -1;
+            ClearPendingPaint();
+            editNotice = $"已将模板 {fragment.id} 放入第 {startRow:000}-{startRow + clone.height - 1:000} 行。之后这里就是地图内容，可以直接编辑。";
+            controller.Validate();
+            Build();
+        }
+
+        private void FillSelectedRowsWithBrush()
+        {
+            if (!IsRowBatchMode || GetSelectedRowCount() <= 0)
+            {
+                return;
+            }
+
+            var startRow = GetSelectedRowMin();
+            var count = GetSelectedRowCount();
+            var fragment = CreateMapContentFragmentFromRows(startRow, count, cell => PaintCell(cell, false));
+            SaveMineRowOverride(startRow, fragment);
+            EndRowBatchMode($"已用当前画笔填充第 {startRow:000}-{startRow + count - 1:000} 行。");
+            controller.Validate();
+            Build();
+        }
+
+        private void ClearSelectedRowsLayer()
+        {
+            if (!IsRowBatchMode || GetSelectedRowCount() <= 0)
+            {
+                return;
+            }
+
+            var startRow = GetSelectedRowMin();
+            var count = GetSelectedRowCount();
+            var fragment = CreateMapContentFragmentFromRows(startRow, count, ClearCurrentLayer);
+            SaveMineRowOverride(startRow, fragment);
+            EndRowBatchMode($"已清空第 {startRow:000}-{startRow + count - 1:000} 行的 {FormatLayer(selectedLayer)}。");
+            controller.Validate();
+            Build();
+        }
+
+        private void DuplicateSelectedRowsDownward()
+        {
+            if (!IsRowBatchMode || GetSelectedRowCount() <= 0)
+            {
+                return;
+            }
+
+            var sourceStart = GetSelectedRowMin();
+            var count = GetSelectedRowCount();
+            var targetStart = GetSelectedRowMax() + 1;
+            var fragment = CreateMapContentFragmentFromRows(sourceStart, count, null);
+            SaveMineRowOverride(targetStart, fragment);
+            minePreviewRows = Mathf.Max(minePreviewRows, targetStart + count + controller.CurrentConfig.visibleHeight);
+            EndRowBatchMode($"已把第 {sourceStart:000}-{sourceStart + count - 1:000} 行复制到第 {targetStart:000}-{targetStart + count - 1:000} 行。");
+            controller.Validate();
+            Build();
+        }
+
+        private FossickFragmentConfig CreateMapContentFragmentFromRows(int startRow, int count, Action<FossickCellConfig> mutate)
+        {
+            var mine = BuildPreviewMine();
+            var width = controller.CurrentConfig.boardWidth;
+            var fragment = new FossickFragmentConfig
+            {
+                id = 800000 + startRow,
+                type = FossickFragmentType.Regular,
+                difficulty = 0,
+                weight = 0,
+                width = width,
+                height = count,
+                cells = new List<FossickCellConfig>()
+            };
+
+            for (var localY = 0; localY < count; localY++)
+            {
+                var row = FindGeneratedRow(mine, startRow + localY);
+                for (var x = 0; x < width; x++)
+                {
+                    var source = row != null && row.cells != null && x < row.cells.Length
+                        ? row.cells[x]
+                        : null;
+                    var cell = CloneCellForRowContent(source, x, localY);
+                    mutate?.Invoke(cell);
+                    fragment.cells.Add(cell);
+                }
+            }
+
+            return fragment;
+        }
+
+        private static FossickGeneratedMineRow FindGeneratedRow(FossickGeneratedMine mine, int rowIndex)
+        {
+            if (mine == null || mine.rows == null)
+            {
+                return null;
+            }
+
+            for (var i = 0; i < mine.rows.Count; i++)
+            {
+                var row = mine.rows[i];
+                if (row != null && row.rowIndex == rowIndex)
+                {
+                    return row;
+                }
+            }
+
+            return null;
+        }
+
+        private static FossickCellConfig CloneCellForRowContent(FossickCellConfig source, int x, int y)
+        {
+            if (source == null)
+            {
+                return new FossickCellConfig
+                {
+                    x = x,
+                    y = y,
+                    terrain = FossickTerrainType.Empty,
+                    hp = 0,
+                    fog = FossickFogType.None
+                };
+            }
+
+            return new FossickCellConfig
+            {
+                x = x,
+                y = y,
+                backgroundId = source.backgroundId,
+                rewardBackgroundId = source.rewardBackgroundId,
+                terrain = source.terrain,
+                hp = source.hp,
+                reward = source.reward,
+                decorations = source.decorations == null ? new List<string>() : new List<string>(source.decorations),
+                decor = source.decor == null ? new List<string>() : new List<string>(source.decor),
+                fog = source.fog,
+                element = source.element,
+                mask = source.mask
+            };
+        }
+
+        private void ClearCurrentLayer(FossickCellConfig cell)
+        {
+            if (cell == null)
+            {
+                return;
+            }
+
+            if (selectedLayer == FossickCellLayer.Terrain)
+            {
+                cell.terrain = FossickTerrainType.Empty;
+                cell.hp = 0;
+                cell.mask = cell.fog == FossickFogType.Covered;
+            }
+            else if (selectedLayer == FossickCellLayer.Reward || selectedLayer == FossickCellLayer.Tool)
+            {
+                cell.reward = null;
+                cell.element = null;
+            }
+            else if (selectedLayer == FossickCellLayer.Decoration)
+            {
+                cell.decorations = new List<string>();
+                cell.decor = new List<string>();
+            }
+            else if (selectedLayer == FossickCellLayer.Fog)
+            {
+                cell.fog = FossickFogType.None;
+                cell.mask = cell.terrain != FossickTerrainType.Empty;
+            }
+            else if (selectedLayer == FossickCellLayer.RewardBackground)
+            {
+                cell.rewardBackgroundId = null;
+            }
+        }
+
+        private void FinishDragPainting()
+        {
+            if (!isDragPainting)
+            {
+                return;
+            }
+
+            isDragPainting = false;
+            selectedPaintCells.Clear();
+            ClearLiveSelectionHighlights();
+            controller.Validate();
+            Build();
+        }
+
+        private bool IsSelectedRow(int rowIndex)
+        {
+            if (selectedRowStart < 0 || selectedRowEnd < 0)
+            {
+                return false;
+            }
+
+            return rowIndex >= GetSelectedRowMin() && rowIndex <= GetSelectedRowMax();
+        }
+
+        private int GetSelectedRowMin()
+        {
+            if (selectedRowStart < 0 || selectedRowEnd < 0)
+            {
+                return -1;
+            }
+
+            return Mathf.Min(selectedRowStart, selectedRowEnd);
+        }
+
+        private int GetSelectedRowMax()
+        {
+            if (selectedRowStart < 0 || selectedRowEnd < 0)
+            {
+                return -1;
+            }
+
+            return Mathf.Max(selectedRowStart, selectedRowEnd);
+        }
+
+        private int GetSelectedRowCount()
+        {
+            var min = GetSelectedRowMin();
+            var max = GetSelectedRowMax();
+            return min < 0 || max < 0 ? 0 : max - min + 1;
+        }
+
+        private bool CanApplySelectedRowsToTemplate()
+        {
+            var fragment = GetSelectedFragment();
+            if (!IsApplyingTemplate || fragment == null)
+            {
+                return false;
+            }
+
+            var count = GetSelectedRowCount();
+            return count == Mathf.Max(1, fragment.height);
+        }
+
+        private string GetApplyButtonLabel()
+        {
+            var fragment = GetSelectedFragment();
+            if (fragment == null || GetSelectedRowCount() <= 0)
+            {
+                return "先选行";
+            }
+
+            return CanApplySelectedRowsToTemplate() ? "确认应用" : $"需选{fragment.height}行";
+        }
+
+        private string FormatSelectedRows()
+        {
+            var min = GetSelectedRowMin();
+            var max = GetSelectedRowMax();
+            if (min < 0 || max < 0)
+            {
+                return "未选择";
+            }
+
+            return min == max ? $"{min:000}" : $"{min:000}-{max:000}";
+        }
+
+        private Color GetRowBarColor(int rowIndex)
+        {
+            if ((!IsApplyingTemplate && !IsRowBatchMode) || !IsSelectedRow(rowIndex))
+            {
+                return new Color(0.07f, 0.09f, 0.09f, 1f);
+            }
+
+            return IsApplyingTemplate
+                ? new Color(0.75f, 0.48f, 0.12f, 0.95f)
+                : new Color(0.18f, 0.42f, 0.72f, 0.95f);
+        }
+
+        private static void CopyCellVisualState(FossickCellConfig source, FossickCellConfig target)
+        {
+            if (source == null || target == null)
+            {
+                return;
+            }
+
+            target.terrain = source.terrain;
+            target.hp = source.hp;
+            target.backgroundId = source.backgroundId;
+            target.rewardBackgroundId = source.rewardBackgroundId;
+            target.reward = source.reward;
+            target.decorations = source.decorations == null ? new List<string>() : new List<string>(source.decorations);
+            target.fog = source.fog;
+            target.element = source.element;
+            target.mask = source.mask;
+        }
+
+        private void UpdateMineCellVisual(Image image, Text text, RectTransform layerRoot, FossickCellConfig cell)
+        {
+            if (image != null)
+            {
+                image.sprite = null;
+                image.color = GetCellInteractionColor(cell);
+            }
+
+            RefreshCellLayerPreview(layerRoot, cell);
+
+            if (text != null)
+            {
+                text.text = GetMiniCellLabel(cell);
+            }
+        }
+
+        private void RefreshCellLayerPreview(RectTransform layerRoot, FossickCellConfig cell)
+        {
+            if (layerRoot == null)
+            {
+                return;
+            }
+
+            for (var i = layerRoot.childCount - 1; i >= 0; i--)
+            {
+                var child = layerRoot.GetChild(i);
+                child.gameObject.SetActive(false);
+                if (Application.isPlaying)
+                {
+                    Destroy(child.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(child.gameObject);
+                }
+            }
+
+            DrawCellLayerPreview(layerRoot, cell, MineCellSize, false);
+        }
+
+        private bool IsPendingPaint(int fragmentId, int x, int y)
+        {
+            return pendingPaintFragmentId == fragmentId && pendingPaintX == x && pendingPaintY == y;
+        }
+
+        private void ClearPendingPaint()
+        {
+            pendingPaintFragmentId = -1;
+            pendingPaintX = -1;
+            pendingPaintY = -1;
+        }
+
+        private static FossickGeneratedFragmentSpan FindGeneratedSpan(FossickGeneratedMine mine, int sequenceIndex)
+        {
+            if (mine == null || mine.fragments == null || sequenceIndex < 0)
+            {
+                return null;
+            }
+
+            for (var i = 0; i < mine.fragments.Count; i++)
+            {
+                var span = mine.fragments[i];
+                if (span != null && span.sequenceIndex == sequenceIndex)
+                {
+                    return span;
+                }
+            }
+
+            return null;
+        }
+
+        private static string FormatMineSelection(FossickGeneratedFragmentSpan span)
+        {
+            if (span == null)
+            {
+                return "当前预览段 未选择";
+            }
+
+            return $"当前预览段 #{span.sequenceIndex:00}";
+        }
+
+        private string FormatSelectedTemplateForReplacement()
+        {
+            var fragment = GetSelectedFragment();
+            if (fragment == null)
+            {
+                return "未选择";
+            }
+
+            return $"{fragment.id}（{FormatFragmentType(fragment.type)}）";
+        }
+
+        private static string FormatTemplateCounts(List<FossickFragmentConfig> fragments)
+        {
+            if (fragments == null || fragments.Count == 0)
+            {
+                return "模板数量：0";
+            }
+
+            var tutorial = 0;
+            var regular = 0;
+            var reward = 0;
+            for (var i = 0; i < fragments.Count; i++)
+            {
+                var fragment = fragments[i];
+                if (fragment == null)
+                {
+                    continue;
+                }
+
+                if (fragment.type == FossickFragmentType.Tutorial)
+                {
+                    tutorial++;
+                }
+                else if (fragment.type == FossickFragmentType.Reward)
+                {
+                    reward++;
+                }
+                else
+                {
+                    regular++;
+                }
+            }
+
+            return $"共 {fragments.Count} 个模板\n新手 {tutorial}  常规 {regular}  奖励 {reward}";
+        }
+
+        private static string FormatTemplatePool(FossickFragmentConfig fragment)
+        {
+            if (fragment == null)
+            {
+                return "未选择模板";
+            }
+
+            if (fragment.type == FossickFragmentType.Tutorial)
+            {
+                return "新手初始模板，按 ID 顺序拼接在矿井开头";
+            }
+
+            if (fragment.type == FossickFragmentType.Reward)
+            {
+                return "奖励模板，进入奖励插入池";
+            }
+
+            return $"常规模板，进入难度 {fragment.difficulty} 抽取池";
+        }
+
+        private string FormatMineInstanceSummary()
+        {
+            if (!mineInstanceGenerated || mineInstanceSourceConfig == null)
+            {
+                return "当前预览：未生成";
+            }
+
+            var generation = mineInstanceSourceConfig.generation;
+            var dirty = generationRulesDirty ? "\n有未应用的生成规则修改" : string.Empty;
+            if (generation == null)
+            {
+                return $"当前预览种子：{mineInstanceSeed}\n按需无限追加{dirty}";
+            }
+
+            return $"当前预览种子：{mineInstanceSeed}\n半随机一轮 {generation.regularGroupSize} 段\n藏宝阁 {generation.rewardInsertMin}-{generation.rewardInsertMax}，按需无限{dirty}";
+        }
+
+        private FossickFragmentConfig GetOrCreateMineOccurrenceOverride(FossickGeneratedFragmentSpan span)
+        {
+            if (span == null)
+            {
+                return null;
+            }
+
+            if (mineOccurrenceOverrides.TryGetValue(span.sequenceIndex, out var fragment) && fragment != null)
+            {
+                return fragment;
+            }
+
+            fragment = CloneFragmentForMineOccurrence(span.config);
+            mineOccurrenceOverrides[span.sequenceIndex] = fragment;
+            SaveMineOccurrenceOverride(span.sequenceIndex, fragment);
+            return fragment;
+        }
+
+        private void LoadMineOccurrenceOverrides()
+        {
+            mineOccurrenceOverrides.Clear();
+            var generation = controller == null || controller.CurrentConfig == null ? null : controller.CurrentConfig.generation;
+            if (generation == null || generation.sequenceOverrides == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < generation.sequenceOverrides.Count; i++)
+            {
+                var item = generation.sequenceOverrides[i];
+                if (item != null && item.fragment != null)
+                {
+                    mineOccurrenceOverrides[item.sequenceIndex] = item.fragment;
+                }
+            }
+        }
+
+        private void SaveMineOccurrenceOverride(int sequenceIndex, FossickFragmentConfig fragment)
+        {
+            var generation = controller == null || controller.CurrentConfig == null ? null : controller.CurrentConfig.generation;
+            if (generation == null)
+            {
+                return;
+            }
+
+            if (generation.sequenceOverrides == null)
+            {
+                generation.sequenceOverrides = new List<FossickSequenceOverrideConfig>();
+            }
+
+            for (var i = 0; i < generation.sequenceOverrides.Count; i++)
+            {
+                var item = generation.sequenceOverrides[i];
+                if (item != null && item.sequenceIndex == sequenceIndex)
+                {
+                    item.fragment = fragment;
+                    return;
+                }
+            }
+
+            generation.sequenceOverrides.Add(new FossickSequenceOverrideConfig
+            {
+                sequenceIndex = sequenceIndex,
+                fragment = fragment
+            });
+        }
+
+        private void SaveMineRowOverride(int startRow, FossickFragmentConfig fragment)
+        {
+            var generation = controller == null || controller.CurrentConfig == null ? null : controller.CurrentConfig.generation;
+            if (generation == null || fragment == null || fragment.height <= 0)
+            {
+                return;
+            }
+
+            if (generation.rowOverrides == null)
+            {
+                generation.rowOverrides = new List<FossickRowOverrideConfig>();
+            }
+
+            var targetStart = startRow;
+            var targetEnd = startRow + fragment.height - 1;
+            var mergeStart = targetStart;
+            var mergeEnd = targetEnd;
+            var hasIntersectingOverride = false;
+            for (var i = generation.rowOverrides.Count - 1; i >= 0; i--)
+            {
+                var item = generation.rowOverrides[i];
+                if (item == null || item.fragment == null || item.fragment.height <= 0)
+                {
+                    continue;
+                }
+
+                var itemEnd = item.startRow + item.fragment.height - 1;
+                if (item.startRow <= targetEnd && itemEnd >= targetStart)
+                {
+                    hasIntersectingOverride = true;
+                    mergeStart = Mathf.Min(mergeStart, item.startRow);
+                    mergeEnd = Mathf.Max(mergeEnd, itemEnd);
+                }
+            }
+
+            if (hasIntersectingOverride)
+            {
+                fragment = MergeRowOverrideFragment(mergeStart, mergeEnd, startRow, fragment);
+                startRow = mergeStart;
+            }
+
+            for (var i = generation.rowOverrides.Count - 1; i >= 0; i--)
+            {
+                var item = generation.rowOverrides[i];
+                if (item == null || item.fragment == null || item.fragment.height <= 0)
+                {
+                    continue;
+                }
+
+                var itemEnd = item.startRow + item.fragment.height - 1;
+                if (item.startRow <= mergeEnd && itemEnd >= mergeStart)
+                {
+                    generation.rowOverrides.RemoveAt(i);
+                }
+            }
+
+            generation.rowOverrides.Add(new FossickRowOverrideConfig
+            {
+                startRow = startRow,
+                fragment = fragment
+            });
+        }
+
+        private FossickFragmentConfig MergeRowOverrideFragment(int mergeStartRow, int mergeEndRow, int incomingStartRow, FossickFragmentConfig incoming)
+        {
+            var count = mergeEndRow - mergeStartRow + 1;
+            var mine = BuildPreviewMine();
+            var width = controller.CurrentConfig.boardWidth;
+            var merged = new FossickFragmentConfig
+            {
+                id = 800000 + mergeStartRow,
+                type = FossickFragmentType.Regular,
+                difficulty = 0,
+                weight = 0,
+                width = width,
+                height = count,
+                cells = new List<FossickCellConfig>()
+            };
+
+            for (var localY = 0; localY < count; localY++)
+            {
+                var row = FindGeneratedRow(mine, mergeStartRow + localY);
+                for (var x = 0; x < width; x++)
+                {
+                    var source = row != null && row.cells != null && x < row.cells.Length
+                        ? row.cells[x]
+                        : null;
+                    merged.cells.Add(CloneCellForRowContent(source, x, localY));
+                }
+            }
+
+            for (var y = 0; y < incoming.height; y++)
+            {
+                var mergedY = incomingStartRow + y - mergeStartRow;
+                if (mergedY < 0 || mergedY >= merged.height)
+                {
+                    continue;
+                }
+
+                for (var x = 0; x < width; x++)
+                {
+                    var incomingCell = FindCell(incoming, x, y);
+                    if (incomingCell == null)
+                    {
+                        continue;
+                    }
+
+                    var index = mergedY * width + x;
+                    if (index >= 0 && index < merged.cells.Count)
+                    {
+                        merged.cells[index] = CloneCellForRowContent(incomingCell, x, mergedY);
+                    }
+                }
+            }
+
+            return merged;
+        }
+
+        private bool TryFindRowOverride(int rowIndex, out FossickRowOverrideConfig rowOverride, out int localRow)
+        {
+            rowOverride = null;
+            localRow = -1;
+
+            var generation = controller == null || controller.CurrentConfig == null ? null : controller.CurrentConfig.generation;
+            var overrides = generation == null ? null : generation.rowOverrides;
+            if (overrides == null)
+            {
+                return false;
+            }
+
+            for (var i = overrides.Count - 1; i >= 0; i--)
+            {
+                var item = overrides[i];
+                if (item == null || item.fragment == null)
+                {
+                    continue;
+                }
+
+                var height = Mathf.Max(1, item.fragment.height);
+                if (rowIndex < item.startRow || rowIndex >= item.startRow + height)
+                {
+                    continue;
+                }
+
+                rowOverride = item;
+                localRow = rowIndex - item.startRow;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static FossickFragmentConfig CloneFragmentForMineOccurrence(FossickFragmentConfig source)
+        {
+            if (source == null)
+            {
+                return null;
+            }
+
+            var clone = new FossickFragmentConfig
+            {
+                id = source.id,
+                type = source.type,
+                difficulty = source.difficulty,
+                weight = source.weight,
+                width = source.width,
+                height = source.height,
+                tags = source.tags == null ? new List<string>() : new List<string>(source.tags),
+                cells = new List<FossickCellConfig>()
+            };
+
+            if (source.cells != null)
+            {
+                for (var i = 0; i < source.cells.Count; i++)
+                {
+                    var cell = source.cells[i];
+                    if (cell == null)
+                    {
+                        continue;
+                    }
+
+                    clone.cells.Add(new FossickCellConfig
+                    {
+                        x = cell.x,
+                        y = cell.y,
+                        backgroundId = cell.backgroundId,
+                        rewardBackgroundId = cell.rewardBackgroundId,
+                        terrain = cell.terrain,
+                        hp = cell.hp,
+                        reward = cell.reward,
+                        decorations = cell.decorations == null ? new List<string>() : new List<string>(cell.decorations),
+                        fog = cell.fog,
+                        element = cell.element,
+                        decor = cell.decor == null ? new List<string>() : new List<string>(cell.decor),
+                        mask = cell.mask
+                    });
+                }
+            }
+
+            return clone;
+        }
+
+        private static FossickFragmentType NextFragmentType(FossickFragmentType current)
+        {
+            return current == FossickFragmentType.Reward ? FossickFragmentType.Tutorial : current + 1;
+        }
+
+        private static void NormalizeFragmentDifficulty(FossickFragmentConfig fragment)
+        {
+            if (fragment == null)
+            {
+                return;
+            }
+
+            fragment.difficulty = fragment.type == FossickFragmentType.Regular
+                ? Mathf.Max(1, fragment.difficulty)
+                : 0;
+        }
+
+        private static FossickCellConfig FindOrCreateCell(FossickFragmentConfig fragment, int x, int y)
+        {
+            for (var i = 0; i < fragment.cells.Count; i++)
+            {
+                var cell = fragment.cells[i];
+                if (cell != null && cell.x == x && cell.y == y)
+                {
+                    return cell;
+                }
+            }
+
+            var created = new FossickCellConfig
+            {
+                x = x,
+                y = y,
+                terrain = FossickTerrainType.Empty,
+                hp = 0,
+                fog = FossickFogType.None
+            };
+            fragment.cells.Add(created);
+            return created;
+        }
+
+        private static FossickCellConfig FindCell(FossickFragmentConfig fragment, int x, int y)
+        {
+            if (fragment == null || fragment.cells == null)
+            {
+                return null;
+            }
+
+            for (var i = 0; i < fragment.cells.Count; i++)
+            {
+                var cell = fragment.cells[i];
+                if (cell != null && cell.x == x && cell.y == y)
+                {
+                    return cell;
+                }
+            }
+
+            return null;
+        }
+
+        private RectTransform CreatePanel(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            var rect = CreateRect(name, parent);
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
+            AddImage(rect.gameObject, Panel);
+            return rect;
+        }
+
+        private RectTransform CreateRow(Transform parent, string name, float width, float height)
+        {
+            var row = CreateRect(name, parent);
+            row.sizeDelta = new Vector2(width, height);
+            AddHorizontalLayout(row.gameObject, 4, TextAnchor.MiddleLeft);
+            return row;
+        }
+
+        private RectTransform CreateContextSection(Transform parent, string name, float height)
+        {
+            var section = CreateRect(name, parent);
+            section.sizeDelta = new Vector2(380f, height);
+            AddImage(section.gameObject, new Color(0.14f, 0.17f, 0.19f));
+            return section;
+        }
+
+        private RectTransform CreateRect(string name, Transform parent)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            return go.GetComponent<RectTransform>();
+        }
+
+        private RectTransform AddButton(Transform parent, string label, Vector2 size, Action onClick, bool selected = false, Color? tint = null)
+        {
+            var rect = CreateRect(label, parent);
+            rect.sizeDelta = size;
+            AddImage(rect.gameObject, selected ? new Color(0.24f, 0.45f, 0.7f) : tint ?? new Color(0.22f, 0.24f, 0.27f));
+
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = rect.GetComponent<Image>();
+            button.onClick.AddListener(() => onClick?.Invoke());
+
+            AddText(rect, label, 13, FontStyle.Bold, size, TextAnchor.MiddleCenter);
+            return rect;
+        }
+
+        private Text AddText(Transform parent, string value, int size, FontStyle style, Vector2 rectSize, TextAnchor anchor = TextAnchor.MiddleLeft)
+        {
+            var rect = CreateRect("Text", parent);
+            rect.sizeDelta = rectSize;
+
+            var text = rect.gameObject.AddComponent<Text>();
+            text.text = value;
+            text.font = font;
+            text.fontSize = size;
+            text.fontStyle = style;
+            text.color = TextColor;
+            text.alignment = anchor;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            return text;
+        }
+
+        private Text AddTextAt(Transform parent, string value, int size, FontStyle style, float x, float y, float width, float height, TextAnchor anchor = TextAnchor.MiddleLeft)
+        {
+            var text = AddText(parent, value, size, style, new Vector2(width, height), anchor);
+            SetTopLeft(text.GetComponent<RectTransform>(), x, y, width, height);
+            return text;
+        }
+
+        private Scrollbar CreateVerticalScrollbar(Transform parent, float x, float y, float width, float height)
+        {
+            var rect = CreateRect("Vertical Scrollbar", parent);
+            SetTopLeft(rect, x, y, width, height);
+            AddImage(rect.gameObject, new Color(0.18f, 0.2f, 0.22f));
+
+            var handle = CreateRect("Handle", rect);
+            Stretch(handle);
+            var handleImage = AddImage(handle.gameObject, new Color(0.42f, 0.48f, 0.56f));
+
+            var scrollbar = rect.gameObject.AddComponent<Scrollbar>();
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            scrollbar.targetGraphic = handleImage;
+            scrollbar.handleRect = handle;
+            return scrollbar;
+        }
+
+        private RectTransform CreateVerticalScrollContent(RectTransform parent, string name)
+        {
+            const float padding = 8f;
+            const float scrollbarWidth = 12f;
+            const float scrollbarGap = 6f;
+
+            var viewport = CreateRect($"{name} Viewport", parent);
+            Stretch(viewport);
+            viewport.offsetMin = new Vector2(padding, padding);
+            viewport.offsetMax = new Vector2(-(padding + scrollbarWidth + scrollbarGap), -padding);
+            var viewportImage = AddImage(viewport.gameObject, new Color(0f, 0f, 0f, 0f));
+            viewportImage.raycastTarget = true;
+            var mask = viewport.gameObject.AddComponent<Mask>();
+            mask.showMaskGraphic = false;
+
+            var content = CreateRect($"{name} Content", viewport);
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = Vector2.zero;
+            AddVerticalLayout(content.gameObject, 8, TextAnchor.UpperLeft);
+            var fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var scrollbarRect = CreateRect($"{name} Scrollbar", parent);
+            scrollbarRect.anchorMin = new Vector2(1f, 0f);
+            scrollbarRect.anchorMax = new Vector2(1f, 1f);
+            scrollbarRect.pivot = new Vector2(1f, 0.5f);
+            scrollbarRect.offsetMin = new Vector2(-(padding + scrollbarWidth), padding);
+            scrollbarRect.offsetMax = new Vector2(-padding, -padding);
+            AddImage(scrollbarRect.gameObject, new Color(0.15f, 0.17f, 0.19f));
+
+            var handle = CreateRect($"{name} Scrollbar Handle", scrollbarRect);
+            Stretch(handle);
+            var handleImage = AddImage(handle.gameObject, new Color(0.4f, 0.46f, 0.54f));
+
+            var scrollbar = scrollbarRect.gameObject.AddComponent<Scrollbar>();
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            scrollbar.targetGraphic = handleImage;
+            scrollbar.handleRect = handle;
+
+            var scrollRect = parent.gameObject.AddComponent<ScrollRect>();
+            scrollRect.viewport = viewport;
+            scrollRect.content = content;
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = 34f;
+            scrollRect.verticalScrollbar = scrollbar;
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+            scrollRect.verticalNormalizedPosition = 1f;
+            scrollbar.value = 1f;
+            return content;
+        }
+
+        private static void AddSpacer(Transform parent, float flexibleWidth)
+        {
+            var spacer = new GameObject("Spacer", typeof(RectTransform), typeof(LayoutElement));
+            spacer.transform.SetParent(parent, false);
+            spacer.GetComponent<LayoutElement>().flexibleWidth = flexibleWidth;
+        }
+
+        private static void AddVerticalSpace(Transform parent, float height)
+        {
+            var spacer = new GameObject("Vertical Space", typeof(RectTransform), typeof(LayoutElement));
+            spacer.transform.SetParent(parent, false);
+            var element = spacer.GetComponent<LayoutElement>();
+            element.minHeight = height;
+            element.preferredHeight = height;
+        }
+
+        private static Image AddImage(GameObject go, Color color)
+        {
+            var image = go.GetComponent<Image>() ?? go.AddComponent<Image>();
+            image.color = color;
+            return image;
+        }
+
+        private static void AddHorizontalLayout(GameObject go, int padding, TextAnchor alignment)
+        {
+            var layout = go.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(padding, padding, padding, padding);
+            layout.spacing = padding;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            layout.childAlignment = alignment;
+        }
+
+        private static void AddVerticalLayout(GameObject go, int padding, TextAnchor alignment)
+        {
+            var layout = go.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(padding, padding, padding, padding);
+            layout.spacing = padding;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            layout.childAlignment = alignment;
+        }
+
+        private static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        private static void SetTopLeft(RectTransform rect, float x, float y, float width, float height)
+        {
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(x, -y);
+            rect.sizeDelta = new Vector2(width, height);
+        }
+
+        private static void EnsureEventSystem()
+        {
+            if (FindObjectOfType<EventSystem>() != null)
+            {
+                return;
+            }
+
+            new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+        }
+
+        private static Color GetTerrainColor(FossickTerrainType terrain)
+        {
+            if (terrain == FossickTerrainType.Dirt)
+            {
+                return new Color(0.48f, 0.32f, 0.18f);
+            }
+
+            if (terrain == FossickTerrainType.Stone)
+            {
+                return new Color(0.48f, 0.5f, 0.54f);
+            }
+
+            if (terrain == FossickTerrainType.Unbreakable)
+            {
+                return new Color(0.08f, 0.08f, 0.1f);
+            }
+
+            return new Color(0.18f, 0.26f, 0.28f);
+        }
+
+        private static Color GetCellBaseColor(FossickCellConfig cell)
+        {
+            if (cell != null && cell.terrain != FossickTerrainType.Empty)
+            {
+                return GetTerrainColor(cell.terrain);
+            }
+
+            if (cell != null && !string.IsNullOrEmpty(cell.rewardBackgroundId))
+            {
+                return new Color(0.58f, 0.38f, 0.08f);
+            }
+
+            if (cell != null && !string.IsNullOrEmpty(cell.backgroundId))
+            {
+                return new Color(0.12f, 0.1f, 0.08f);
+            }
+
+            return cell == null ? new Color(0.18f, 0.26f, 0.28f) : GetTerrainColor(cell.terrain);
+        }
+
+        private static Color GetRewardColor(FossickElementType type)
+        {
+            switch (type)
+            {
+                case FossickElementType.Coin:
+                    return new Color(1f, 0.72f, 0.12f, 0.9f);
+                case FossickElementType.Score:
+                    return new Color(0.35f, 0.78f, 1f, 0.9f);
+                case FossickElementType.Ore:
+                    return new Color(0.95f, 0.55f, 0.18f, 0.9f);
+                case FossickElementType.Item:
+                    return new Color(0.85f, 0.2f, 0.18f, 0.9f);
+                case FossickElementType.Chest:
+                    return new Color(0.95f, 0.48f, 0.08f, 0.9f);
+                case FossickElementType.Collection:
+                    return new Color(0.75f, 0.32f, 1f, 0.9f);
+                default:
+                    return new Color(1f, 1f, 1f, 0.75f);
+            }
+        }
+
+        private static string FormatFragmentType(FossickFragmentType type)
+        {
+            switch (type)
+            {
+                case FossickFragmentType.Tutorial:
+                    return "新手";
+                case FossickFragmentType.Regular:
+                    return "常规";
+                case FossickFragmentType.Reward:
+                    return "奖励";
+                default:
+                    return type.ToString();
+            }
+        }
+
+        private static string FormatTerrain(FossickTerrainType terrain)
+        {
+            switch (terrain)
+            {
+                case FossickTerrainType.Empty:
+                    return "空格";
+                case FossickTerrainType.Dirt:
+                    return "土";
+                case FossickTerrainType.Stone:
+                    return "石头";
+                case FossickTerrainType.Unbreakable:
+                    return "基岩";
+                default:
+                    return terrain.ToString();
+            }
+        }
+
+        private static string FormatLayer(FossickCellLayer layer)
+        {
+            switch (layer)
+            {
+                case FossickCellLayer.Background:
+                    return "背景";
+                case FossickCellLayer.RewardBackground:
+                    return "藏宝阁";
+                case FossickCellLayer.Terrain:
+                    return "挖掘物材质";
+                case FossickCellLayer.Reward:
+                    return "奖励堆";
+                case FossickCellLayer.Tool:
+                    return "道具";
+                case FossickCellLayer.Decoration:
+                    return "装饰";
+                case FossickCellLayer.Fog:
+                    return "阴影";
+                default:
+                    return layer.ToString();
+            }
+        }
+
+        private string FormatCurrentBrush()
+        {
+            switch (selectedLayer)
+            {
+                case FossickCellLayer.Terrain:
+                    return FormatTerrain(selectedTerrain);
+                case FossickCellLayer.Reward:
+                case FossickCellLayer.Tool:
+                    return FormatRewardBrush(selectedRewardType, selectedRewardId);
+                case FossickCellLayer.Decoration:
+                    return string.IsNullOrEmpty(selectedDecorationId) ? "清空装饰" : selectedDecorationId;
+                case FossickCellLayer.Fog:
+                    return selectedFog == FossickFogType.Covered ? "迷雾" : "无阴影";
+                case FossickCellLayer.RewardBackground:
+                    if (string.IsNullOrEmpty(selectedRewardBackgroundId))
+                    {
+                        return "清空藏宝阁";
+                    }
+
+                    return $"{FormatRewardBackgroundBrush(selectedRewardBackgroundId)} {selectedRewardBackgroundWidth}x{selectedRewardBackgroundHeight}";
+                default:
+                    return selectedLayer.ToString();
+            }
+        }
+
+        private static string FormatRewardBackgroundBrush(string id)
+        {
+            switch (id)
+            {
+                case TreasureRoomSmallId:
+                    return "小藏宝阁";
+                case TreasureRoomMediumId:
+                    return "中藏宝阁";
+                case TreasureRoomLargeId:
+                    return "大藏宝阁";
+                default:
+                    return id;
+            }
+        }
+
+        private static string FormatRewardType(FossickElementType type)
+        {
+            switch (type)
+            {
+                case FossickElementType.None:
+                    return "清空奖励";
+                case FossickElementType.Ore:
+                    return "矿石";
+                case FossickElementType.Coin:
+                    return "金币";
+                case FossickElementType.Score:
+                    return "积分";
+                case FossickElementType.Collection:
+                    return "收藏品";
+                case FossickElementType.Item:
+                    return "道具";
+                case FossickElementType.Chest:
+                    return "宝箱";
+                default:
+                    return type.ToString();
+            }
+        }
+
+        private static string FormatRewardBrush(FossickElementType type, string id)
+        {
+            if (type == FossickElementType.Item)
+            {
+                switch (id)
+                {
+                    case "pickaxe":
+                        return "矿镐道具";
+                    case "dynamite":
+                        return "雷管道具";
+                    case "tnt":
+                        return "炸药道具";
+                    case "radar":
+                        return "雷达道具";
+                }
+            }
+
+            if (type == FossickElementType.Ore)
+            {
+                switch (id)
+                {
+                    case "ore_copper":
+                    case "copper":
+                        return "铜矿";
+                    case "ore_silver":
+                    case "silver":
+                    case "ore_blue":
+                        return "银矿";
+                    case "ore_gold":
+                    case "gold":
+                    case "ore_yellow":
+                        return "金矿";
+                    case "ore_gem":
+                    case "gem":
+                    case "ore_crystal":
+                    case "crystal":
+                        return "宝石矿";
+                }
+            }
+
+            return FormatRewardType(type);
+        }
+
+        private static string GetDefaultRewardId(FossickElementType type)
+        {
+            switch (type)
+            {
+                case FossickElementType.Ore:
+                    return "ore_copper";
+                case FossickElementType.Coin:
+                    return "coin_pile";
+                case FossickElementType.Score:
+                    return "score_gem";
+                case FossickElementType.Collection:
+                    return "collection_piece";
+                case FossickElementType.Item:
+                    return "tool_box";
+                case FossickElementType.Chest:
+                    return "treasure_chest";
+                default:
+                    return "reward";
+            }
+        }
+
+        private static int GetDefaultRewardAmount(FossickElementType type)
+        {
+            return GetDefaultRewardAmount(type, GetDefaultRewardId(type));
+        }
+
+        private static int GetDefaultRewardAmount(FossickElementType type, string id)
+        {
+            switch (type)
+            {
+                case FossickElementType.Coin:
+                    return 100;
+                case FossickElementType.Score:
+                    return 10;
+                case FossickElementType.Ore:
+                    return GetOreScoreValue(id);
+                default:
+                    return 1;
+            }
+        }
+
+        private static int GetOreScoreValue(string id)
+        {
+            switch (id)
+            {
+                case "ore_copper":
+                case "copper":
+                case "ore_orange":
+                    return 10;
+                case "ore_silver":
+                case "silver":
+                case "ore_blue":
+                    return 20;
+                case "ore_gem":
+                case "gem":
+                case "ore_crystal":
+                case "crystal":
+                    return 30;
+                case "ore_gold":
+                case "gold":
+                case "ore_yellow":
+                    return 50;
+                default:
+                    return 10;
+            }
+        }
+
+        private static FossickElementConfig GetReward(FossickCellConfig cell)
+        {
+            return cell == null ? null : cell.reward ?? cell.element;
+        }
+
+        private static bool IsOreReward(FossickElementConfig reward)
+        {
+            return reward != null && reward.type == FossickElementType.Ore;
+        }
+
+        private static bool CanAttachOre(FossickCellConfig cell)
+        {
+            return cell != null && cell.terrain != FossickTerrainType.Empty && cell.terrain != FossickTerrainType.Unbreakable && cell.hp > 0;
+        }
+
+        private static bool HasDecoration(FossickCellConfig cell)
+        {
+            if (cell == null)
+            {
+                return false;
+            }
+
+            return HasValidDecoration(cell.decorations) || HasValidDecoration(cell.decor);
+        }
+
+        private static bool HasValidDecoration(List<string> ids)
+        {
+            if (ids == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < ids.Count; i++)
+            {
+                if (!IsReservedElementArtId(ids[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsReservedElementArtId(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return false;
+            }
+
+            switch (id)
+            {
+                case "small_rock":
+                case "gold_pile":
+                case "pickaxe":
+                case "dynamite":
+                case "tnt":
+                case "radar":
+                case "coin_pile":
+                case "score_gem":
+                case "ore_copper":
+                case "ore_orange":
+                case "ore_silver":
+                case "ore_blue":
+                case "ore_gold":
+                case "ore_yellow":
+                case "ore_gem":
+                case "ore_crystal":
+                case "treasure_chest":
+                case "collection_piece":
+                    return true;
+            }
+
+            int numericId;
+            return int.TryParse(id, out numericId) && numericId >= 1 && numericId <= 37;
+        }
+
+        private static string GetCellLabel(FossickCellConfig cell)
+        {
+            var reward = GetReward(cell);
+            if (reward != null && reward.type != FossickElementType.None)
+            {
+                return FormatRewardMarker(reward.type) + "\n" + cell.x + "," + cell.y;
+            }
+
+            if (cell.terrain == FossickTerrainType.Dirt)
+            {
+                return "D\n" + cell.x + "," + cell.y;
+            }
+
+            if (cell.terrain == FossickTerrainType.Stone)
+            {
+                return "S" + cell.hp + "\n" + cell.x + "," + cell.y;
+            }
+
+            if (cell.terrain == FossickTerrainType.Unbreakable)
+            {
+                return "基\n" + cell.x + "," + cell.y;
+            }
+
+            return ".\n" + cell.x + "," + cell.y;
+        }
+
+        private static string GetMiniCellLabel(FossickCellConfig cell)
+        {
+            var reward = GetReward(cell);
+            if (reward != null && reward.type != FossickElementType.None)
+            {
+                return FormatRewardMarker(reward.type);
+            }
+
+            if (cell.terrain == FossickTerrainType.Dirt)
+            {
+                return "D";
+            }
+
+            if (cell.terrain == FossickTerrainType.Stone)
+            {
+                return "S";
+            }
+
+            if (cell.terrain == FossickTerrainType.Unbreakable)
+            {
+                return "基";
+            }
+
+            return ".";
+        }
+
+        private static string FormatRewardMarker(FossickElementType type)
+        {
+            switch (type)
+            {
+                case FossickElementType.Coin:
+                    return "G";
+                case FossickElementType.Score:
+                    return "$";
+                case FossickElementType.Ore:
+                    return "O";
+                case FossickElementType.Item:
+                    return "T";
+                case FossickElementType.Chest:
+                    return "C";
+                case FossickElementType.Collection:
+                    return "P";
+                default:
+                    return "$";
+            }
+        }
+
+        private static string FormatIssue(FossickValidationIssue issue)
+        {
+            var location = issue.fragmentId == 0 ? string.Empty : $" 碎片={issue.fragmentId}";
+            if (issue.x >= 0 && issue.y >= 0)
+            {
+                location += $" 格子=({issue.x},{issue.y})";
+            }
+
+            return $"[{FormatSeverity(issue.severity)}]{location} {TranslateValidationMessage(issue.message)}";
+        }
+
+        private static string FormatSeverity(FossickValidationSeverity severity)
+        {
+            return severity == FossickValidationSeverity.Error ? "错误" : "警告";
+        }
+
+        private static string TranslateValidationMessage(string message)
+        {
+            switch (message)
+            {
+                case "Map config is null.":
+                    return "地图配置为空。";
+                case "Activity must be Fossick.":
+                    return "活动名称必须是 Fossick。";
+                case "Board width and visible height must be greater than zero.":
+                    return "棋盘宽度和可视高度必须大于 0。";
+                case "Generation config is missing.":
+                    return "缺少生成配置。";
+                case "Regular group size must be greater than zero.":
+                    return "常规碎片组大小必须大于 0。";
+                case "Reward insert range is invalid.":
+                    return "奖励碎片插入范围无效。";
+                case "At least one difficulty count is required.":
+                    return "至少需要配置一个难度数量。";
+                case "Difficulty count entry is null.":
+                    return "难度数量配置为空。";
+                case "Difficulty must be greater than zero.":
+                    return "难度必须大于 0。";
+                case "Difficulty count must be greater than zero.":
+                    return "难度数量必须大于 0。";
+                case "At least one fragment is required.":
+                    return "至少需要一个碎片。";
+                case "Fragment entry is null.":
+                    return "碎片配置为空。";
+                case "Fragment height must be greater than zero.":
+                    return "碎片高度必须大于 0。";
+                case "Regular fragment must have a difficulty greater than zero.":
+                    return "常规碎片必须配置大于 0 的难度。";
+                case "No tutorial fragments found.":
+                    return "没有找到新手碎片。";
+                case "No reward fragments found.":
+                    return "没有找到奖励碎片。";
+                case "Fragment cells are missing. Empty cells will be assumed.":
+                    return "碎片格子数据缺失，将按空格处理。";
+                case "Cell entry is null.":
+                    return "格子配置为空。";
+                case "Cell coordinate is out of bounds.":
+                    return "格子坐标越界。";
+                case "Cell coordinate is duplicated.":
+                    return "格子坐标重复。";
+                case "Cell hp cannot be negative.":
+                    return "格子血量不能为负数。";
+                case "Breakable terrain should have hp greater than zero.":
+                    return "可破坏地形的血量应该大于 0。";
+                case "Reward amount cannot be negative.":
+                    return "奖励数量不能为负数。";
+                case "Reward is buried under unbreakable terrain.":
+                    return "奖励被埋在基岩下。";
+                case "Ore must be attached to diggable terrain.":
+                    return "矿石只能埋在可挖掘地形上。";
+                case "Cell uses both legacy decor and layered decorations.":
+                    return "格子同时使用了旧装饰字段和新装饰层。";
+                case "Reward background is usually reserved for reward fragments.":
+                    return "奖励层背景通常只应放在奖励碎片中。";
+                default:
+                    return message
+                        .Replace("Fragment id", "碎片 ID")
+                        .Replace("is duplicated.", "重复。")
+                        .Replace("Fragment width", "碎片宽度")
+                        .Replace("must match board width", "必须匹配棋盘宽度")
+                        .Replace("Difficulty counts total", "难度数量总和")
+                        .Replace("but regular group size is", "但常规碎片组大小是")
+                        .Replace("Difficulty", "难度")
+                        .Replace("is duplicated in generation config.", "在生成配置中重复。")
+                        .Replace("Generation requires difficulty", "生成配置需要难度")
+                        .Replace("but no regular fragment uses it.", "但没有常规碎片使用该难度。");
+            }
+        }
+    }
+}

@@ -1,0 +1,13 @@
+[mcp_servers.unity-mcp]
+command = "/opt/homebrew/bin/uvx"
+args = [
+  "--from",
+  "mcpforunityserver==9.7.1",
+  "mcp-for-unity",
+  "--transport",
+  "stdio",
+]
+
+[mcp_servers.unity-mcp.env]
+DISABLE_TELEMETRY = "1"
+UNITY_MCP_DEFAULT_INSTANCE = "FossickUnity"

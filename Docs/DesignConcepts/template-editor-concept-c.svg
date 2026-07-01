@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+  <defs>
+    <style>
+      .bg{fill:#111817}.panel{fill:#20262b}.panel2{fill:#252c33}.bar{fill:#1b2026}.muted{fill:#343b44}.blue{fill:#3d78ba}.green{fill:#2d504f}.gold{fill:#8a612f}.text{fill:#eef2f5;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Arial,sans-serif}.small{font-size:18px}.mid{font-size:22px;font-weight:700}.big{font-size:28px;font-weight:800}.hint{fill:#bac4cc;font-size:16px}.accent{stroke:#66a9ff;stroke-width:3;fill:none}
+    </style>
+  </defs>
+  <rect class="bg" width="1440" height="900"/>
+  <rect class="bar" x="0" y="0" width="1440" height="72"/>
+  <text class="text big" x="28" y="45">方案 C：步骤化编辑</text>
+  <text class="text small" x="400" y="43">先定义模板，再绘制内容，最后应用到地图</text>
+  <rect class="blue" x="1012" y="18" width="150" height="38"/><text class="text small" x="1044" y="43">保存模板</text>
+  <rect class="muted" x="1174" y="18" width="160" height="38"/><text class="text small" x="1208" y="43">返回地图</text>
+
+  <rect class="panel" x="28" y="96" width="250" height="760"/>
+  <text class="text mid" x="52" y="135">流程</text>
+  <text class="hint" x="52" y="168">降低新手理解成本</text>
+  <rect class="blue" x="52" y="220" width="202" height="54"/><text class="text small" x="78" y="253">1 模板信息</text>
+  <rect class="muted" x="52" y="292" width="202" height="54"/><text class="text small" x="78" y="325">2 绘制内容</text>
+  <rect class="muted" x="52" y="364" width="202" height="54"/><text class="text small" x="78" y="397">3 应用到地图</text>
+  <rect class="panel2" x="52" y="520" width="202" height="146"/>
+  <text class="text small" x="72" y="552">当前模板</text>
+  <text class="hint" x="72" y="584">1001 新手</text>
+  <text class="hint" x="72" y="614">高度 6</text>
+  <text class="hint" x="72" y="644">有未保存修改</text>
+
+  <rect class="panel" x="304" y="96" width="1108" height="760"/>
+  <rect class="panel2" x="328" y="120" width="1044" height="88"/>
+  <text class="text mid" x="352" y="154">步骤 1：模板信息</text>
+  <text class="hint" x="352" y="184">这里只处理 ID、类型、难度和高度，不出现画笔和地图操作</text>
+  <rect class="muted" x="900" y="145" width="120" height="38"/><text class="text small" x="932" y="170">撤销</text>
+  <rect class="muted" x="1032" y="145" width="120" height="38"/><text class="text small" x="1064" y="170">重做</text>
+  <rect class="blue" x="1164" y="145" width="160" height="38"/><text class="text small" x="1200" y="170">下一步</text>
+
+  <rect class="panel2" x="328" y="234" width="1044" height="132"/>
+  <text class="text small" x="352" y="268">模板类型</text>
+  <rect class="blue" x="352" y="290" width="100" height="40"/><text class="text small" x="382" y="316">新手</text>
+  <rect class="muted" x="464" y="290" width="100" height="40"/><text class="text small" x="494" y="316">常规</text>
+  <rect class="muted" x="576" y="290" width="100" height="40"/><text class="text small" x="606" y="316">奖励</text>
+  <text class="hint" x="720" y="316">新手：按 ID 拼接在矿井开头，不进入随机池</text>
+  <text class="text small" x="352" y="350">高度</text>
+  <rect class="muted" x="432" y="328" width="82" height="34"/><text class="text small" x="463" y="351">-</text>
+  <rect class="blue" x="524" y="328" width="110" height="34"/><text class="text small" x="550" y="351">6 行</text>
+  <rect class="muted" x="644" y="328" width="82" height="34"/><text class="text small" x="675" y="351">+</text>
+
+  <rect class="panel2" x="328" y="398" width="1044" height="84"/>
+  <text class="text small" x="352" y="430">步骤 2 预览</text>
+  <rect class="green" x="510" y="418" width="96" height="36"/><text class="text small" x="542" y="442">地形</text>
+  <rect class="muted" x="618" y="418" width="96" height="36"/><text class="text small" x="650" y="442">奖励</text>
+  <rect class="muted" x="726" y="418" width="96" height="36"/><text class="text small" x="758" y="442">道具</text>
+  <rect class="muted" x="834" y="418" width="96" height="36"/><text class="text small" x="866" y="442">装饰</text>
+
+  <rect class="bg" x="458" y="522" width="760" height="278"/>
+  <rect fill="#294850" x="514" y="544" width="672" height="232"/>
+  <rect fill="#b87838" x="562" y="584" width="576" height="152"/>
+  <rect fill="#71808e" x="562" y="660" width="76" height="76"/>
+  <text class="text small" x="478" y="584">000</text><text class="text small" x="478" y="660">001</text><text class="text small" x="478" y="736">002</text>
+  <rect class="accent" x="514" y="544" width="672" height="232"/>
+  <text class="hint" x="514" y="822">推荐点：最适合给新策划上手；缺点是老手会觉得多一步。</text>
+</svg>

@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="960" viewBox="0 0 1600 960">
+  <defs>
+    <style>
+      .bg { fill: #141b1b; }
+      .chrome { fill: #20262b; }
+      .panel { fill: #22282e; stroke: #303a42; stroke-width: 2; }
+      .panel2 { fill: #1a2226; stroke: #303a42; stroke-width: 2; }
+      .soft { fill: #29323a; }
+      .button { fill: #3a424d; }
+      .primary { fill: #3d78b8; }
+      .danger { fill: #734334; }
+      .success { fill: #23523b; }
+      .warn { fill: #5c4a2f; }
+      .line { stroke: #3b454d; stroke-width: 2; }
+      .text { fill: #f0f3f6; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+      .sub { fill: #c7d0d9; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+      .dim { fill: #8d99a5; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+      .title { font-size: 28px; font-weight: 850; }
+      .h2 { font-size: 20px; font-weight: 850; }
+      .h3 { font-size: 16px; font-weight: 800; }
+      .body { font-size: 14px; }
+      .small { font-size: 12px; }
+      .btnText { fill: #fff; font-size: 13px; font-weight: 800; text-anchor: middle; dominant-baseline: middle; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+      .center { text-anchor: middle; }
+      .num { font-size: 18px; font-weight: 850; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1600" height="960"/>
+  <text class="text title" x="48" y="54">Fossick 生成规则界面优化方案</text>
+  <text class="sub body" x="48" y="84">目标：让策划明确知道“难度池如何抽、每轮抽多少、藏宝阁多久插入、保存/应用后会影响生成预览”。</text>
+
+  <!-- Option A -->
+  <g transform="translate(48,126)">
+    <text class="text h2" x="0" y="-18">A. 单页表单型</text>
+    <rect class="chrome" x="0" y="0" width="468" height="760"/>
+    <rect class="panel" x="18" y="18" width="432" height="724"/>
+    <text class="text h2" x="42" y="58">生成规则</text>
+    <text class="sub small" x="42" y="84">编辑普通碎片抽取和藏宝阁插入规则。</text>
+
+    <rect class="soft" x="42" y="114" width="384" height="44"/>
+    <rect class="primary" x="252" y="120" width="78" height="32"/>
+    <text class="btnText" x="291" y="136">保存规则</text>
+    <rect class="button" x="338" y="120" width="74" height="32"/>
+    <text class="btnText" x="375" y="136">放弃修改</text>
+    <text class="sub small" x="58" y="141">未保存修改</text>
+
+    <text class="text h3" x="42" y="204">1. 拼接方式</text>
+    <rect class="panel2" x="42" y="224" width="384" height="74"/>
+    <rect class="primary" x="60" y="244" width="86" height="34"/>
+    <text class="btnText" x="103" y="261">半随机</text>
+    <text class="sub small" x="162" y="252">每轮按难度配比抽取普通模板，</text>
+    <text class="sub small" x="162" y="274">再用种子洗牌。</text>
+
+    <text class="text h3" x="42" y="340">2. 每轮难度配比</text>
+    <rect class="panel2" x="42" y="360" width="384" height="186"/>
+    <text class="dim small" x="60" y="384">难度</text><text class="dim small" x="156" y="384">数量</text><text class="dim small" x="254" y="384">可用模板</text>
+    <g transform="translate(60,404)">
+      <text class="sub body" x="0" y="24">难度 1</text><rect class="button" x="88" y="0" width="34" height="32"/><text class="btnText" x="105" y="16">-</text><rect class="soft" x="126" y="0" width="54" height="32"/><text class="text num center" x="153" y="23">7</text><rect class="button" x="184" y="0" width="34" height="32"/><text class="btnText" x="201" y="16">+</text><text class="sub small" x="244" y="21">1 个</text>
+      <text class="sub body" x="0" y="70">难度 2</text><rect class="button" x="88" y="46" width="34" height="32"/><text class="btnText" x="105" y="62">-</text><rect class="soft" x="126" y="46" width="54" height="32"/><text class="text num center" x="153" y="69">2</text><rect class="button" x="184" y="46" width="34" height="32"/><text class="btnText" x="201" y="62">+</text><text class="sub small" x="244" y="67">2 个</text>
+      <text class="sub body" x="0" y="116">难度 3</text><rect class="button" x="88" y="92" width="34" height="32"/><text class="btnText" x="105" y="108">-</text><rect class="soft" x="126" y="92" width="54" height="32"/><text class="text num center" x="153" y="115">1</text><rect class="button" x="184" y="92" width="34" height="32"/><text class="btnText" x="201" y="108">+</text><text class="sub small" x="244" y="113">3 个</text>
+    </g>
+    <rect class="success" x="60" y="512" width="348" height="24"/>
+    <text class="text small" x="72" y="529">合计 10 段，校验通过</text>
+
+    <text class="text h3" x="42" y="588">3. 藏宝阁插入</text>
+    <rect class="panel2" x="42" y="608" width="384" height="86"/>
+    <text class="sub body" x="60" y="640">每</text>
+    <rect class="button" x="92" y="618" width="34" height="32"/><text class="btnText" x="109" y="634">-</text>
+    <rect class="soft" x="130" y="618" width="50" height="32"/><text class="text num center" x="155" y="641">4</text>
+    <rect class="button" x="184" y="618" width="34" height="32"/><text class="btnText" x="201" y="634">+</text>
+    <text class="sub body" x="232" y="640">到</text>
+    <rect class="soft" x="266" y="618" width="50" height="32"/><text class="text num center" x="291" y="641">6</text>
+    <text class="sub body" x="326" y="640">段插入</text>
+    <text class="dim small" x="60" y="676">可用奖励模板：1 个</text>
+
+    <text class="dim small" x="42" y="724">优点：最容易落地，和当前逻辑接近。</text>
+  </g>
+
+  <!-- Option B -->
+  <g transform="translate(566,126)">
+    <text class="text h2" x="0" y="-18">B. 分步向导型</text>
+    <rect class="chrome" x="0" y="0" width="468" height="760"/>
+    <rect class="panel" x="18" y="18" width="432" height="724"/>
+    <text class="text h2" x="42" y="58">生成规则</text>
+    <text class="sub small" x="42" y="84">按步骤配置，适合降低第一次使用门槛。</text>
+
+    <g transform="translate(42,118)">
+      <rect class="primary" x="0" y="0" width="106" height="36"/><text class="btnText" x="53" y="18">1 拼接</text>
+      <rect class="button" x="112" y="0" width="106" height="36"/><text class="btnText" x="165" y="18">2 难度</text>
+      <rect class="button" x="224" y="0" width="106" height="36"/><text class="btnText" x="277" y="18">3 藏宝阁</text>
+      <rect class="button" x="336" y="0" width="48" height="36"/><text class="btnText" x="360" y="18">校验</text>
+    </g>
+
+    <rect class="panel2" x="42" y="188" width="384" height="386"/>
+    <text class="text h2" x="66" y="232">步骤 2：难度配比</text>
+    <text class="sub small" x="66" y="260">配置一轮普通碎片里各难度出现多少段。</text>
+
+    <rect class="soft" x="66" y="300" width="336" height="56"/>
+    <text class="sub small" x="84" y="323">一轮普通碎片</text>
+    <text class="text num" x="84" y="348">10 段</text>
+    <text class="dim small" x="154" y="344">当前难度合计 10 段</text>
+
+    <g transform="translate(66,394)">
+      <rect class="soft" x="0" y="0" width="336" height="42"/>
+      <text class="text h3" x="16" y="27">难度 1</text><text class="sub body" x="110" y="27">7 段</text><rect class="button" x="238" y="6" width="34" height="30"/><text class="btnText" x="255" y="21">-</text><rect class="button" x="286" y="6" width="34" height="30"/><text class="btnText" x="303" y="21">+</text>
+      <rect class="soft" x="0" y="54" width="336" height="42"/>
+      <text class="text h3" x="16" y="81">难度 2</text><text class="sub body" x="110" y="81">2 段</text><rect class="button" x="238" y="60" width="34" height="30"/><text class="btnText" x="255" y="75">-</text><rect class="button" x="286" y="60" width="34" height="30"/><text class="btnText" x="303" y="75">+</text>
+      <rect class="soft" x="0" y="108" width="336" height="42"/>
+      <text class="text h3" x="16" y="135">难度 3</text><text class="sub body" x="110" y="135">1 段</text><rect class="button" x="238" y="114" width="34" height="30"/><text class="btnText" x="255" y="129">-</text><rect class="button" x="286" y="114" width="34" height="30"/><text class="btnText" x="303" y="129">+</text>
+    </g>
+
+    <rect class="button" x="42" y="626" width="92" height="36"/><text class="btnText" x="88" y="644">上一步</text>
+    <rect class="primary" x="304" y="626" width="122" height="36"/><text class="btnText" x="365" y="644">下一步</text>
+    <rect class="success" x="42" y="682" width="384" height="36"/><text class="text small" x="60" y="705">校验通过：当前规则可以生成矿井。</text>
+
+    <text class="dim small" x="42" y="724">优点：适合新手；缺点：老用户编辑效率低。</text>
+  </g>
+
+  <!-- Option C -->
+  <g transform="translate(1084,126)">
+    <text class="text h2" x="0" y="-18">C. 推荐：规则编辑 + 摘要校验</text>
+    <rect class="chrome" x="0" y="0" width="468" height="760"/>
+    <rect class="panel" x="18" y="18" width="432" height="724"/>
+    <text class="text h2" x="42" y="58">生成规则</text>
+    <text class="sub small" x="42" y="84">左侧编辑，右侧实时告诉策划结果是否可用。</text>
+
+    <rect class="soft" x="42" y="112" width="384" height="48"/>
+    <text class="sub small" x="60" y="141">规则修改后需要保存，并更新生成预览。</text>
+
+    <rect class="panel2" x="42" y="188" width="240" height="456"/>
+    <text class="text h3" x="60" y="222">规则编辑</text>
+    <text class="dim small" x="60" y="252">普通碎片一轮</text>
+    <rect class="button" x="60" y="266" width="34" height="30"/><text class="btnText" x="77" y="281">-</text>
+    <rect class="soft" x="98" y="266" width="58" height="30"/><text class="text num center" x="127" y="288">10</text>
+    <rect class="button" x="160" y="266" width="34" height="30"/><text class="btnText" x="177" y="281">+</text>
+    <text class="dim small" x="60" y="324">难度分布</text>
+    <g transform="translate(60,344)">
+      <text class="sub small" x="0" y="20">难度 1</text><rect class="button" x="68" y="0" width="28" height="28"/><text class="btnText" x="82" y="14">-</text><rect class="soft" x="100" y="0" width="42" height="28"/><text class="text small center" x="121" y="18">7</text><rect class="button" x="146" y="0" width="28" height="28"/><text class="btnText" x="160" y="14">+</text>
+      <text class="sub small" x="0" y="58">难度 2</text><rect class="button" x="68" y="38" width="28" height="28"/><text class="btnText" x="82" y="52">-</text><rect class="soft" x="100" y="38" width="42" height="28"/><text class="text small center" x="121" y="56">2</text><rect class="button" x="146" y="38" width="28" height="28"/><text class="btnText" x="160" y="52">+</text>
+      <text class="sub small" x="0" y="96">难度 3</text><rect class="button" x="68" y="76" width="28" height="28"/><text class="btnText" x="82" y="90">-</text><rect class="soft" x="100" y="76" width="42" height="28"/><text class="text small center" x="121" y="94">1</text><rect class="button" x="146" y="76" width="28" height="28"/><text class="btnText" x="160" y="90">+</text>
+    </g>
+    <text class="dim small" x="60" y="480">藏宝阁间隔</text>
+    <rect class="soft" x="60" y="496" width="66" height="30"/><text class="text small center" x="93" y="515">4</text>
+    <text class="sub small center" x="142" y="515">到</text>
+    <rect class="soft" x="160" y="496" width="66" height="30"/><text class="text small center" x="193" y="515">6</text>
+    <rect class="button" x="60" y="552" width="74" height="32"/><text class="btnText" x="97" y="568">放弃</text>
+    <rect class="primary" x="144" y="552" width="94" height="32"/><text class="btnText" x="191" y="568">保存规则</text>
+    <rect class="primary" x="60" y="594" width="178" height="32"/><text class="btnText" x="149" y="610">应用并更新预览</text>
+
+    <rect class="panel2" x="294" y="188" width="132" height="456"/>
+    <text class="text h3" x="312" y="222">摘要</text>
+    <rect class="success" x="312" y="246" width="96" height="34"/>
+    <text class="text small center" x="360" y="267">校验通过</text>
+    <text class="sub small" x="312" y="314">一轮 10 段</text>
+    <text class="sub small" x="312" y="340">难度 7/2/1</text>
+    <text class="sub small" x="312" y="366">藏宝阁 4-6</text>
+    <line class="line" x1="312" y1="394" x2="408" y2="394"/>
+    <text class="dim small" x="312" y="426">模板池</text>
+    <text class="sub small" x="312" y="452">D1：1</text>
+    <text class="sub small" x="312" y="476">D2：2</text>
+    <text class="sub small" x="312" y="500">D3：3</text>
+    <text class="sub small" x="312" y="524">奖励：1</text>
+    <line class="line" x1="312" y1="552" x2="408" y2="552"/>
+    <text class="dim small" x="312" y="584">影响</text>
+    <text class="sub small" x="312" y="610">下次生成生效</text>
+
+    <text class="dim small" x="42" y="724">优点：信息完整、效率高，适合产品形态。</text>
+  </g>
+</svg>
