@@ -10,6 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Fossick.Preview.Views
@@ -23,6 +24,7 @@ namespace Fossick.Preview.Views
         private const float OuterPadding = 16f;
         private const float ColumnGap = 18f;
         private const float SmoothTileOverlap = 2f;
+        private const string MapStudioSceneName = "FossickMapStudio";
 
         private static readonly Color Background = new Color(0.07f, 0.09f, 0.1f);
         private static readonly Color Panel = new Color(0.13f, 0.15f, 0.17f);
@@ -129,6 +131,10 @@ namespace Fossick.Preview.Views
             AddHeaderStat(header, 836f, controller.Rewards == null ? "积分 0" : $"积分 {controller.Rewards.score}");
             AddHeaderStat(header, 974f, controller.Rewards == null ? "金币 0" : $"金币 {controller.Rewards.coins}");
 
+            AddButton(header, "返回编辑器", new Vector2(128f, 38f), () =>
+            {
+                SceneManager.LoadScene(MapStudioSceneName);
+            }, false, new Color(0.24f, 0.47f, 0.72f), new Vector2(1148f, 15f));
             AddButton(header, "保存", new Vector2(104f, 38f), () =>
             {
                 controller.Save();
@@ -417,6 +423,14 @@ namespace Fossick.Preview.Views
         private IEnumerator PlayBoardScroll(int scrollRows)
         {
             isBoardAnimating = true;
+            var previousRowsAbove = boardView == null ? 0 : boardView.RenderRowsAbove;
+            var previousRowsBelow = boardView == null ? 0 : boardView.RenderRowsBelow;
+            if (boardView != null)
+            {
+                boardView.RenderRowsAbove = Mathf.Max(previousRowsAbove, scrollRows + 1);
+                boardView.RenderRowsBelow = Mathf.Max(previousRowsBelow, scrollRows + 1);
+            }
+
             var duration = Mathf.Max(0.01f, boardScrollAnimationDuration);
             var elapsed = 0f;
 
@@ -432,6 +446,8 @@ namespace Fossick.Preview.Views
 
             if (boardView != null && controller != null && controller.Board != null)
             {
+                boardView.RenderRowsAbove = previousRowsAbove;
+                boardView.RenderRowsBelow = previousRowsBelow;
                 boardView.SetVisualRowOffset(0f);
                 boardView.Render(controller.Board, previewTargetKeys);
             }

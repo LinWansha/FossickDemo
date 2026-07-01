@@ -9,14 +9,7 @@ namespace Fossick.Core.Visual
     public sealed class FossickArtCatalog : ScriptableObject
     {
         public Color emptyCellColor = new Color(0.08f, 0.18f, 0.22f);
-        public Color fogColor = new Color(0.08f, 0.06f, 0.045f, 0.58f);
         public Color previewColor = new Color(0.32f, 0.9f, 0.48f, 0.95f);
-        public Color fallbackDirtColor = new Color(0.56f, 0.38f, 0.25f);
-        public Color fallbackStoneColor = new Color(0.48f, 0.53f, 0.58f);
-        public Color fallbackRockColor = new Color(0.07f, 0.07f, 0.09f);
-        public Sprite mineBackground;
-        public Sprite treasureRoomBackground;
-        public Sprite fogSprite;
         public List<FossickAutoTileSet> autoTileSets = new List<FossickAutoTileSet>();
         public List<FossickElementSpriteEntry> rewardSprites = new List<FossickElementSpriteEntry>();
         public List<FossickToolSpriteEntry> toolSprites = new List<FossickToolSpriteEntry>();
@@ -33,6 +26,12 @@ namespace Fossick.Core.Visual
         {
             var set = FindAutoTileSet(terrain);
             return set != null && set.sprites.Count > 0;
+        }
+
+        public Sprite GetFogAutoTileSprite(int assetIndex)
+        {
+            var set = FindFogAutoTileSet();
+            return set == null ? null : set.GetSprite(assetIndex);
         }
 
         public Sprite GetRewardSprite(FossickElementConfig reward)
@@ -89,14 +88,9 @@ namespace Fossick.Core.Visual
                 return null;
             }
 
-            if (id == "mine_default")
-            {
-                return mineBackground;
-            }
-
             if (id == "treasure_room")
             {
-                return treasureRoomBackground;
+                id = "treasure_room_7x2";
             }
 
             return FindNamedSprite(backgrounds, id);
@@ -107,27 +101,26 @@ namespace Fossick.Core.Visual
             return FindNamedSprite(decorations, id);
         }
 
-        public Color GetFallbackTerrainColor(FossickTerrainType terrain)
-        {
-            switch (terrain)
-            {
-                case FossickTerrainType.Dirt:
-                    return fallbackDirtColor;
-                case FossickTerrainType.Stone:
-                    return fallbackStoneColor;
-                case FossickTerrainType.Unbreakable:
-                    return fallbackRockColor;
-                default:
-                    return emptyCellColor;
-            }
-        }
-
         private FossickAutoTileSet FindAutoTileSet(FossickTerrainType terrain)
         {
             for (var i = 0; i < autoTileSets.Count; i++)
             {
                 var set = autoTileSets[i];
-                if (set != null && set.terrain == terrain)
+                if (set != null && set.kind == FossickAutoTileSetKind.Terrain && set.terrain == terrain)
+                {
+                    return set;
+                }
+            }
+
+            return null;
+        }
+
+        private FossickAutoTileSet FindFogAutoTileSet()
+        {
+            for (var i = 0; i < autoTileSets.Count; i++)
+            {
+                var set = autoTileSets[i];
+                if (set != null && set.kind == FossickAutoTileSetKind.Fog)
                 {
                     return set;
                 }
@@ -156,9 +149,16 @@ namespace Fossick.Core.Visual
         }
     }
 
+    public enum FossickAutoTileSetKind
+    {
+        Terrain,
+        Fog
+    }
+
     [Serializable]
     public sealed class FossickAutoTileSet
     {
+        public FossickAutoTileSetKind kind;
         public FossickTerrainType terrain;
         public List<FossickAutoTileSpriteEntry> sprites = new List<FossickAutoTileSpriteEntry>();
 

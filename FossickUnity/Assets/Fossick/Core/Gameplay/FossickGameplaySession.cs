@@ -108,22 +108,23 @@ namespace Fossick.Core.Gameplay
                 scoreAfter = Rewards.score
             };
 
-            if (!unlimitedTools && !Inventory.HasTool(toolType))
+            EnsureGeneratedRowsAhead();
+            var canCollectSpawnedRewardWithoutTool = CanCollectSpawnedRewardWithoutTool(toolType, x, y);
+            if (!unlimitedTools && !canCollectSpawnedRewardWithoutTool && !Inventory.HasTool(toolType))
             {
                 result.notEnoughTool = true;
                 return result;
             }
 
-            EnsureGeneratedRowsAhead();
             var action = actionResolver.ResolveTool(Board, toolType, x, y);
             result.action = action;
-            result.actionWasApplied = action != null && action.toolConsumed;
+            result.actionWasApplied = action != null && action.isApplied;
             if (!result.actionWasApplied)
             {
                 return result;
             }
 
-            if (!unlimitedTools)
+            if (!unlimitedTools && action.toolConsumed)
             {
                 Inventory.ConsumeTool(toolType);
             }
@@ -136,6 +137,17 @@ namespace Fossick.Core.Gameplay
             EnsureGeneratedRowsAhead();
             PruneRowsBehind();
             return result;
+        }
+
+        private bool CanCollectSpawnedRewardWithoutTool(FossickToolType toolType, int x, int y)
+        {
+            if (toolType != FossickToolType.Pickaxe || Board == null)
+            {
+                return false;
+            }
+
+            var cell = Board.GetCell(x, y);
+            return cell != null && cell.fog == FossickFogType.None && cell.HasSpawnedReward;
         }
 
         public FossickSaveState CreateSaveState()

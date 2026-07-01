@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Fossick.Core.Config
 {
@@ -17,6 +18,150 @@ namespace Fossick.Core.Config
         public List<FossickFragmentConfig> fragments = new List<FossickFragmentConfig>();
 
         public FossickBoardSpec BoardSpec => new FossickBoardSpec(boardWidth, visibleHeight);
+    }
+
+    [Serializable]
+    public sealed class FossickFragmentLibraryConfig
+    {
+        public int version = 1;
+        public string activity = "Fossick";
+        public string libraryId = "fossick_default_fragments";
+        public int boardWidth = FossickBoardSpec.DefaultWidth;
+        public List<FossickFragmentConfig> fragments = new List<FossickFragmentConfig>();
+    }
+
+    [Serializable]
+    public sealed class FossickGenerationRulesConfig
+    {
+        public int version = 1;
+        public string activity = "Fossick";
+        public string rulesId = "fossick_default_rules";
+        public int boardWidth = FossickBoardSpec.DefaultWidth;
+        public int visibleHeight = FossickBoardSpec.DefaultVisibleHeight;
+        public FossickGenerationConfig generation = new FossickGenerationConfig();
+        public FossickGameplayConfig gameplay = new FossickGameplayConfig();
+        public FossickToolRulesConfig tools = new FossickToolRulesConfig();
+        public FossickVisualConfig visual = new FossickVisualConfig();
+    }
+
+    [Serializable]
+    public sealed class FossickMapDefinitionConfig
+    {
+        public int version = 1;
+        public string activity = "Fossick";
+        public string mapId = "fossick_default_map";
+        public string fragmentLibraryId = "fossick_default_fragments";
+        public string generationRulesId = "fossick_default_rules";
+        public int seed = 12345;
+    }
+
+    [Serializable]
+    public sealed class FossickMapProjectConfig
+    {
+        public int version = 1;
+        public string activity = "Fossick";
+        public FossickFragmentLibraryConfig fragmentLibrary = new FossickFragmentLibraryConfig();
+        public FossickGenerationRulesConfig generationRules = new FossickGenerationRulesConfig();
+        public FossickMapDefinitionConfig mapDefinition = new FossickMapDefinitionConfig();
+
+        public static FossickMapProjectConfig FromRuntimeConfig(FossickMapConfig config, int seed)
+        {
+            var project = new FossickMapProjectConfig();
+            if (config == null)
+            {
+                return project;
+            }
+
+            project.version = config.version;
+            project.activity = string.IsNullOrEmpty(config.activity) ? "Fossick" : config.activity;
+
+            project.fragmentLibrary = new FossickFragmentLibraryConfig
+            {
+                version = config.version,
+                activity = project.activity,
+                boardWidth = config.boardWidth,
+                fragments = config.fragments ?? new List<FossickFragmentConfig>()
+            };
+
+            var generation = config.generation ?? new FossickGenerationConfig();
+            project.generationRules = new FossickGenerationRulesConfig
+            {
+                version = config.version,
+                activity = project.activity,
+                boardWidth = config.boardWidth,
+                visibleHeight = config.visibleHeight,
+                generation = CloneGenerationWithoutMapOverrides(generation),
+                gameplay = config.gameplay ?? new FossickGameplayConfig(),
+                tools = config.tools ?? new FossickToolRulesConfig(),
+                visual = config.visual ?? new FossickVisualConfig()
+            };
+
+            project.mapDefinition = new FossickMapDefinitionConfig
+            {
+                version = config.version,
+                activity = project.activity,
+                seed = seed,
+                fragmentLibraryId = project.fragmentLibrary.libraryId,
+                generationRulesId = project.generationRules.rulesId
+            };
+
+            return project;
+        }
+
+        public FossickMapConfig ToRuntimeConfig()
+        {
+            var config = new FossickMapConfig();
+            config.version = version;
+            config.activity = string.IsNullOrEmpty(activity) ? "Fossick" : activity;
+
+            if (fragmentLibrary != null)
+            {
+                config.boardWidth = fragmentLibrary.boardWidth;
+                config.fragments = fragmentLibrary.fragments ?? new List<FossickFragmentConfig>();
+            }
+
+            if (generationRules != null)
+            {
+                config.boardWidth = generationRules.boardWidth;
+                config.visibleHeight = generationRules.visibleHeight;
+                config.generation = CloneGenerationWithoutMapOverrides(generationRules.generation ?? new FossickGenerationConfig());
+                config.gameplay = generationRules.gameplay ?? new FossickGameplayConfig();
+                config.tools = generationRules.tools ?? new FossickToolRulesConfig();
+                config.visual = generationRules.visual ?? new FossickVisualConfig();
+            }
+
+            if (config.generation == null)
+            {
+                config.generation = new FossickGenerationConfig();
+            }
+
+            config.generation.sequenceOverrides = new List<FossickSequenceOverrideConfig>();
+            config.generation.rowOverrides = new List<FossickRowOverrideConfig>();
+
+            return config;
+        }
+
+        private static FossickGenerationConfig CloneGenerationWithoutMapOverrides(FossickGenerationConfig source)
+        {
+            var clone = new FossickGenerationConfig
+            {
+                regularGroupSize = source.regularGroupSize,
+                rewardInsertMin = source.rewardInsertMin,
+                rewardInsertMax = source.rewardInsertMax,
+                prefetchVisibleScreens = source.prefetchVisibleScreens,
+                minimumRowsAhead = source.minimumRowsAhead,
+                retainRowsBehind = source.retainRowsBehind,
+                difficultyCounts = source.difficultyCounts == null
+                    ? new List<FossickDifficultyCount>()
+                    : source.difficultyCounts
+                        .Select(count => new FossickDifficultyCount { difficulty = count.difficulty, count = count.count })
+                        .ToList(),
+                sequenceOverrides = new List<FossickSequenceOverrideConfig>(),
+                rowOverrides = new List<FossickRowOverrideConfig>()
+            };
+
+            return clone;
+        }
     }
 
     [Serializable]
@@ -97,7 +242,9 @@ namespace Fossick.Core.Config
         public int prefetchVisibleScreens = 4;
         public int minimumRowsAhead = 24;
         public int retainRowsBehind = 12;
+        [NonSerialized]
         public List<FossickSequenceOverrideConfig> sequenceOverrides = new List<FossickSequenceOverrideConfig>();
+        [NonSerialized]
         public List<FossickRowOverrideConfig> rowOverrides = new List<FossickRowOverrideConfig>();
     }
 

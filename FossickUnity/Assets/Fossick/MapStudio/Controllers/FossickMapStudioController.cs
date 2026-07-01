@@ -21,6 +21,10 @@ namespace Fossick.MapStudio.Controllers
             {
                 LoadJson(initialMapJson.text);
             }
+            else if (TryLoadSplitProject())
+            {
+                Validate();
+            }
             else
             {
                 CurrentConfig = FossickSampleMapFactory.CreateDefaultConfig();
@@ -37,6 +41,24 @@ namespace Fossick.MapStudio.Controllers
         public string ExportJson()
         {
             return FossickMapJsonUtility.ToJson(CurrentConfig);
+        }
+
+        public void LoadProject(FossickMapProjectConfig project)
+        {
+            if (project == null)
+            {
+                CurrentConfig = FossickSampleMapFactory.CreateDefaultConfig();
+                Validate();
+                return;
+            }
+
+            CurrentConfig = project.ToRuntimeConfig();
+            if (project.mapDefinition != null)
+            {
+                seed = project.mapDefinition.seed;
+            }
+
+            Validate();
         }
 
         public void SetSeed(int value)
@@ -61,5 +83,16 @@ namespace Fossick.MapStudio.Controllers
             return LastValidation;
         }
 
+        private bool TryLoadSplitProject()
+        {
+            var project = FossickMapProjectFileService.LoadEditableProject();
+            if (project == null)
+            {
+                return false;
+            }
+
+            LoadProject(project);
+            return true;
+        }
     }
 }

@@ -1,0 +1,160 @@
+{
+    "version": 1,
+    "activity": "Fossick",
+    "rulesId": "fossick_default_rules",
+    "boardWidth": 7,
+    "visibleHeight": 6,
+    "generation": {
+        "regularGroupSize": 10,
+        "difficultyCounts": [
+            {
+                "difficulty": 1,
+                "count": 7
+            },
+            {
+                "difficulty": 2,
+                "count": 2
+            },
+            {
+                "difficulty": 3,
+                "count": 1
+            }
+        ],
+        "rewardInsertMin": 4,
+        "rewardInsertMax": 6,
+        "prefetchVisibleScreens": 4,
+        "minimumRowsAhead": 24,
+        "retainRowsBehind": 12
+    },
+    "gameplay": {
+        "startingPickaxes": 20,
+        "startingDynamite": 3,
+        "startingTnt": 1,
+        "startingRadar": 1
+    },
+    "tools": {
+        "dynamite": {
+            "offsets": [
+                {
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "x": 1,
+                    "y": 0
+                },
+                {
+                    "x": -1,
+                    "y": 0
+                },
+                {
+                    "x": 0,
+                    "y": 1
+                },
+                {
+                    "x": 0,
+                    "y": -1
+                }
+            ]
+        },
+        "tnt": {
+            "offsets": [
+                {
+                    "x": -1,
+                    "y": -1
+                },
+                {
+                    "x": 0,
+                    "y": -1
+                },
+                {
+                    "x": 1,
+                    "y": -1
+                },
+                {
+                    "x": -1,
+                    "y": 0
+                },
+                {
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "x": 1,
+                    "y": 0
+                },
+                {
+                    "x": -1,
+                    "y": 1
+                },
+                {
+                    "x": 0,
+                    "y": 1
+                },
+                {
+                    "x": 1,
+                    "y": 1
+                }
+            ]
+        },
+        "radar": {
+            "offsets": [
+                {
+                    "x": 0,
+                    "y": -2
+                },
+                {
+                    "x": -1,
+                    "y": -1
+                },
+                {
+                    "x": 0,
+                    "y": -1
+                },
+                {
+                    "x": 1,
+                    "y": -1
+                },
+                {
+                    "x": -2,
+                    "y": 0
+                },
+                {
+                    "x": -1,
+                    "y": 0
+                },
+                {
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "x": 1,
+                    "y": 0
+                },
+                {
+                    "x": 2,
+                    "y": 0
+                },
+                {
+                    "x": -1,
+                    "y": 1
+                },
+                {
+                    "x": 0,
+                    "y": 1
+                },
+                {
+                    "x": 1,
+                    "y": 1
+                },
+                {
+                    "x": 0,
+                    "y": 2
+                }
+            ]
+        }
+    },
+    "visual": {
+        "dirtAutoTileSet": "Dirt"
+    }
+}

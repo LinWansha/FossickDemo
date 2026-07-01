@@ -14,6 +14,9 @@ namespace Fossick.Preview.Controllers
     public sealed class FossickPreviewController : MonoBehaviour
     {
         [SerializeField] private TextAsset mapJson;
+        [SerializeField] private TextAsset fragmentLibraryJson;
+        [SerializeField] private TextAsset generationRulesJson;
+        [SerializeField] private TextAsset mapDefinitionJson;
         [SerializeField] private int seed = 12345;
 
         private FossickActionResolver actionResolver = new FossickActionResolver();
@@ -33,9 +36,7 @@ namespace Fossick.Preview.Controllers
 
         private void Awake()
         {
-            config = mapJson != null
-                ? FossickMapJsonUtility.FromJson(mapJson.text)
-                : FossickSampleMapFactory.CreateDefaultConfig();
+            config = LoadConfig();
             actionResolver = new FossickActionResolver(config.tools);
 
             BuildBoard();
@@ -96,6 +97,44 @@ namespace Fossick.Preview.Controllers
             session = restore == null
                 ? new FossickGameplaySession(config, seed, rows, UnlimitedTools)
                 : FossickGameplaySession.Restore(config, restore, rows, UnlimitedTools);
+        }
+
+        private FossickMapConfig LoadConfig()
+        {
+            var editableProject = FossickMapProjectFileService.LoadEditableProject();
+            if (editableProject != null)
+            {
+                if (editableProject.mapDefinition != null)
+                {
+                    seed = editableProject.mapDefinition.seed;
+                }
+
+                return editableProject.ToRuntimeConfig();
+            }
+
+            if (fragmentLibraryJson != null && generationRulesJson != null && mapDefinitionJson != null)
+            {
+                var project = new FossickMapProjectConfig
+                {
+                    fragmentLibrary = FossickMapJsonUtility.FragmentLibraryFromJson(fragmentLibraryJson.text),
+                    generationRules = FossickMapJsonUtility.GenerationRulesFromJson(generationRulesJson.text),
+                    mapDefinition = FossickMapJsonUtility.MapDefinitionFromJson(mapDefinitionJson.text)
+                };
+
+                if (project.mapDefinition != null)
+                {
+                    seed = project.mapDefinition.seed;
+                }
+
+                return project.ToRuntimeConfig();
+            }
+
+            if (mapJson != null)
+            {
+                return FossickMapJsonUtility.FromJson(mapJson.text);
+            }
+
+            return FossickSampleMapFactory.CreateDefaultConfig();
         }
 
         private void AppendActionLog(FossickGameplayActionResult gameplayResult)

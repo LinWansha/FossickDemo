@@ -11,19 +11,19 @@ namespace Fossick.Core.Validation
 
             if (config == null)
             {
-                result.Add(FossickValidationSeverity.Error, "Map config is null.");
+                result.Add(FossickValidationSeverity.Error, "Map config is null.", category: FossickValidationCategory.MapDefinition);
                 return result;
             }
 
             if (config.activity != "Fossick")
             {
-                result.Add(FossickValidationSeverity.Error, "Activity must be Fossick.");
+                result.Add(FossickValidationSeverity.Error, "Activity must be Fossick.", category: FossickValidationCategory.MapDefinition);
             }
 
             var boardSpec = config.BoardSpec;
             if (!boardSpec.IsValid)
             {
-                result.Add(FossickValidationSeverity.Error, "Board width and visible height must be greater than zero.");
+                result.Add(FossickValidationSeverity.Error, "Board width and visible height must be greater than zero.", category: FossickValidationCategory.MapDefinition);
             }
 
             ValidateGeneration(config, result);
@@ -37,24 +37,24 @@ namespace Fossick.Core.Validation
             var generation = config.generation;
             if (generation == null)
             {
-                result.Add(FossickValidationSeverity.Error, "Generation config is missing.");
+                result.Add(FossickValidationSeverity.Error, "Generation config is missing.", category: FossickValidationCategory.GenerationRules);
                 return;
             }
 
             if (generation.regularGroupSize <= 0)
             {
-                result.Add(FossickValidationSeverity.Error, "Regular group size must be greater than zero.");
+                result.Add(FossickValidationSeverity.Error, "Regular group size must be greater than zero.", category: FossickValidationCategory.GenerationRules);
             }
 
             if (generation.rewardInsertMin <= 0 || generation.rewardInsertMax <= 0 || generation.rewardInsertMin > generation.rewardInsertMax)
             {
-                result.Add(FossickValidationSeverity.Error, "Reward insert range is invalid.");
+                result.Add(FossickValidationSeverity.Error, "Reward insert range is invalid.", category: FossickValidationCategory.GenerationRules);
             }
 
             var total = 0;
             if (generation.difficultyCounts == null || generation.difficultyCounts.Count == 0)
             {
-                result.Add(FossickValidationSeverity.Error, "At least one difficulty count is required.");
+                result.Add(FossickValidationSeverity.Error, "At least one difficulty count is required.", category: FossickValidationCategory.GenerationRules);
                 return;
             }
 
@@ -64,23 +64,23 @@ namespace Fossick.Core.Validation
                 var entry = generation.difficultyCounts[i];
                 if (entry == null)
                 {
-                    result.Add(FossickValidationSeverity.Error, "Difficulty count entry is null.");
+                    result.Add(FossickValidationSeverity.Error, "Difficulty count entry is null.", category: FossickValidationCategory.GenerationRules);
                     continue;
                 }
 
                 if (entry.difficulty <= 0)
                 {
-                    result.Add(FossickValidationSeverity.Error, "Difficulty must be greater than zero.");
+                    result.Add(FossickValidationSeverity.Error, "Difficulty must be greater than zero.", category: FossickValidationCategory.GenerationRules);
                 }
 
                 if (entry.count <= 0)
                 {
-                    result.Add(FossickValidationSeverity.Error, "Difficulty count must be greater than zero.");
+                    result.Add(FossickValidationSeverity.Error, "Difficulty count must be greater than zero.", category: FossickValidationCategory.GenerationRules);
                 }
 
                 if (!difficulties.Add(entry.difficulty))
                 {
-                    result.Add(FossickValidationSeverity.Error, $"Difficulty {entry.difficulty} is duplicated in generation config.");
+                    result.Add(FossickValidationSeverity.Error, $"Difficulty {entry.difficulty} is duplicated in generation config.", category: FossickValidationCategory.GenerationRules);
                 }
 
                 total += entry.count;
@@ -88,7 +88,7 @@ namespace Fossick.Core.Validation
 
             if (generation.regularGroupSize > 0 && total != generation.regularGroupSize)
             {
-                result.Add(FossickValidationSeverity.Warning, $"Difficulty counts total {total}, but regular group size is {generation.regularGroupSize}.");
+                result.Add(FossickValidationSeverity.Error, $"Difficulty counts total {total}, but regular group size is {generation.regularGroupSize}.", category: FossickValidationCategory.GenerationRules);
             }
         }
 
@@ -96,7 +96,7 @@ namespace Fossick.Core.Validation
         {
             if (config.fragments == null || config.fragments.Count == 0)
             {
-                result.Add(FossickValidationSeverity.Error, "At least one fragment is required.");
+                result.Add(FossickValidationSeverity.Error, "At least one fragment is required.", category: FossickValidationCategory.Template);
                 return;
             }
 
@@ -215,12 +215,12 @@ namespace Fossick.Core.Validation
 
                     if (cell.terrain == FossickTerrainType.Unbreakable)
                     {
-                        result.Add(FossickValidationSeverity.Warning, "Reward is buried under unbreakable terrain.", fragment.id, cell.x, cell.y);
+                        result.Add(FossickValidationSeverity.Error, "Reward is buried under unbreakable terrain.", fragment.id, cell.x, cell.y);
                     }
 
-                    if (reward.type == FossickElementType.Ore && !CanAttachOre(cell))
+                    if ((reward.type == FossickElementType.Ore || reward.type == FossickElementType.Item) && !CanAttachBuriedElement(cell))
                     {
-                        result.Add(FossickValidationSeverity.Error, "Ore must be attached to diggable terrain.", fragment.id, cell.x, cell.y);
+                        result.Add(FossickValidationSeverity.Error, "Buried reward must be attached to diggable terrain.", fragment.id, cell.x, cell.y);
                     }
                 }
 
@@ -234,6 +234,8 @@ namespace Fossick.Core.Validation
                     result.Add(FossickValidationSeverity.Warning, "Reward background is usually reserved for reward fragments.", fragment.id, cell.x, cell.y);
                 }
             }
+
+            ValidateRewardBackgroundRegions(config, fragment, result);
         }
 
         private static void ValidateDifficultyCoverage(FossickMapConfig config, HashSet<int> regularDifficulties, FossickValidationResult result)
@@ -248,12 +250,166 @@ namespace Fossick.Core.Validation
                 var entry = config.generation.difficultyCounts[i];
                 if (entry != null && entry.difficulty > 0 && !regularDifficulties.Contains(entry.difficulty))
                 {
-                    result.Add(FossickValidationSeverity.Error, $"Generation requires difficulty {entry.difficulty}, but no regular fragment uses it.");
+                    result.Add(FossickValidationSeverity.Error, $"Generation requires difficulty {entry.difficulty}, but no regular fragment uses it.", category: FossickValidationCategory.GenerationRules);
                 }
             }
         }
 
-        private static bool CanAttachOre(FossickCellConfig cell)
+        private static void ValidateRewardBackgroundRegions(FossickMapConfig config, FossickFragmentConfig fragment, FossickValidationResult result)
+        {
+            if (config == null || fragment == null || fragment.cells == null || config.boardWidth <= 0 || fragment.height <= 0)
+            {
+                return;
+            }
+
+            var ids = new string[fragment.height, config.boardWidth];
+            for (var i = 0; i < fragment.cells.Count; i++)
+            {
+                var cell = fragment.cells[i];
+                if (cell == null
+                    || cell.x < 0
+                    || cell.x >= config.boardWidth
+                    || cell.y < 0
+                    || cell.y >= fragment.height
+                    || string.IsNullOrEmpty(cell.rewardBackgroundId))
+                {
+                    continue;
+                }
+
+                ids[cell.y, cell.x] = cell.rewardBackgroundId;
+            }
+
+            var visited = new bool[fragment.height, config.boardWidth];
+            for (var y = 0; y < fragment.height; y++)
+            {
+                for (var x = 0; x < config.boardWidth; x++)
+                {
+                    if (visited[y, x] || string.IsNullOrEmpty(ids[y, x]))
+                    {
+                        continue;
+                    }
+
+                    ValidateRewardBackgroundRegion(fragment, result, ids, visited, x, y, config.boardWidth, fragment.height);
+                }
+            }
+        }
+
+        private static void ValidateRewardBackgroundRegion(
+            FossickFragmentConfig fragment,
+            FossickValidationResult result,
+            string[,] ids,
+            bool[,] visited,
+            int startX,
+            int startY,
+            int width,
+            int height)
+        {
+            var id = ids[startY, startX];
+            var queue = new Queue<int>();
+            queue.Enqueue(startY * width + startX);
+            visited[startY, startX] = true;
+
+            var minX = startX;
+            var maxX = startX;
+            var minY = startY;
+            var maxY = startY;
+            var count = 0;
+
+            while (queue.Count > 0)
+            {
+                var key = queue.Dequeue();
+                var x = key % width;
+                var y = key / width;
+                count++;
+
+                if (x < minX)
+                {
+                    minX = x;
+                }
+
+                if (x > maxX)
+                {
+                    maxX = x;
+                }
+
+                if (y < minY)
+                {
+                    minY = y;
+                }
+
+                if (y > maxY)
+                {
+                    maxY = y;
+                }
+
+                EnqueueRewardBackgroundNeighbor(ids, visited, queue, id, x - 1, y, width, height);
+                EnqueueRewardBackgroundNeighbor(ids, visited, queue, id, x + 1, y, width, height);
+                EnqueueRewardBackgroundNeighbor(ids, visited, queue, id, x, y - 1, width, height);
+                EnqueueRewardBackgroundNeighbor(ids, visited, queue, id, x, y + 1, width, height);
+            }
+
+            if (!TryGetRewardBackgroundSize(id, out var expectedWidth, out var expectedHeight))
+            {
+                result.Add(FossickValidationSeverity.Warning, $"Unknown reward background id {id}.", fragment.id, startX, startY);
+                return;
+            }
+
+            var actualWidth = maxX - minX + 1;
+            var actualHeight = maxY - minY + 1;
+            if (actualWidth != expectedWidth || actualHeight != expectedHeight || count != expectedWidth * expectedHeight)
+            {
+                result.Add(FossickValidationSeverity.Error, "Reward background region shape is invalid.", fragment.id, startX, startY);
+            }
+        }
+
+        private static void EnqueueRewardBackgroundNeighbor(
+            string[,] ids,
+            bool[,] visited,
+            Queue<int> queue,
+            string id,
+            int x,
+            int y,
+            int width,
+            int height)
+        {
+            if (x < 0 || x >= width || y < 0 || y >= height || visited[y, x] || ids[y, x] != id)
+            {
+                return;
+            }
+
+            visited[y, x] = true;
+            queue.Enqueue(y * width + x);
+        }
+
+        private static bool TryGetRewardBackgroundSize(string id, out int width, out int height)
+        {
+            if (id == "treasure_room_3x2")
+            {
+                width = 3;
+                height = 2;
+                return true;
+            }
+
+            if (id == "treasure_room_5x2")
+            {
+                width = 5;
+                height = 2;
+                return true;
+            }
+
+            if (id == "treasure_room" || id == "treasure_room_7x2")
+            {
+                width = 7;
+                height = 2;
+                return true;
+            }
+
+            width = 0;
+            height = 0;
+            return false;
+        }
+
+        private static bool CanAttachBuriedElement(FossickCellConfig cell)
         {
             return cell != null
                 && cell.terrain != FossickTerrainType.Empty

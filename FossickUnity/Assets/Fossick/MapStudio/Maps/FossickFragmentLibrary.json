@@ -1,0 +1,5156 @@
+{
+    "version": 1,
+    "activity": "Fossick",
+    "libraryId": "fossick_default_fragments",
+    "boardWidth": 7,
+    "fragments": [
+        {
+            "id": 1001,
+            "type": 0,
+            "difficulty": 0,
+            "weight": 1,
+            "tags": [],
+            "width": 7,
+            "height": 6,
+            "cells": [
+                {
+                    "x": 0,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 1,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 2,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 3,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 4,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 5,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 6,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 0,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 1,
+                        "id": "ore_gem",
+                        "amount": 30
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 1,
+                        "id": "ore_gem",
+                        "amount": 30
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 4,
+                        "id": "collection_piece",
+                        "amount": 1
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 4,
+                        "id": "collection_piece",
+                        "amount": 1
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 5,
+                        "id": "dynamite",
+                        "amount": 1
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 5,
+                        "id": "dynamite",
+                        "amount": 1
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 5,
+                        "id": "pickaxe",
+                        "amount": 1
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 5,
+                        "id": "pickaxe",
+                        "amount": 1
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 5,
+                        "id": "tnt",
+                        "amount": 1
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 5,
+                        "id": "tnt",
+                        "amount": 1
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 5,
+                        "id": "radar",
+                        "amount": 1
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 5,
+                        "id": "radar",
+                        "amount": 1
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 6,
+                        "id": "treasure_chest",
+                        "amount": 1
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 6,
+                        "id": "treasure_chest",
+                        "amount": 1
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 1,
+                        "id": "copper",
+                        "amount": 10
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 6,
+                        "id": "treasure_chest",
+                        "amount": 1
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 6,
+                        "id": "treasure_chest",
+                        "amount": 1
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 4,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                }
+            ]
+        },
+        {
+            "id": 2001,
+            "type": 1,
+            "difficulty": 1,
+            "weight": 1,
+            "tags": [],
+            "width": 7,
+            "height": 6,
+            "cells": [
+                {
+                    "x": 0,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 1,
+                        "id": "copper",
+                        "amount": 10
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 4,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                }
+            ]
+        },
+        {
+            "id": 2002,
+            "type": 1,
+            "difficulty": 2,
+            "weight": 1,
+            "tags": [],
+            "width": 7,
+            "height": 6,
+            "cells": [
+                {
+                    "x": 0,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 1,
+                        "id": "copper",
+                        "amount": 10
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 4,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                }
+            ]
+        },
+        {
+            "id": 2003,
+            "type": 1,
+            "difficulty": 3,
+            "weight": 1,
+            "tags": [],
+            "width": 7,
+            "height": 6,
+            "cells": [
+                {
+                    "x": 0,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 1,
+                        "id": "copper",
+                        "amount": 10
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 3,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 4,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 4,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 5,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                }
+            ]
+        },
+        {
+            "id": 3001,
+            "type": 2,
+            "difficulty": 0,
+            "weight": 1,
+            "tags": [],
+            "width": 7,
+            "height": 3,
+            "cells": [
+                {
+                    "x": 0,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 1,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 2,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 3,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 4,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 5,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 6,
+                    "y": 0,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 0,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 1,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 2,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 2,
+                        "id": "coin_pile",
+                        "amount": 25
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 3,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 2,
+                        "id": "coin_pile",
+                        "amount": 25
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 4,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 2,
+                        "id": "coin_pile",
+                        "amount": 25
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 5,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 6,
+                    "y": 1,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "treasure_room_7x2",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 0,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 1,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 2,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 3,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 4,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 5,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                },
+                {
+                    "x": 6,
+                    "y": 2,
+                    "backgroundId": "mine_default",
+                    "rewardBackgroundId": "",
+                    "terrain": 0,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 0,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": false
+                }
+            ]
+        },
+        {
+            "id": 2000,
+            "type": 1,
+            "difficulty": 1,
+            "weight": 1,
+            "tags": [],
+            "width": 7,
+            "height": 6,
+            "cells": [
+                {
+                    "x": 0,
+                    "y": 0,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 0,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 0,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 0,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 0,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 0,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 0,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 1,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 1,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 1,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 1,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 1,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 1,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 1,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 2,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 2,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 2,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 2,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 2,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 2,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 2,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 3,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 3,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 3,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 3,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 2,
+                    "hp": 2,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 3,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 3,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 3,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 4,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 4,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 4,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 4,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 4,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 4,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 4,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 0,
+                    "y": 5,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 1,
+                    "y": 5,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 2,
+                    "y": 5,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 3,
+                    "y": 5,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 4,
+                    "y": 5,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 5,
+                    "y": 5,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                },
+                {
+                    "x": 6,
+                    "y": 5,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1,
+                    "element": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decor": [],
+                    "mask": true
+                }
+            ]
+        }
+    ]
+}

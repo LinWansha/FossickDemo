@@ -165,7 +165,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 34dfb4214636b4695accc379fb2bd78d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mapJson: {fileID: 4900000, guid: 1e730247fbe7f46efbcd07f215d0a322, type: 3}
+  mapJson: {fileID: 0}
+  fragmentLibraryJson: {fileID: 4900000, guid: 4d8b7c2f0a9143f2b6e5d8a1c9f20431, type: 3}
+  generationRulesJson: {fileID: 4900000, guid: 7a1e5c9d3b4f4a55a0c92e8176d2b308, type: 3}
+  mapDefinitionJson: {fileID: 4900000, guid: a6f3c90d12e84c70b4d91f52a8e0376b, type: 3}
   seed: 12345
 --- !u!4 &876976240
 Transform:

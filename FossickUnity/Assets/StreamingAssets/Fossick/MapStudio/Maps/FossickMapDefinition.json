@@ -1,0 +1,8 @@
+{
+    "version": 1,
+    "activity": "Fossick",
+    "mapId": "fossick_default_map",
+    "fragmentLibraryId": "fossick_default_fragments",
+    "generationRulesId": "fossick_default_rules",
+    "seed": 12345
+}

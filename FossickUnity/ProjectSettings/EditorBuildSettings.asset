@@ -6,9 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Fossick/Preview/Scenes/FossickPreview.unity
-    guid: 8d24de5ff65f6490e8f1e2189ee559dc
-  - enabled: 1
     path: Assets/Fossick/MapStudio/Scenes/FossickMapStudio.unity
     guid: 51799e2248cde452ba8c93229da8dbe2
+  - enabled: 1
+    path: Assets/Fossick/Preview/Scenes/FossickPreview.unity
+    guid: 8d24de5ff65f6490e8f1e2189ee559dc
   m_configObjects: {}

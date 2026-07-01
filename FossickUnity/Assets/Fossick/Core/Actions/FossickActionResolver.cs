@@ -73,7 +73,7 @@ namespace Fossick.Core.Actions
             {
                 var target = targets[0];
                 var cell = board.GetCell(target.x, target.y);
-                if (!ApplyCellEffect(cell, result, true, true, 1))
+                if (!ApplyCellEffect(cell, result, true, true, true, 1))
                 {
                     result.depthAfterAction = board.Depth;
                     return result;
@@ -96,7 +96,7 @@ namespace Fossick.Core.Actions
                 for (var i = 0; i < targets.Count; i++)
                 {
                     var target = targets[i];
-                    ApplyCellEffect(board.GetCell(target.x, target.y), result, false, false, GetToolDamage(toolType));
+                    ApplyCellEffect(board.GetCell(target.x, target.y), result, false, false, false, GetToolDamage(toolType));
                 }
             }
 
@@ -120,7 +120,7 @@ namespace Fossick.Core.Actions
             return toolType == FossickToolType.Tnt ? 2 : 1;
         }
 
-        private static bool ApplyCellEffect(FossickCellState cell, FossickActionResult result, bool consumeTool, bool invalidWhenNoEffect, int damage)
+        private static bool ApplyCellEffect(FossickCellState cell, FossickActionResult result, bool consumeTool, bool invalidWhenNoEffect, bool collectSpawnedReward, int damage)
         {
             if (cell == null)
             {
@@ -177,15 +177,18 @@ namespace Fossick.Core.Actions
                         {
                             AddStep(result, FossickActionStepType.RewardRevealed, cell.x, cell.y);
                         }
-
-                        delta.rewardCollected = CollectReward(cell, result);
                     }
                 }
             }
             else if (!cell.HasObstacle)
             {
-                delta.rewardCollected = CollectReward(cell, result);
+                delta.rewardCollected = collectSpawnedReward && CollectReward(cell, result);
                 changed = delta.rewardCollected;
+                if (delta.rewardCollected)
+                {
+                    result.isApplied = true;
+                }
+
                 if (!delta.rewardCollected && invalidWhenNoEffect)
                 {
                     MarkInvalid(result, cell.x, cell.y, "Target cell has no diggable terrain or collectable reward.");
@@ -275,7 +278,7 @@ namespace Fossick.Core.Actions
         {
             if (toolType == FossickToolType.Pickaxe)
             {
-                if (IsVisibleBreakableCell(board.GetCell(x, y)))
+                if (IsVisiblePickaxeTarget(board.GetCell(x, y)))
                 {
                     AddTargetIfValid(board, x, y, targets);
                 }
@@ -304,14 +307,14 @@ namespace Fossick.Core.Actions
             }
         }
 
-        private static bool IsVisibleBreakableCell(FossickCellState cell)
+        private static bool IsVisiblePickaxeTarget(FossickCellState cell)
         {
-            return cell != null && cell.fog == FossickFogType.None && cell.IsBreakable;
+            return cell != null && cell.fog == FossickFogType.None && (cell.IsBreakable || cell.HasSpawnedReward);
         }
 
         private static bool IsVisibleEmptyCell(FossickCellState cell)
         {
-            return cell != null && cell.fog == FossickFogType.None && !cell.HasObstacle;
+            return cell != null && cell.fog == FossickFogType.None && !cell.HasObstacle && !cell.HasSpawnedReward;
         }
 
         private static void AddConfiguredTargets(FossickBoard board, FossickToolShapeConfig shape, int x, int y, List<FossickToolTarget> targets)

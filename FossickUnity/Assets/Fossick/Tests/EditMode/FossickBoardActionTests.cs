@@ -29,7 +29,7 @@ namespace Fossick.Core.Tests
         }
 
         [Test]
-        public void Pickaxe_WhenDirtBreaks_CollectsBuriedRewardAndUpdatesProgress()
+        public void Pickaxe_WhenDirtBreaks_RevealsBuriedRewardEntityBeforeCollection()
         {
             var config = FossickSampleMapFactory.CreateDefaultConfig();
             var fragment = CreateRewardFragment(9101);
@@ -49,20 +49,34 @@ namespace Fossick.Core.Tests
             var resolver = new FossickActionResolver();
             var progress = new FossickProgressState();
 
-            var result = resolver.ResolvePickaxe(board, 0, 0);
-            progress.Apply(result);
+            var breakResult = resolver.ResolvePickaxe(board, 0, 0);
+            progress.Apply(breakResult);
 
-            Assert.That(result.isApplied, Is.True);
-            Assert.That(result.toolConsumed, Is.True);
-            Assert.That(result.invalidReason, Is.Null);
-            Assert.That(result.rewards.Count, Is.EqualTo(1));
-            Assert.That(result.rewards[0].elementType, Is.EqualTo(FossickElementType.Ore));
-            Assert.That(result.rewards[0].amount, Is.EqualTo(3));
-            Assert.That(result.steps[0].type, Is.EqualTo(FossickActionStepType.ToolConsumed));
-            Assert.That(result.steps[1].type, Is.EqualTo(FossickActionStepType.ObstacleHit));
-            Assert.That(result.steps[2].type, Is.EqualTo(FossickActionStepType.ObstacleBroken));
-            Assert.That(result.steps[3].type, Is.EqualTo(FossickActionStepType.RewardRevealed));
-            Assert.That(result.steps[4].type, Is.EqualTo(FossickActionStepType.RewardCollected));
+            Assert.That(breakResult.isApplied, Is.True);
+            Assert.That(breakResult.toolConsumed, Is.True);
+            Assert.That(breakResult.invalidReason, Is.Null);
+            Assert.That(breakResult.rewards, Is.Empty);
+            Assert.That(breakResult.steps[0].type, Is.EqualTo(FossickActionStepType.ToolConsumed));
+            Assert.That(breakResult.steps[1].type, Is.EqualTo(FossickActionStepType.ObstacleHit));
+            Assert.That(breakResult.steps[2].type, Is.EqualTo(FossickActionStepType.ObstacleBroken));
+            Assert.That(breakResult.steps[3].type, Is.EqualTo(FossickActionStepType.RewardRevealed));
+            Assert.That(board.GetCell(0, 0).terrain, Is.EqualTo(FossickTerrainType.Empty));
+            Assert.That(board.GetCell(0, 0).HasSpawnedReward, Is.True);
+            Assert.That(board.GetCell(0, 0).collected, Is.False);
+            Assert.That(progress.oreFound, Is.EqualTo(0));
+            Assert.That(progress.toolUsed, Is.EqualTo(1));
+
+            var collectResult = resolver.ResolvePickaxe(board, 0, 0);
+            progress.Apply(collectResult);
+
+            Assert.That(collectResult.isApplied, Is.True);
+            Assert.That(collectResult.toolConsumed, Is.False);
+            Assert.That(collectResult.rewards.Count, Is.EqualTo(1));
+            Assert.That(collectResult.rewards[0].elementType, Is.EqualTo(FossickElementType.Ore));
+            Assert.That(collectResult.rewards[0].amount, Is.EqualTo(3));
+            Assert.That(collectResult.steps[0].type, Is.EqualTo(FossickActionStepType.RewardCollected));
+            Assert.That(board.GetCell(0, 0).HasSpawnedReward, Is.False);
+            Assert.That(board.GetCell(0, 0).collected, Is.True);
             Assert.That(progress.oreFound, Is.EqualTo(3));
             Assert.That(progress.toolUsed, Is.EqualTo(1));
         }

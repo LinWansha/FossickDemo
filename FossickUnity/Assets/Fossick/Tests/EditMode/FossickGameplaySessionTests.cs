@@ -7,18 +7,31 @@ namespace Fossick.Core.Tests
     public sealed class FossickGameplaySessionTests
     {
         [Test]
-        public void UseTool_WhenPickaxeBreaksOre_AddsScoreAndConsumesOnePickaxe()
+        public void UseTool_WhenPickaxeBreaksBuriedOre_SpawnsOreEntityBeforeCollection()
         {
             var config = CreateConfigWithSingleReward(FossickElementType.Ore, "copper", 15);
-            config.gameplay.startingPickaxes = 2;
+            config.gameplay.startingPickaxes = 3;
             var session = new FossickGameplaySession(config, 12345, 8);
 
-            var result = session.UseTool(FossickToolType.Pickaxe, 0, 0);
+            var breakResult = session.UseTool(FossickToolType.Pickaxe, 0, 0);
 
-            Assert.That(result.notEnoughTool, Is.False);
-            Assert.That(result.action.rewards.Count, Is.EqualTo(1));
-            Assert.That(session.Inventory.pickaxes, Is.EqualTo(1));
+            Assert.That(breakResult.notEnoughTool, Is.False);
+            Assert.That(breakResult.action.rewards, Is.Empty);
+            Assert.That(breakResult.action.steps.Exists(step => step.type == Fossick.Core.Actions.FossickActionStepType.RewardRevealed), Is.True);
+            Assert.That(session.Inventory.pickaxes, Is.EqualTo(2));
+            Assert.That(session.Rewards.score, Is.EqualTo(0));
+            Assert.That(session.Board.GetCell(0, 0).terrain, Is.EqualTo(FossickTerrainType.Empty));
+            Assert.That(session.Board.GetCell(0, 0).HasSpawnedReward, Is.True);
+            Assert.That(session.Board.GetCell(0, 0).collected, Is.False);
+
+            var collectResult = session.UseTool(FossickToolType.Pickaxe, 0, 0);
+
+            Assert.That(collectResult.action.rewards.Count, Is.EqualTo(1));
+            Assert.That(collectResult.action.rewards[0].elementType, Is.EqualTo(FossickElementType.Ore));
+            Assert.That(session.Inventory.pickaxes, Is.EqualTo(2));
             Assert.That(session.Rewards.score, Is.EqualTo(15));
+            Assert.That(session.Board.GetCell(0, 0).HasSpawnedReward, Is.False);
+            Assert.That(session.Board.GetCell(0, 0).collected, Is.True);
         }
 
         [Test]
@@ -43,10 +56,12 @@ namespace Fossick.Core.Tests
             config.gameplay.startingPickaxes = 0;
             var session = new FossickGameplaySession(config, 12345, 8, true);
 
-            var result = session.UseTool(FossickToolType.Pickaxe, 0, 0);
+            var breakResult = session.UseTool(FossickToolType.Pickaxe, 0, 0);
+            var collectResult = session.UseTool(FossickToolType.Pickaxe, 0, 0);
 
-            Assert.That(result.notEnoughTool, Is.False);
-            Assert.That(result.actionWasApplied, Is.True);
+            Assert.That(breakResult.notEnoughTool, Is.False);
+            Assert.That(breakResult.actionWasApplied, Is.True);
+            Assert.That(collectResult.actionWasApplied, Is.True);
             Assert.That(session.Inventory.pickaxes, Is.EqualTo(0));
             Assert.That(session.Rewards.score, Is.EqualTo(15));
         }
@@ -58,6 +73,9 @@ namespace Fossick.Core.Tests
             config.gameplay.startingPickaxes = 1;
             config.gameplay.startingDynamite = 0;
             var session = new FossickGameplaySession(config, 12345, 8);
+
+            session.UseTool(FossickToolType.Pickaxe, 0, 0);
+            Assert.That(session.Inventory.dynamite, Is.EqualTo(0));
 
             session.UseTool(FossickToolType.Pickaxe, 0, 0);
 
@@ -87,12 +105,22 @@ namespace Fossick.Core.Tests
 
             var secondHit = session.UseTool(FossickToolType.Pickaxe, 0, 0);
 
-            Assert.That(secondHit.action.rewards.Count, Is.EqualTo(1));
-            Assert.That(secondHit.action.rewards[0].elementType, Is.EqualTo(FossickElementType.Item));
-            Assert.That(secondHit.action.rewards[0].id, Is.EqualTo("pickaxe"));
+            Assert.That(secondHit.action.rewards, Is.Empty);
+            Assert.That(secondHit.action.steps.Exists(step => step.type == Fossick.Core.Actions.FossickActionStepType.RewardRevealed), Is.True);
             Assert.That(session.Board.GetCell(0, 0).terrain, Is.EqualTo(FossickTerrainType.Empty));
             Assert.That(session.Board.GetCell(0, 0).HasBuriedReward, Is.False);
             Assert.That(session.Board.GetCell(0, 0).HasTerrainAttachedReward, Is.False);
+            Assert.That(session.Board.GetCell(0, 0).HasSpawnedReward, Is.True);
+            Assert.That(session.Board.GetCell(0, 0).HasRewardOverlay, Is.True);
+            Assert.That(session.Board.GetCell(0, 0).collected, Is.False);
+            Assert.That(session.Inventory.pickaxes, Is.EqualTo(0));
+
+            var collect = session.UseTool(FossickToolType.Pickaxe, 0, 0);
+
+            Assert.That(collect.action.rewards.Count, Is.EqualTo(1));
+            Assert.That(collect.action.rewards[0].elementType, Is.EqualTo(FossickElementType.Item));
+            Assert.That(collect.action.rewards[0].id, Is.EqualTo("pickaxe"));
+            Assert.That(session.Board.GetCell(0, 0).HasSpawnedReward, Is.False);
             Assert.That(session.Board.GetCell(0, 0).HasRewardOverlay, Is.False);
             Assert.That(session.Board.GetCell(0, 0).collected, Is.True);
             Assert.That(session.Inventory.pickaxes, Is.EqualTo(3));
@@ -105,6 +133,7 @@ namespace Fossick.Core.Tests
             config.gameplay.startingPickaxes = 3;
             var session = new FossickGameplaySession(config, 777, 8);
             session.UseTool(FossickToolType.Pickaxe, 0, 0);
+            session.UseTool(FossickToolType.Pickaxe, 0, 0);
 
             var save = session.CreateSaveState();
             var restored = FossickGameplaySession.Restore(config, save, 8);
@@ -112,6 +141,28 @@ namespace Fossick.Core.Tests
             Assert.That(restored.Inventory.pickaxes, Is.EqualTo(2));
             Assert.That(restored.Rewards.score, Is.EqualTo(20));
             Assert.That(restored.Board.GetCellAtAbsoluteRow(0, 0).terrain, Is.EqualTo(FossickTerrainType.Empty));
+            Assert.That(restored.Board.GetCellAtAbsoluteRow(0, 0).collected, Is.True);
+        }
+
+        [Test]
+        public void SaveAndRestore_PreservesSpawnedUncollectedRewardEntity()
+        {
+            var config = CreateConfigWithSingleReward(FossickElementType.Ore, "copper", 20);
+            config.gameplay.startingPickaxes = 3;
+            var session = new FossickGameplaySession(config, 777, 8);
+            session.UseTool(FossickToolType.Pickaxe, 0, 0);
+
+            var save = session.CreateSaveState();
+            var restored = FossickGameplaySession.Restore(config, save, 8);
+
+            Assert.That(restored.Rewards.score, Is.EqualTo(0));
+            Assert.That(restored.Board.GetCellAtAbsoluteRow(0, 0).terrain, Is.EqualTo(FossickTerrainType.Empty));
+            Assert.That(restored.Board.GetCellAtAbsoluteRow(0, 0).HasSpawnedReward, Is.True);
+            Assert.That(restored.Board.GetCellAtAbsoluteRow(0, 0).collected, Is.False);
+
+            restored.UseTool(FossickToolType.Pickaxe, 0, 0);
+
+            Assert.That(restored.Rewards.score, Is.EqualTo(20));
             Assert.That(restored.Board.GetCellAtAbsoluteRow(0, 0).collected, Is.True);
         }
 

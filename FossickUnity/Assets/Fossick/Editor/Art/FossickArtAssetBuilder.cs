@@ -97,15 +97,15 @@ namespace Fossick.Editor.Art
             AddAutoTileSet(catalog, FossickTerrainType.Dirt, "Dirt");
             AddAutoTileSet(catalog, FossickTerrainType.Stone, "Stone");
             AddAutoTileSet(catalog, FossickTerrainType.Unbreakable, "Rock");
+            AddAutoTileSet(catalog, "Fog");
 
-            catalog.mineBackground = LoadSprite("Backgrounds/底图2.png")
+            var mineBackground = LoadSprite("Backgrounds/底图2.png")
                 ?? LoadSprite("Backgrounds/底图3.png")
                 ?? LoadSprite("Backgrounds/地图1.png");
-            catalog.treasureRoomBackground = LoadSprite("TreasureBackgrounds/33.png")
+            var treasureRoomBackground = LoadSprite("TreasureBackgrounds/33.png")
                 ?? LoadSprite("TreasureBackgrounds/32.png")
                 ?? LoadSprite("TreasureBackgrounds/31.png")
-                ?? catalog.mineBackground;
-            catalog.fogSprite = null;
+                ?? mineBackground;
 
             AddReward(catalog, FossickElementType.Coin, string.Empty, "Rewards/General/28.png", "Rewards/General/35.png", "Rewards/General/36.png");
             AddReward(catalog, FossickElementType.Score, string.Empty, "Rewards/General/29.png", "Rewards/General/30.png");
@@ -130,11 +130,13 @@ namespace Fossick.Editor.Art
             AddNamed(catalog.decorations, "grass_small", LoadSprite("Attachments/Static/22.png"));
             AddNamed(catalog.decorations, "mushroom", LoadSprite("Attachments/Static/23.png"));
 
-            AddNamed(catalog.backgrounds, "mine_default", catalog.mineBackground);
+            AddNamed(catalog.backgrounds, "mine_default", mineBackground);
+            AddNamed(catalog.backgrounds, "mine_map_1", LoadSprite("Backgrounds/地图1.png"));
+            AddNamed(catalog.backgrounds, "mine_bottom_2", LoadSprite("Backgrounds/底图2.png"));
+            AddNamed(catalog.backgrounds, "mine_bottom_3", LoadSprite("Backgrounds/底图3.png"));
             AddNamed(catalog.backgrounds, "treasure_room_3x2", LoadSprite("TreasureBackgrounds/31.png"));
             AddNamed(catalog.backgrounds, "treasure_room_5x2", LoadSprite("TreasureBackgrounds/32.png"));
-            AddNamed(catalog.backgrounds, "treasure_room_7x2", catalog.treasureRoomBackground);
-            AddNamed(catalog.backgrounds, "treasure_room", catalog.treasureRoomBackground);
+            AddNamed(catalog.backgrounds, "treasure_room_7x2", treasureRoomBackground);
 
             EditorUtility.SetDirty(catalog);
             return catalog;
@@ -164,7 +166,26 @@ namespace Fossick.Editor.Art
 
         private static void AddAutoTileSet(FossickArtCatalog catalog, FossickTerrainType terrain, string folder)
         {
-            var set = new FossickAutoTileSet { terrain = terrain };
+            var set = new FossickAutoTileSet { kind = FossickAutoTileSetKind.Terrain, terrain = terrain };
+            var paths = Directory.GetFiles(Path.Combine(ArtRoot, "AutoTiles", folder), "*.png");
+            for (var i = 0; i < paths.Length; i++)
+            {
+                var path = NormalizePath(paths[i]);
+                var index = ParseLeadingInt(Path.GetFileNameWithoutExtension(path));
+                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                if (index > 0 && sprite != null)
+                {
+                    set.sprites.Add(new FossickAutoTileSpriteEntry { index = index, sprite = sprite });
+                }
+            }
+
+            set.sprites.Sort((a, b) => a.index.CompareTo(b.index));
+            catalog.autoTileSets.Add(set);
+        }
+
+        private static void AddAutoTileSet(FossickArtCatalog catalog, string folder)
+        {
+            var set = new FossickAutoTileSet { kind = FossickAutoTileSetKind.Fog };
             var paths = Directory.GetFiles(Path.Combine(ArtRoot, "AutoTiles", folder), "*.png");
             for (var i = 0; i < paths.Length; i++)
             {

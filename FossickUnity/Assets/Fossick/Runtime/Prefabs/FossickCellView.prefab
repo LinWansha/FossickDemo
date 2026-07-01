@@ -88,10 +88,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ce4287278c103461d915aa9543272be0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  backgroundLayer: {fileID: 0}
-  rewardBackgroundLayer: {fileID: 0}
-  rewardLayer: {fileID: 0}
-  decorationLayer: {fileID: 0}
-  fogLayer: {fileID: 0}
-  previewLayer: {fileID: 0}
   label: {fileID: 0}

@@ -15,7 +15,7 @@ namespace Fossick.Runtime.Views
         private const int StoneDamagedSpriteIndex = 19;
         private const string TreasureRoomSmallId = "treasure_room_3x2";
         private const string TreasureRoomMediumId = "treasure_room_5x2";
-        private const string TreasureRoomLargeId = "treasure_room";
+        private const string TreasureRoomLargeId = "treasure_room_7x2";
 
         [SerializeField] private FossickArtCatalog artCatalog;
         [SerializeField] private FossickCellView cellViewPrefab;
@@ -37,6 +37,7 @@ namespace Fossick.Runtime.Views
         private readonly HashSet<string> previewKeys = new HashSet<string>();
 
         private RectTransform labelRoot;
+        private RectTransform clipRoot;
         private RectTransform backgroundRoot;
         private RectTransform rewardBackgroundRoot;
         private RectTransform terrainRoot;
@@ -188,6 +189,7 @@ namespace Fossick.Runtime.Views
             currentRenderedRowCount = 0;
             currentVisibleRowOffset = 0;
             labelRoot = null;
+            clipRoot = null;
             backgroundRoot = null;
             rewardBackgroundRoot = null;
             terrainRoot = null;
@@ -209,15 +211,17 @@ namespace Fossick.Runtime.Views
 
             var root = (RectTransform)transform;
             labelRoot = CreateRect("Row Labels", root);
-            backgroundRoot = CreateMaskedLayer("0 Background", root);
-            rewardBackgroundRoot = CreateMaskedLayer("1 Reward Background", root);
-            terrainRoot = CreateMaskedLayer("2 Terrain", root);
-            attachmentRoot = CreateMaskedLayer("3 Terrain Attachment", root);
-            rewardRoot = CreateMaskedLayer("4 Reward", root);
-            decorationRoot = CreateMaskedLayer("5 Decoration", root);
-            fogRoot = CreateMaskedLayer("6 Fog", root);
-            previewRoot = CreateMaskedLayer("Selection Preview", root);
-            interactionRoot = CreateMaskedLayer("Interaction", root);
+            clipRoot = CreateRect("Grid Clip", root);
+            clipRoot.gameObject.AddComponent<RectMask2D>();
+            backgroundRoot = CreateLayer("0 Background", clipRoot);
+            rewardBackgroundRoot = CreateLayer("1 Reward Background", clipRoot);
+            terrainRoot = CreateLayer("2 Terrain", clipRoot);
+            attachmentRoot = CreateLayer("3 Terrain Attachment", clipRoot);
+            rewardRoot = CreateLayer("4 Reward", clipRoot);
+            decorationRoot = CreateLayer("5 Decoration", clipRoot);
+            fogRoot = CreateLayer("6 Fog", clipRoot);
+            previewRoot = CreateLayer("Selection Preview", clipRoot);
+            interactionRoot = CreateLayer("Interaction", clipRoot);
 
             backgroundImage = backgroundRoot.gameObject.AddComponent<Image>();
             backgroundImage.raycastTarget = false;
@@ -239,15 +243,16 @@ namespace Fossick.Runtime.Views
             var top = Mathf.Max(0f, (rect.rect.height - gridHeight) * 0.5f);
 
             SetTopLeft(labelRoot, left - labelWidth, top, labelWidth, gridHeight);
-            SetGridRoot(backgroundRoot, left, top, gridWidth, gridHeight);
-            SetGridRoot(rewardBackgroundRoot, left, top, gridWidth, gridHeight);
-            SetGridRoot(terrainRoot, left, top, gridWidth, gridHeight);
-            SetGridRoot(attachmentRoot, left, top, gridWidth, gridHeight);
-            SetGridRoot(rewardRoot, left, top, gridWidth, gridHeight);
-            SetGridRoot(decorationRoot, left, top, gridWidth, gridHeight);
-            SetGridRoot(fogRoot, left, top, gridWidth, gridHeight);
-            SetGridRoot(previewRoot, left, top, gridWidth, gridHeight);
-            SetGridRoot(interactionRoot, left, top, gridWidth, gridHeight);
+            SetTopLeft(clipRoot, left, top, gridWidth, gridHeight);
+            SetGridRoot(backgroundRoot, 0f, 0f, gridWidth, gridHeight);
+            SetGridRoot(rewardBackgroundRoot, 0f, 0f, gridWidth, gridHeight);
+            SetGridRoot(terrainRoot, 0f, 0f, gridWidth, gridHeight);
+            SetGridRoot(attachmentRoot, 0f, 0f, gridWidth, gridHeight);
+            SetGridRoot(rewardRoot, 0f, 0f, gridWidth, gridHeight);
+            SetGridRoot(decorationRoot, 0f, 0f, gridWidth, gridHeight);
+            SetGridRoot(fogRoot, 0f, 0f, gridWidth, gridHeight);
+            SetGridRoot(previewRoot, 0f, 0f, gridWidth, gridHeight);
+            SetGridRoot(interactionRoot, 0f, 0f, gridWidth, gridHeight);
         }
 
         private static void SetGridRoot(RectTransform root, float left, float top, float width, float height)
@@ -626,7 +631,6 @@ namespace Fossick.Runtime.Views
                     height = 2;
                     return true;
                 case TreasureRoomLargeId:
-                case "treasure_room_7x2":
                     width = 7;
                     height = 2;
                     return true;
@@ -937,10 +941,9 @@ namespace Fossick.Runtime.Views
             return x + ":" + y;
         }
 
-        private static RectTransform CreateMaskedLayer(string name, Transform parent)
+        private static RectTransform CreateLayer(string name, Transform parent)
         {
             var rect = CreateRect(name, parent);
-            rect.gameObject.AddComponent<RectMask2D>();
             return rect;
         }
 
@@ -964,8 +967,8 @@ namespace Fossick.Runtime.Views
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(0f, 1f);
             rect.pivot = new Vector2(0f, 1f);
-            rect.anchoredPosition = new Vector2(left, -top);
-            rect.sizeDelta = new Vector2(width, height);
+            rect.anchoredPosition = new Vector2(Mathf.Round(left), -Mathf.Round(top));
+            rect.sizeDelta = new Vector2(Mathf.Round(width), Mathf.Round(height));
         }
     }
 }

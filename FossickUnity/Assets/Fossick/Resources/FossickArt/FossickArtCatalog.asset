@@ -13,16 +13,10 @@ MonoBehaviour:
   m_Name: FossickArtCatalog
   m_EditorClassIdentifier: 
   emptyCellColor: {r: 0.08, g: 0.18, b: 0.22, a: 1}
-  fogColor: {r: 0.08, g: 0.06, b: 0.045, a: 0.58}
   previewColor: {r: 0.32, g: 0.9, b: 0.48, a: 0.95}
-  fallbackDirtColor: {r: 0.56, g: 0.38, b: 0.25, a: 1}
-  fallbackStoneColor: {r: 0.48, g: 0.53, b: 0.58, a: 1}
-  fallbackRockColor: {r: 0.07, g: 0.07, b: 0.09, a: 1}
-  mineBackground: {fileID: 21300000, guid: f64c71fa16c21455aa8488dde99c9a60, type: 3}
-  treasureRoomBackground: {fileID: 21300000, guid: 07cbe665139264b18896f17bafa7d8c2, type: 3}
-  fogSprite: {fileID: 0}
   autoTileSets:
-  - terrain: 1
+  - kind: 0
+    terrain: 1
     sprites:
     - index: 1
       sprite: {fileID: 21300000, guid: 90ea6f2cc3f204330bf4bf408fa2e4b0, type: 3}
@@ -60,7 +54,8 @@ MonoBehaviour:
       sprite: {fileID: 21300000, guid: 023219384758443b780406a3df902205, type: 3}
     - index: 18
       sprite: {fileID: 21300000, guid: 52c7505e91a9a4d44b26c72140844d4e, type: 3}
-  - terrain: 2
+  - kind: 0
+    terrain: 2
     sprites:
     - index: 1
       sprite: {fileID: 21300000, guid: 0c7e096070f684f998c50155474960fa, type: 3}
@@ -100,7 +95,8 @@ MonoBehaviour:
       sprite: {fileID: 21300000, guid: 60a1a949776bd4aba8382353669a5c57, type: 3}
     - index: 19
       sprite: {fileID: 21300000, guid: ace19e185e3844ed4ab6f6715a8ad06e, type: 3}
-  - terrain: 3
+  - kind: 0
+    terrain: 3
     sprites:
     - index: 1
       sprite: {fileID: 21300000, guid: 80b8ea01e1601446889254120c959aa0, type: 3}
@@ -138,133 +134,107 @@ MonoBehaviour:
       sprite: {fileID: 21300000, guid: 2e0d0dd600349492b80ee1a663585e72, type: 3}
     - index: 18
       sprite: {fileID: 21300000, guid: 012aa13123aa24da98eefd63514cab2b, type: 3}
+  - kind: 1
+    terrain: 0
+    sprites:
+    - index: 1
+      sprite: {fileID: 21300000, guid: 01aa6bda847834e7fa06f3549441aaf1, type: 3}
+    - index: 2
+      sprite: {fileID: 21300000, guid: 69aa39208589b47f181ce71d82179c62, type: 3}
+    - index: 3
+      sprite: {fileID: 21300000, guid: 89662bc370e05444b9a00ea5d4997aaf, type: 3}
+    - index: 4
+      sprite: {fileID: 21300000, guid: 84b7cc31f5173470f8c3f3b5cb528ccb, type: 3}
+    - index: 5
+      sprite: {fileID: 21300000, guid: ba9952ba0cb4040a99eb62c68ae91b53, type: 3}
+    - index: 6
+      sprite: {fileID: 21300000, guid: 7bf264f261b7b4a0a9f5d3f2c487e88e, type: 3}
+    - index: 7
+      sprite: {fileID: 21300000, guid: 926827a712ca04aef90604105483c7d3, type: 3}
+    - index: 8
+      sprite: {fileID: 21300000, guid: 718e3f7d902df4a1bad5d5bf9d57d203, type: 3}
+    - index: 9
+      sprite: {fileID: 21300000, guid: 9c6d3c32b167c4b298c723a1d79e5707, type: 3}
+    - index: 10
+      sprite: {fileID: 21300000, guid: bbc108788aa424a7494e5f752cc37d36, type: 3}
+    - index: 11
+      sprite: {fileID: 21300000, guid: 4e13e81149f0a44bcb6509223c8eb9b0, type: 3}
+    - index: 12
+      sprite: {fileID: 21300000, guid: 1b05c82948f724ffcae12a42947eb25d, type: 3}
+    - index: 13
+      sprite: {fileID: 21300000, guid: 1e932988909af4368894179d48f5b68d, type: 3}
+    - index: 14
+      sprite: {fileID: 21300000, guid: 1511bec01bb34414db95b0a168c9398e, type: 3}
+    - index: 15
+      sprite: {fileID: 21300000, guid: 4631d950a7ed9498980042f404dfb870, type: 3}
   rewardSprites:
   - type: 2
     id: 
-    sprite: {fileID: 21300000, guid: 85ced959cd36048baaa1215f13866b81, type: 3}
+    sprite: {fileID: 21300000, guid: 49525bdf703c04c12b71a863387c396f, type: 3}
   - type: 3
     id: 
-    sprite: {fileID: 21300000, guid: 536b8c4df9bba484ca3a88a540d18abf, type: 3}
+    sprite: {fileID: 21300000, guid: 50b84028e5c7340b3b64712fcc80f028, type: 3}
   - type: 1
-    id: 
-    sprite: {fileID: 21300000, guid: 6af64e80a92334693952dae46a8e385a, type: 3}
+    id: ore_copper
+    sprite: {fileID: 21300000, guid: 296cb8612702143a1abbd76970862680, type: 3}
+  - type: 1
+    id: ore_gem
+    sprite: {fileID: 21300000, guid: bf4cfd411f5f449538d91ded63a067e2, type: 3}
+  - type: 1
+    id: ore_gold
+    sprite: {fileID: 21300000, guid: d08f1d464ceb74a8b8b88a4c1854b0b2, type: 3}
+  - type: 1
+    id: ore_silver
+    sprite: {fileID: 21300000, guid: 4d359b576813a4bbd912a5ace07e2fee, type: 3}
+  - type: 5
+    id: pickaxe
+    sprite: {fileID: 21300000, guid: 7bd6e2d7f343f4c109b3a8729eb46adf, type: 3}
+  - type: 5
+    id: dynamite
+    sprite: {fileID: 21300000, guid: 0b5fd0ee1c2b44ed795489bc7a2a2cd5, type: 3}
+  - type: 5
+    id: tnt
+    sprite: {fileID: 21300000, guid: a1af28319062e4a13b07977c6f77b73f, type: 3}
+  - type: 5
+    id: radar
+    sprite: {fileID: 21300000, guid: 028ab9a21a02e4170be5dd91d9d9b293, type: 3}
   - type: 5
     id: 
-    sprite: {fileID: 21300000, guid: 1314bbaac39ed443dbe0f4781359bfe6, type: 3}
+    sprite: {fileID: 21300000, guid: 7bd6e2d7f343f4c109b3a8729eb46adf, type: 3}
   - type: 6
     id: 
-    sprite: {fileID: 21300000, guid: 96ece22e55141463984d21751a3bf170, type: 3}
+    sprite: {fileID: 21300000, guid: 931ce7a82d3c74f348af08e7a83c11ef, type: 3}
   - type: 4
     id: 
-    sprite: {fileID: 21300000, guid: 421ca42ace16d431487bf26f113e274f, type: 3}
+    sprite: {fileID: 21300000, guid: c7e21d090b62140809e12aa14838e736, type: 3}
   toolSprites:
   - type: 0
-    sprite: {fileID: 21300000, guid: 421ca42ace16d431487bf26f113e274f, type: 3}
+    sprite: {fileID: 21300000, guid: 7bd6e2d7f343f4c109b3a8729eb46adf, type: 3}
   - type: 1
-    sprite: {fileID: 21300000, guid: 1314bbaac39ed443dbe0f4781359bfe6, type: 3}
+    sprite: {fileID: 21300000, guid: 0b5fd0ee1c2b44ed795489bc7a2a2cd5, type: 3}
   - type: 2
-    sprite: {fileID: 21300000, guid: a821855512d0747ddac97ebea216d048, type: 3}
+    sprite: {fileID: 21300000, guid: a1af28319062e4a13b07977c6f77b73f, type: 3}
   - type: 3
-    sprite: {fileID: 21300000, guid: c3c5d099f47464fdc8e875d9d90a2c4d, type: 3}
+    sprite: {fileID: 21300000, guid: 028ab9a21a02e4170be5dd91d9d9b293, type: 3}
   decorations:
-  - id: 1
-    sprite: {fileID: 21300000, guid: 6af64e80a92334693952dae46a8e385a, type: 3}
-  - id: 10
-    sprite: {fileID: 21300000, guid: 97fb5a1979dad485185e5a84e4a05533, type: 3}
-  - id: 11
-    sprite: {fileID: 21300000, guid: 8eac7cd5a620b49bcbb92f22f11dac6d, type: 3}
-  - id: 12
-    sprite: {fileID: 21300000, guid: 917496827873c461b937785335ca37c8, type: 3}
-  - id: 13
-    sprite: {fileID: 21300000, guid: 1afc716024ba04d8584f6cf03d09a517, type: 3}
-  - id: 14
-    sprite: {fileID: 21300000, guid: 0ff58e057a35e4aeea9abb6ab452aeda, type: 3}
-  - id: 15
-    sprite: {fileID: 21300000, guid: 136d91b4738a349379a97086571ce007, type: 3}
-  - id: 16
-    sprite: {fileID: 21300000, guid: f3e21c8ded6bd483999c8268e136f9b7, type: 3}
-  - id: 17
-    sprite: {fileID: 21300000, guid: 7682b8d00b37b4dfb9a0e7b4b8488554, type: 3}
-  - id: 18
-    sprite: {fileID: 21300000, guid: 5458051eadf2644e4acd20f115b75b97, type: 3}
-  - id: 19
-    sprite: {fileID: 21300000, guid: a69b04acaaba6452688405320b67dd6d, type: 3}
-  - id: 2
-    sprite: {fileID: 21300000, guid: 2e8495b72870047ee8142d281e1c3369, type: 3}
-  - id: 20
-    sprite: {fileID: 21300000, guid: 2700f550d85054356a31c11b776ed84d, type: 3}
-  - id: 21
-    sprite: {fileID: 21300000, guid: 1957d9716b47a4ac5b185f68cc673380, type: 3}
-  - id: 22
-    sprite: {fileID: 21300000, guid: 84b3676a55df644a3b8e11a5076e1bbb, type: 3}
-  - id: 23
-    sprite: {fileID: 21300000, guid: 421ca42ace16d431487bf26f113e274f, type: 3}
-  - id: 24
-    sprite: {fileID: 21300000, guid: 1314bbaac39ed443dbe0f4781359bfe6, type: 3}
-  - id: 25
-    sprite: {fileID: 21300000, guid: 6297428743b2b4c53bb103c466d2a4a9, type: 3}
-  - id: 26
-    sprite: {fileID: 21300000, guid: 6955546d2c6794e39b901c45acdb26f9, type: 3}
-  - id: 27
-    sprite: {fileID: 21300000, guid: 1156e5fcef5b443b381113454d8334b3, type: 3}
-  - id: 28
-    sprite: {fileID: 21300000, guid: 85ced959cd36048baaa1215f13866b81, type: 3}
-  - id: 29
-    sprite: {fileID: 21300000, guid: 536b8c4df9bba484ca3a88a540d18abf, type: 3}
-  - id: 3
-    sprite: {fileID: 21300000, guid: 6f0402dea1c394d119f04f06eb815f8b, type: 3}
-  - id: 30
-    sprite: {fileID: 21300000, guid: f5bd2739f35b94019865049e1fcc27be, type: 3}
-  - id: 31
-    sprite: {fileID: 21300000, guid: c3c5d099f47464fdc8e875d9d90a2c4d, type: 3}
-  - id: 32
-    sprite: {fileID: 21300000, guid: a821855512d0747ddac97ebea216d048, type: 3}
-  - id: 33
-    sprite: {fileID: 21300000, guid: 9f079e358954c46ce8f2812289e81c6d, type: 3}
-  - id: 34
-    sprite: {fileID: 21300000, guid: 95daf7ad26f56466596b48847c78c719, type: 3}
-  - id: 35
-    sprite: {fileID: 21300000, guid: cc740b5c2e75747f3be03d77e5c721af, type: 3}
-  - id: 36
-    sprite: {fileID: 21300000, guid: 1578d5c7591d04ae8a1565f701ded6fd, type: 3}
-  - id: 37
-    sprite: {fileID: 21300000, guid: 7cc1fc3c82047468b8509a825bffbf1d, type: 3}
-  - id: 4
-    sprite: {fileID: 21300000, guid: 920635729a8d44727986d536a6123ba3, type: 3}
-  - id: 5
-    sprite: {fileID: 21300000, guid: 5925410d6a57c4b39ab61059f1088dd2, type: 3}
-  - id: 6
-    sprite: {fileID: 21300000, guid: 482173314fc5d4cc4950225dca68cb40, type: 3}
-  - id: 8
-    sprite: {fileID: 21300000, guid: bbbf18a64c2a448ed83381ac6fa60077, type: 3}
-  - id: 9
-    sprite: {fileID: 21300000, guid: 00b1b5f2a943c4bd38f813546a06e1d3, type: 3}
-  - id: "\u5730\u56FE1"
-    sprite: {fileID: 21300000, guid: 33497fd8a96c34ecd83cb29ae0fe1537, type: 3}
-  - id: "\u5B9D\u7BB1\u5173\u4E0A"
-    sprite: {fileID: 21300000, guid: 96ece22e55141463984d21751a3bf170, type: 3}
-  - id: "\u5B9D\u7BB1\u6253\u5F00"
-    sprite: {fileID: 21300000, guid: f2eb482a5ec544d9887c08deaf182ec4, type: 3}
-  - id: "\u5B9D\u7BB1\u80CC\u540E\u5149"
-    sprite: {fileID: 21300000, guid: 3a31f10a080fe417ab470d50ac46c8ef, type: 3}
-  - id: "\u5E95\u56FE2"
-    sprite: {fileID: 21300000, guid: f64c71fa16c21455aa8488dde99c9a60, type: 3}
-  - id: "\u5E95\u56FE3"
-    sprite: {fileID: 21300000, guid: 5f8ac83a3042c40878b562d5025431da, type: 3}
-  - id: "\u6F02\u6D41\u74F6\u9634\u5F71"
-    sprite: {fileID: 21300000, guid: 2962625d281fb4bf89f1f17dd124211f, type: 3}
-  - id: "\u793A\u610F\u56FE"
-    sprite: {fileID: 21300000, guid: a043e875745624117a310c862737d3d3, type: 3}
-  - id: "\u793A\u610F\u56FE2"
-    sprite: {fileID: 21300000, guid: 4defb635bebfc49bebe4d6f31cabcd70, type: 3}
+  - id: grass_large
+    sprite: {fileID: 21300000, guid: 37adb527b48a14d65acbbbddd77e9fbc, type: 3}
+  - id: grass_small
+    sprite: {fileID: 21300000, guid: a97987af0835649b2b2199a2bec59aec, type: 3}
+  - id: mushroom
+    sprite: {fileID: 21300000, guid: 7c1fdd14689da4a51a2cf37c2b9b75a5, type: 3}
   backgrounds:
   - id: mine_default
-    sprite: {fileID: 21300000, guid: f64c71fa16c21455aa8488dde99c9a60, type: 3}
+    sprite: {fileID: 21300000, guid: e74a20fd051c24684b6f63c609c36ee8, type: 3}
+  - id: mine_map_1
+    sprite: {fileID: 21300000, guid: b8ab1198f73574b6c96d4ebd52898371, type: 3}
+  - id: mine_bottom_2
+    sprite: {fileID: 21300000, guid: e74a20fd051c24684b6f63c609c36ee8, type: 3}
+  - id: mine_bottom_3
+    sprite: {fileID: 21300000, guid: d0cd8ce61d62743bfa86ad35c499ba55, type: 3}
   - id: treasure_room_3x2
     sprite: {fileID: 21300000, guid: 69883c0dcc9ff4397b25605ede1d00fb, type: 3}
   - id: treasure_room_5x2
     sprite: {fileID: 21300000, guid: 009aee104dc474252b91ed4a5ea4cd82, type: 3}
   - id: treasure_room_7x2
-    sprite: {fileID: 21300000, guid: 07cbe665139264b18896f17bafa7d8c2, type: 3}
-  - id: treasure_room
     sprite: {fileID: 21300000, guid: 07cbe665139264b18896f17bafa7d8c2, type: 3}

@@ -10,19 +10,21 @@ using Fossick.MapStudio.Controllers;
 using Fossick.MapStudio.ImportExport;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.SceneManagement;
 #endif
 
 namespace Fossick.MapStudio.Views
 {
     [RequireComponent(typeof(FossickMapStudioController))]
-    public sealed class FossickMapStudioView : MonoBehaviour
+    public sealed partial class FossickMapStudioView : MonoBehaviour
     {
         private const float HeaderHeight = 56f;
-        private const float LeftWidth = 250f;
+        private const float LeftWidth = 270f;
         private const float CenterWidth = 1442f;
         private const float ColumnGap = 24f;
         private const float CellSize = 64f;
@@ -32,9 +34,11 @@ namespace Fossick.MapStudio.Views
         private const float SmoothTileOverlap = 2f;
         private const float GridLabelWidth = 50f;
         private const float LeftButtonWidth = 222f;
-        private const string DraftAssetPath = "Assets/Fossick/MapStudio/Maps/FossickMapDraft.json";
+        private const string PreviewScenePath = "Assets/Fossick/Preview/Scenes/FossickPreview.unity";
+        private const string PreviewSceneName = "FossickPreview";
 
         private FossickMapStudioController controller;
+        private FossickBrushPaletteView brushPaletteView;
         private GameObject canvasObject;
         private RectTransform root;
         private Font font;
@@ -45,7 +49,13 @@ namespace Fossick.MapStudio.Views
         private float mineScrollNormalizedPosition = 1f;
         private FossickTerrainType selectedTerrain = FossickTerrainType.Dirt;
         private string exportStatus;
-        private string editNotice;
+        private string currentFeedbackMessage;
+        private MapStudioFeedbackKind currentFeedbackKind = MapStudioFeedbackKind.Info;
+        private string editNotice
+        {
+            get => currentFeedbackMessage;
+            set => SetFeedback(value, InferFeedbackKind(value));
+        }
         private int pendingPaintFragmentId = -1;
         private int pendingPaintX = -1;
         private int pendingPaintY = -1;
@@ -58,19 +68,23 @@ namespace Fossick.MapStudio.Views
         private int selectedRewardBackgroundHeight;
         private string selectedDecorationId = string.Empty;
         private FossickFogType selectedFog = FossickFogType.Covered;
+        private bool showFogInEditor = true;
         private bool templateLibraryOpen;
+        private TemplateLibraryFilter templateLibraryFilter = TemplateLibraryFilter.All;
+        private TemplatePresetType selectedTemplatePreset = TemplatePresetType.Blank;
         private bool generationRulesOpen;
+        private FossickFragmentConfig templateEditDraft;
+        private int templateEditSourceIndex = -1;
+        private bool templateEditDirty;
         private FossickMapConfig mineInstanceSourceConfig;
         private int mineInstanceSeed;
         private bool mineInstanceGenerated;
         private bool generationRulesDirty;
-        private bool waitingForReplacementTarget;
-        private int pendingReplacementStartRow = -1;
-        private int selectedRowStart = -1;
-        private int selectedRowEnd = -1;
-        private int rowSelectionAnchor = -1;
-        private bool isRowSelecting;
-        private readonly Dictionary<int, FossickFragmentConfig> mineOccurrenceOverrides = new Dictionary<int, FossickFragmentConfig>();
+        private bool generationRulesEditDirty;
+        private bool generationRulesDirtySnapshot;
+        private FossickGenerationConfig generationRulesSnapshot;
+        private readonly List<string> templateUndoStack = new List<string>();
+        private readonly List<string> templateRedoStack = new List<string>();
         private readonly HashSet<string> selectedPaintCells = new HashSet<string>();
         private readonly Dictionary<string, RectTransform> selectedPaintCellRects = new Dictionary<string, RectTransform>();
         private readonly Dictionary<string, GameObject> selectedPaintCellHighlights = new Dictionary<string, GameObject>();
@@ -78,15 +92,50 @@ namespace Fossick.MapStudio.Views
         private static readonly Color Background = new Color(0.09f, 0.1f, 0.11f);
         private static readonly Color Panel = new Color(0.14f, 0.15f, 0.17f);
         private static readonly Color TextColor = new Color(0.92f, 0.93f, 0.94f);
+        private static readonly Color ButtonDefault = new Color(0.22f, 0.24f, 0.27f);
+        private static readonly Color ButtonPrimary = new Color(0.24f, 0.47f, 0.72f);
+        private static readonly Color ButtonSelected = ButtonPrimary;
+        private static readonly Color ButtonDanger = new Color(0.45f, 0.27f, 0.22f);
+        private static readonly Color ButtonMuted = new Color(0.17f, 0.2f, 0.22f);
         private const string TreasureRoomSmallId = "treasure_room_3x2";
         private const string TreasureRoomMediumId = "treasure_room_5x2";
-        private const string TreasureRoomLargeId = "treasure_room";
+        private const string TreasureRoomLargeId = "treasure_room_7x2";
 
         private enum MapStudioEditMode
         {
             Template,
-            MineInstance,
-            RowBatch
+            MineInstance
+        }
+
+        private enum TemplateLibraryFilter
+        {
+            All,
+            Tutorial,
+            Regular,
+            Reward
+        }
+
+        private enum TemplatePresetType
+        {
+            Blank,
+            FilledRegular,
+            RewardRoom
+        }
+
+        private enum MapStudioFeedbackKind
+        {
+            Info,
+            Success,
+            Warning,
+            Error
+        }
+
+        private enum ButtonTone
+        {
+            Default,
+            Primary,
+            Danger,
+            Muted
         }
 
         private struct RewardBackgroundRegion
@@ -98,21 +147,11 @@ namespace Fossick.MapStudio.Views
             public int endY;
         }
 
-        private bool IsApplyingTemplate =>
-            editMode == MapStudioEditMode.MineInstance
-            && waitingForReplacementTarget
-            && !templateLibraryOpen
-            && GetSelectedFragment() != null;
-
-        private bool IsRowBatchMode =>
-            editMode == MapStudioEditMode.RowBatch
-            && !waitingForReplacementTarget
-            && !templateLibraryOpen;
-
         private void Awake()
         {
             controller = GetComponent<FossickMapStudioController>();
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            brushPaletteView = new FossickBrushPaletteView(font);
         }
 
         private void Start()
@@ -122,8 +161,7 @@ namespace Fossick.MapStudio.Views
                 controller.CurrentConfig.visual = new FossickVisualConfig();
             }
 
-            LoadMineOccurrenceOverrides();
-            GenerateMineInstance(false, "已按当前模板和规则生成默认矿井实例。");
+            GenerateMineInstance(false, "已按当前模板、半随机规则和种子生成默认地图预览。");
             Build();
         }
 
@@ -134,10 +172,6 @@ namespace Fossick.MapStudio.Views
                 FinishDragPainting();
             }
 
-            if (isRowSelecting && !Input.GetMouseButton(0))
-            {
-                FinishRowSelection();
-            }
         }
 
         private void Build()
@@ -173,13 +207,9 @@ namespace Fossick.MapStudio.Views
             DrawFragmentList();
             DrawMineEditor();
             DrawMinePreviewPanel();
-            if (templateLibraryOpen)
+            if (operationDialogOpen)
             {
-                DrawTemplateLibraryWindow();
-            }
-            if (generationRulesOpen)
-            {
-                DrawGenerationRulesWindow();
+                DrawOperationDialog();
             }
 
         }
@@ -197,154 +227,150 @@ namespace Fossick.MapStudio.Views
             AddText(header, $"种子 {controller.Seed}", 16, FontStyle.Normal, new Vector2(120f, 40f));
 
             AddSpacer(header, 1f);
-            AddButton(header, "校验", new Vector2(120f, 36f), () =>
+            AddActionButton(header, "试玩", new Vector2(100f, 36f), PlayPreviewScene, ButtonTone.Primary);
+            AddActionButton(header, "校验", new Vector2(120f, 36f), () =>
             {
                 controller.Validate();
                 Build();
             });
-            AddButton(header, "导出 JSON", new Vector2(140f, 36f), ExportJson);
+            AddActionButton(header, "导出 JSON", new Vector2(140f, 36f), ExportJson);
+            AddActionButton(header, "打开数据目录", new Vector2(150f, 36f), OpenDataFolder);
         }
 
         private void DrawFragmentList()
         {
             var panel = CreatePanel("Fragments Panel", root, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(12f, 12f), new Vector2(LeftWidth, -HeaderHeight - 24f));
-            AddVerticalLayout(panel.gameObject, 8, TextAnchor.UpperLeft);
+            var mask = panel.gameObject.AddComponent<Mask>();
+            mask.showMaskGraphic = true;
 
-            AddText(panel, "菜单栏", 20, FontStyle.Bold, new Vector2(LeftButtonWidth, 30f));
-            AddText(panel, "模板、生成规则和矿井实例分开管理。", 12, FontStyle.Normal, new Vector2(LeftButtonWidth, 38f));
+            const float x = 14f;
+            var y = 14f;
 
-            AddSpacer(panel, 1f);
-            AddText(panel, "模板管理", 18, FontStyle.Bold, new Vector2(LeftButtonWidth, 28f));
+            var title = AddText(panel, "菜单栏", 20, FontStyle.Bold, new Vector2(LeftButtonWidth, 30f));
+            SetTopLeft(title.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 30f);
+            y += 34f;
+
+            var description = AddText(panel, "模板、生成规则和预览分开管理。", 12, FontStyle.Normal, new Vector2(LeftButtonWidth, 38f));
+            SetTopLeft(description.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 38f);
+            y += 58f;
+
+            var stateTitle = AddText(panel, "当前状态", 16, FontStyle.Bold, new Vector2(LeftButtonWidth, 22f));
+            SetTopLeft(stateTitle.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 22f);
+            y += 28f;
+
+            var stateCard = CreateRect("Mode Summary Card", panel);
+            SetTopLeft(stateCard, x, y, LeftButtonWidth, 58f);
+            AddImage(stateCard.gameObject, ButtonMuted);
+
+            var stateStripe = CreateRect("Mode Summary Stripe", stateCard);
+            SetTopLeft(stateStripe, 0f, 0f, 4f, 58f);
+            AddImage(stateStripe.gameObject, GetCurrentModeColor()).raycastTarget = false;
+
+            var stateCardTitle = AddText(stateCard, GetCurrentModeTitle(), 14, FontStyle.Bold, new Vector2(LeftButtonWidth - 16f, 20f));
+            SetTopLeft(stateCardTitle.GetComponent<RectTransform>(), 12f, 6f, LeftButtonWidth - 18f, 20f);
+
+            var stateDetail = AddText(stateCard, GetCurrentModeDescription(), 12, FontStyle.Normal, new Vector2(LeftButtonWidth - 16f, 26f));
+            SetTopLeft(stateDetail.GetComponent<RectTransform>(), 12f, 29f, LeftButtonWidth - 18f, 26f);
+            y += 76f;
+
+            var templateTitle = AddText(panel, "模板管理", 17, FontStyle.Bold, new Vector2(LeftButtonWidth, 24f));
+            SetTopLeft(templateTitle.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 24f);
+            y += 28f;
 
             var fragments = controller.CurrentConfig.fragments;
-            AddText(panel, FormatTemplateCounts(fragments), 13, FontStyle.Normal, new Vector2(LeftButtonWidth, 56f));
+            var templateCounts = AddText(panel, FormatTemplateCounts(fragments), 12, FontStyle.Normal, new Vector2(LeftButtonWidth, 40f));
+            SetTopLeft(templateCounts.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 40f);
+            y += 46f;
 
             var selected = GetSelectedFragment();
-            AddText(panel, selected == null ? "当前模板：未选择" : $"当前模板：{selected.id}  {FormatFragmentType(selected.type)}", 13, FontStyle.Bold, new Vector2(LeftButtonWidth, 28f));
-            AddButton(panel, "打开模板库", new Vector2(LeftButtonWidth, 34f), OpenTemplateLibrary);
+            var selectedTemplate = AddText(
+                panel,
+                selected == null ? "当前模板：未选择" : $"当前模板：{selected.id}  {FormatFragmentType(selected.type)}",
+                12,
+                FontStyle.Bold,
+                new Vector2(LeftButtonWidth, 22f));
+            SetTopLeft(selectedTemplate.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 22f);
+            y += 28f;
 
-            AddSpacer(panel, 1f);
-            AddText(panel, "生成配置", 18, FontStyle.Bold, new Vector2(LeftButtonWidth, 28f));
-            AddButton(panel, "生成规则", new Vector2(LeftButtonWidth, 34f), OpenGenerationRules);
-            AddText(panel, generationRulesDirty ? "模板或规则已修改，需重新生成矿井实例。" : "模板和规则与当前实例一致。", 12, generationRulesDirty ? FontStyle.Bold : FontStyle.Normal, new Vector2(LeftButtonWidth, 44f));
+            var templateButton = AddActionButton(panel, "打开模板库", new Vector2(LeftButtonWidth, 32f), OpenTemplateLibrary, templateLibraryOpen ? ButtonTone.Primary : ButtonTone.Default);
+            SetTopLeft(templateButton, x, y, LeftButtonWidth, 32f);
+            y += 54f;
 
-            AddSpacer(panel, 1f);
-            AddText(panel, "矿井实例", 18, FontStyle.Bold, new Vector2(LeftButtonWidth, 28f));
-            AddText(panel, FormatMineInstanceSummary(), 12, FontStyle.Normal, new Vector2(LeftButtonWidth, 56f));
-            AddButton(panel, "生成矿井", new Vector2(LeftButtonWidth, 34f), () =>
-            {
-                GenerateMineInstance(true, "已按当前模板、生成规则和种子生成新的矿井实例。");
-                Build();
-            });
-            AddButton(panel, "随机种子", new Vector2(LeftButtonWidth, 34f), () =>
+            var generationTitle = AddText(panel, "生成配置", 17, FontStyle.Bold, new Vector2(LeftButtonWidth, 24f));
+            SetTopLeft(generationTitle.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 24f);
+            y += 30f;
+
+            var generationButton = AddActionButton(panel, "生成规则", new Vector2(LeftButtonWidth, 32f), OpenGenerationRules, generationRulesOpen ? ButtonTone.Primary : ButtonTone.Default);
+            SetTopLeft(generationButton, x, y, LeftButtonWidth, 32f);
+            y += 40f;
+
+            var generationStatus = AddText(
+                panel,
+                generationRulesDirty ? "模板或规则已修改，需要重新生成地图预览。" : "模板和规则与当前地图预览一致。",
+                12,
+                generationRulesDirty ? FontStyle.Bold : FontStyle.Normal,
+                new Vector2(LeftButtonWidth, 36f));
+            SetTopLeft(generationStatus.GetComponent<RectTransform>(), x, y, LeftButtonWidth, 36f);
+            y += 62f;
+
+            var previewCard = CreateRect("Generation Preview Card", panel);
+            SetTopLeft(previewCard, x, y, LeftButtonWidth, 226f);
+            AddImage(previewCard.gameObject, new Color(0.1f, 0.13f, 0.15f));
+
+            var mineTitle = AddText(previewCard, "地图预览", 17, FontStyle.Bold, new Vector2(LeftButtonWidth - 24f, 24f));
+            SetTopLeft(mineTitle.GetComponent<RectTransform>(), 12f, 12f, LeftButtonWidth - 24f, 24f);
+
+            var mineDesc = AddText(previewCard, "用当前模板和规则生成矿井。", 12, FontStyle.Normal, new Vector2(LeftButtonWidth - 24f, 22f));
+            SetTopLeft(mineDesc.GetComponent<RectTransform>(), 12f, 40f, LeftButtonWidth - 24f, 22f);
+
+            var seedTitle = AddText(previewCard, "种子", 12, FontStyle.Bold, new Vector2(44f, 22f));
+            SetTopLeft(seedTitle.GetComponent<RectTransform>(), 12f, 76f, 44f, 22f);
+
+            var seedValue = AddText(previewCard, controller.Seed.ToString(), 14, FontStyle.Bold, new Vector2(82f, 22f));
+            SetTopLeft(seedValue.GetComponent<RectTransform>(), 56f, 76f, 82f, 22f);
+
+            var seedButton = AddActionButton(previewCard, "换一个", new Vector2(70f, 30f), () =>
             {
                 controller.RandomizeSeed();
                 generationRulesDirty = true;
-                editNotice = "已生成随机种子，点击“生成矿井”后会替换当前实例。";
+                editNotice = mineInstanceGenerated
+                    ? "已换一个种子。点击“更新预览”后会刷新当前地图预览。"
+                    : "已换一个种子。点击“生成预览”后会生成对应矿井。";
                 Build();
             });
-            AddButton(panel, "清空实例", new Vector2(LeftButtonWidth, 34f), () =>
+            SetTopLeft(seedButton, 12f, 106f, 70f, 30f);
+
+            var generateButton = AddActionButton(previewCard, mineInstanceGenerated ? "更新预览" : "生成预览", new Vector2(126f, 30f), () =>
             {
-                ClearMineInstance("已清空当前矿井实例。");
+                GenerateMineInstance(true, "已按当前模板、半随机规则和种子生成地图预览；矿井会按需无限向下延展。");
                 Build();
-            });
-        }
+            }, ButtonTone.Primary);
+            SetTopLeft(generateButton, 88f, 106f, 126f, 30f);
 
-        private void DrawFragmentEditor()
-        {
-            var panel = CreatePanel("Editor Panel", root, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(LeftWidth + 24f, 12f), new Vector2(CenterWidth, -HeaderHeight - 24f));
-            AddVerticalLayout(panel.gameObject, 10, TextAnchor.UpperLeft);
+            var previewStatus = AddText(previewCard, FormatMineInstanceSummary(), 12, FontStyle.Normal, new Vector2(LeftButtonWidth - 24f, 46f));
+            SetTopLeft(previewStatus.GetComponent<RectTransform>(), 12f, 152f, LeftButtonWidth - 24f, 46f);
 
-            var fragment = GetSelectedFragment();
-            if (fragment == null)
+            if (editMode == MapStudioEditMode.MineInstance && !templateLibraryOpen && !generationRulesOpen)
             {
-                AddText(panel, "未选中碎片。", 16, FontStyle.Normal, new Vector2(620f, 32f));
+                var currentPreview = AddText(previewCard, "正在查看地图预览", 12, FontStyle.Bold, new Vector2(LeftButtonWidth - 24f, 22f));
+                SetTopLeft(currentPreview.GetComponent<RectTransform>(), 12f, 196f, LeftButtonWidth - 24f, 22f);
                 return;
             }
 
-            AddText(panel, $"碎片 {fragment.id}（{FormatFragmentType(fragment.type)}）", 18, FontStyle.Bold, new Vector2(620f, 30f));
-            DrawFragmentFields(panel, fragment);
-            DrawPalette(panel);
-            DrawGrid(panel, fragment);
-        }
-
-        private void DrawFragmentFields(RectTransform parent, FossickFragmentConfig fragment)
-        {
-            var row = CreateRow(parent, "Fragment Fields", 920f, 34f);
-            DrawFragmentMetadataControls(row, fragment, "碎片");
-        }
-
-        private void DrawFragmentMetadataControls(RectTransform row, FossickFragmentConfig fragment, string label)
-        {
-            NormalizeFragmentDifficulty(fragment);
-            AddButton(row, $"ID {fragment.id}", new Vector2(110f, 30f), () => { });
-            AddButton(row, $"切换类型：{FormatFragmentType(fragment.type)}", new Vector2(170f, 30f), () =>
-            {
-                fragment.type = NextFragmentType(fragment.type);
-                NormalizeFragmentDifficulty(fragment);
-                ClearPendingPaint();
-                editNotice = $"已修改{label} {fragment.id} 的类型。";
-                MarkTemplateLibraryChanged();
-                controller.Validate();
-                Build();
-            });
-
-            if (fragment.type == FossickFragmentType.Regular)
-            {
-                AddButton(row, "难度 -", new Vector2(90f, 30f), () =>
-                {
-                    fragment.difficulty = Mathf.Max(1, fragment.difficulty - 1);
-                    ClearPendingPaint();
-                    editNotice = $"已修改{label} {fragment.id} 的难度。";
-                    MarkTemplateLibraryChanged();
-                    controller.Validate();
-                    Build();
-                });
-                AddButton(row, $"难度 {fragment.difficulty}", new Vector2(90f, 30f), () => { });
-                AddButton(row, "难度 +", new Vector2(90f, 30f), () =>
-                {
-                    fragment.difficulty = Mathf.Min(9, Mathf.Max(1, fragment.difficulty + 1));
-                    ClearPendingPaint();
-                    editNotice = $"已修改{label} {fragment.id} 的难度。";
-                    MarkTemplateLibraryChanged();
-                    controller.Validate();
-                    Build();
-                });
-            }
-            else
-            {
-                AddButton(row, "难度 固定0", new Vector2(140f, 30f), () =>
-                {
-                    NormalizeFragmentDifficulty(fragment);
-                    editNotice = $"{FormatFragmentType(fragment.type)}模板不参与常规难度池，难度固定为 0。";
-                    Build();
-                });
-            }
-
-            AddButton(row, "减少行数", new Vector2(100f, 30f), () =>
-            {
-                ResizeFragment(fragment, Mathf.Max(1, fragment.height - 1));
-                ClearPendingPaint();
-                editNotice = $"已减少{label} {fragment.id} 的高度。";
-                MarkTemplateLibraryChanged();
-                Build();
-            });
-            AddButton(row, $"高度 {fragment.height}", new Vector2(90f, 30f), () => { });
-            AddButton(row, "增加行数", new Vector2(100f, 30f), () =>
-            {
-                ResizeFragment(fragment, Mathf.Min(24, fragment.height + 1));
-                ClearPendingPaint();
-                editNotice = $"已增加{label} {fragment.id} 的高度。";
-                MarkTemplateLibraryChanged();
-                Build();
-            });
+            var previewButton = AddActionButton(
+                previewCard,
+                mineInstanceGenerated ? "查看地图预览" : "暂无预览可查看",
+                new Vector2(LeftButtonWidth - 24f, 30f),
+                mineInstanceGenerated ? OpenGeneratedPreviewFromMenu : null,
+                mineInstanceGenerated ? ButtonTone.Default : ButtonTone.Muted);
+            SetTopLeft(previewButton, 12f, 190f, LeftButtonWidth - 24f, 30f);
         }
 
         private void DrawPalette(RectTransform parent)
         {
             AddText(parent, "分层画笔", 16, FontStyle.Bold, new Vector2(620f, 24f));
             var row = CreateRow(parent, "Brush Row", 900f, BrushTileHeight + 8f);
-            DrawCurrentLayerBrushes(row);
+            DrawBrushPalette(row);
         }
 
         private void DrawGrid(RectTransform parent, FossickFragmentConfig fragment)
@@ -384,18 +410,20 @@ namespace Fossick.MapStudio.Views
             }
         }
 
-        private void DrawRightPanel()
-        {
-            var panel = CreatePanel("Right Panel", root, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(CenterWidth + ColumnGap, 12f), new Vector2(-12f, -HeaderHeight - 24f));
-            AddVerticalLayout(panel.gameObject, 10, TextAnchor.UpperLeft);
-
-            DrawSelection(panel);
-            DrawValidation(panel);
-            DrawGeneratedPreview(panel);
-        }
-
         private void DrawMineEditor()
         {
+            if (templateLibraryOpen)
+            {
+                DrawTemplateLibraryPanel();
+                return;
+            }
+
+            if (generationRulesOpen)
+            {
+                DrawGenerationRulesPanel();
+                return;
+            }
+
             if (editMode == MapStudioEditMode.Template)
             {
                 DrawTemplateEditorPanel();
@@ -412,20 +440,22 @@ namespace Fossick.MapStudio.Views
             var panelWidth = panelRight - panelLeft;
             var panel = CreatePanel("Template Editor Panel", root, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(panelLeft, 12f), new Vector2(panelRight, -HeaderHeight - 24f));
 
-            var fragment = GetSelectedFragment();
+            var fragment = GetTemplateEditFragment();
+            const float padding = 16f;
+            var editorWidth = panelWidth - padding * 2f;
+
             var title = AddText(panel, "模板编辑", 20, FontStyle.Bold, new Vector2(panelWidth - 32f, 30f));
             SetTopLeft(title.GetComponent<RectTransform>(), 16f, 14f, panelWidth - 32f, 30f);
 
             var summary = AddText(panel, fragment == null
                 ? "当前模板 未选择"
-                : $"当前模板 {fragment.id}   {FormatTemplatePool(fragment)}   编辑层 {FormatLayer(selectedLayer)}   画笔 {FormatCurrentBrush()}；这里编辑的是模板库",
-                14, FontStyle.Normal, new Vector2(panelWidth - 32f, 26f));
-            SetTopLeft(summary.GetComponent<RectTransform>(), 16f, 54f, panelWidth - 32f, 26f);
+                : $"当前模板 {fragment.id}   {FormatTemplatePool(fragment)}   编辑层 {FormatLayer(selectedLayer)}   画笔 {FormatCurrentBrush()}   {(templateEditDirty ? "有未保存修改" : "已保存")}",
+                14, FontStyle.Normal, new Vector2(editorWidth, 26f));
+            SetTopLeft(summary.GetComponent<RectTransform>(), padding, 54f, editorWidth, 26f);
 
             if (!string.IsNullOrEmpty(editNotice))
             {
-                var notice = AddText(panel, editNotice, 13, FontStyle.Bold, new Vector2(panelWidth - 32f, 24f));
-                SetTopLeft(notice.GetComponent<RectTransform>(), 16f, 84f, panelWidth - 32f, 24f);
+                DrawFeedbackBanner(panel, padding, 82f, editorWidth);
             }
 
             if (fragment == null)
@@ -433,36 +463,85 @@ namespace Fossick.MapStudio.Views
                 return;
             }
 
-            var modeRow = CreateRow(panel, "Template Mode Controls", 760f, 34f);
-            SetTopLeft(modeRow, 16f, 118f, 760f, 34f);
-            AddButton(modeRow, "返回地图编辑", new Vector2(120f, 30f), () =>
-            {
-                editMode = MapStudioEditMode.MineInstance;
-                ClearPendingPaint();
-                Build();
-            });
-            AddButton(modeRow, "应用到地图", new Vector2(120f, 30f), BeginMapReplacementPick);
-
-            var fields = CreateRow(panel, "Template Fields", 920f, 34f);
-            SetTopLeft(fields, 16f, 164f, 920f, 34f);
-            DrawFragmentMetadataControls(fields, fragment, "模板");
+            DrawTemplateCommandBar(panel, padding, 120f, editorWidth);
 
             var brushTitle = AddText(panel, "分层画笔", 16, FontStyle.Bold, new Vector2(240f, 24f));
-            SetTopLeft(brushTitle.GetComponent<RectTransform>(), 16f, 210f, 240f, 24f);
-            var layerRow = CreateRow(panel, "Template Layer Row", 790f, 38f);
-            SetTopLeft(layerRow, 16f, 240f, 790f, 38f);
-            AddLayerButton(layerRow, FossickCellLayer.RewardBackground, "1 藏宝阁");
-            AddLayerButton(layerRow, FossickCellLayer.Terrain, "2 地形");
-            AddLayerButton(layerRow, FossickCellLayer.Reward, "3 奖励");
-            AddLayerButton(layerRow, FossickCellLayer.Tool, "4 道具");
-            AddLayerButton(layerRow, FossickCellLayer.Decoration, "5 装饰");
-            AddLayerButton(layerRow, FossickCellLayer.Fog, "6 阴影");
+            SetTopLeft(brushTitle.GetComponent<RectTransform>(), padding, 176f, 240f, 24f);
+            var layerRow = CreateRow(panel, "Template Layer Row", Mathf.Min(790f, editorWidth), 38f);
+            SetTopLeft(layerRow, padding, 206f, Mathf.Min(790f, editorWidth), 38f);
+            DrawBrushLayerTabs(layerRow);
 
-            var palette = CreateRow(panel, "Template Brush Row", 900f, BrushTileHeight + 8f);
-            SetTopLeft(palette, 16f, 290f, 900f, BrushTileHeight + 8f);
-            DrawCurrentLayerBrushes(palette);
+            var palette = CreateRow(panel, "Template Brush Row", editorWidth, BrushTileHeight + 8f);
+            SetTopLeft(palette, padding, 256f, editorWidth, BrushTileHeight + 8f);
+            DrawBrushPalette(palette);
 
-            DrawTemplateGridEditor(panel, fragment, panelWidth, 392f);
+            DrawTemplateGridEditor(panel, fragment, padding, editorWidth, 376f);
+        }
+
+        private void DrawTemplateCommandBar(RectTransform parent, float x, float y, float width)
+        {
+            var bar = CreateRect("Template Command Bar", parent);
+            SetTopLeft(bar, x, y, width, 42f);
+            AddImage(bar.gameObject, new Color(0.11f, 0.13f, 0.15f));
+
+            AddTextAt(bar, "模板操作", 13, FontStyle.Bold, 12f, 0f, 72f, 42f);
+
+            var row = CreateRow(bar, "Template Command Row", Mathf.Min(width - 96f, 620f), 34f);
+            SetTopLeft(row, 92f, 4f, Mathf.Min(width - 96f, 620f), 34f);
+            AddActionButton(row, "撤销", new Vector2(76f, 30f), templateUndoStack.Count > 0 ? UndoTemplateEdit : null, templateUndoStack.Count > 0 ? ButtonTone.Default : ButtonTone.Muted);
+            AddActionButton(row, "重做", new Vector2(76f, 30f), templateRedoStack.Count > 0 ? RedoTemplateEdit : null, templateRedoStack.Count > 0 ? ButtonTone.Default : ButtonTone.Muted);
+            AddActionButton(row, "保存模板", new Vector2(112f, 30f), SaveTemplateEdit, ButtonTone.Primary);
+            AddActionButton(row, "放弃修改", new Vector2(112f, 30f), templateEditDirty ? DiscardTemplateEdit : null, templateEditDirty ? ButtonTone.Danger : ButtonTone.Muted);
+            AddActionButton(row, "返回地图", new Vector2(112f, 30f), ReturnFromTemplateEdit);
+        }
+
+        private void SetTemplateDraftType(FossickFragmentType type)
+        {
+            var fragment = GetTemplateEditFragment();
+            if (fragment == null || fragment.type == type)
+            {
+                return;
+            }
+
+            RecordTemplateUndoSnapshot();
+            fragment.type = type;
+            NormalizeFragmentDifficulty(fragment);
+            MarkTemplateDraftChanged();
+            ClearPendingPaint();
+            editNotice = $"已把模板 {fragment.id} 设为{FormatFragmentType(fragment.type)}，保存后生效。";
+            Build();
+        }
+
+        private void SetTemplateDraftDifficulty(int difficulty)
+        {
+            var fragment = GetTemplateEditFragment();
+            if (fragment == null || fragment.type != FossickFragmentType.Regular || fragment.difficulty == difficulty)
+            {
+                return;
+            }
+
+            RecordTemplateUndoSnapshot();
+            fragment.difficulty = Mathf.Clamp(difficulty, 1, 3);
+            MarkTemplateDraftChanged();
+            ClearPendingPaint();
+            editNotice = $"已把模板 {fragment.id} 难度设为 {fragment.difficulty}，保存后生效。";
+            Build();
+        }
+
+        private void ResizeTemplateDraft(int height)
+        {
+            var fragment = GetTemplateEditFragment();
+            if (fragment == null || fragment.height == height)
+            {
+                return;
+            }
+
+            RecordTemplateUndoSnapshot();
+            ResizeFragment(fragment, height);
+            MarkTemplateDraftChanged();
+            ClearPendingPaint();
+            editNotice = $"已调整模板 {fragment.id} 高度为 {fragment.height}，保存后生效。";
+            Build();
         }
 
         private void DrawGeneratedMineEditorPanel()
@@ -474,124 +553,38 @@ namespace Fossick.MapStudio.Views
 
             var mine = BuildPreviewMine();
 
-            var selectedMineSpan = FindGeneratedSpan(mine, selectedMineSequenceIndex);
-            var title = AddText(panel, "生成矿井编辑", 20, FontStyle.Bold, new Vector2(panelWidth - 32f, 30f));
+            var title = AddText(panel, "地图预览", 20, FontStyle.Bold, new Vector2(panelWidth - 32f, 30f));
             SetTopLeft(title.GetComponent<RectTransform>(), 16f, 14f, panelWidth - 32f, 30f);
+            DrawModeBadge(panel, panelWidth, 14f);
 
-            var isApplyingTemplate = IsApplyingTemplate;
-            var isRowBatchMode = IsRowBatchMode;
-            var summaryText = isApplyingTemplate
-                ? $"应用模板：{FormatSelectedTemplateForReplacement()}。在左侧行号栏点选或拖选目标行；当前选择 {FormatSelectedRows()}。"
-                : isRowBatchMode
-                    ? $"批量行操作：当前选择 {FormatSelectedRows()}；左侧行号栏可点选或拖选多行。"
-                : $"{FormatMineSelection(selectedMineSpan)}   编辑层 {FormatLayer(selectedLayer)}   画笔 {FormatCurrentBrush()}；点击/拖动格子编辑地图内容";
-            var summary = AddText(panel, summaryText, 14, isApplyingTemplate || isRowBatchMode ? FontStyle.Bold : FontStyle.Normal, new Vector2(panelWidth - 32f, 26f));
+            var summaryText = "只读预览：由模板库和生成规则实时拼接矿井；点击格子可查看来源碎片，模板内容请回到模板库编辑。";
+            var summary = AddText(panel, summaryText, 14, FontStyle.Normal, new Vector2(panelWidth - 32f, 26f));
             SetTopLeft(summary.GetComponent<RectTransform>(), 16f, 54f, panelWidth - 32f, 26f);
             if (!string.IsNullOrEmpty(editNotice))
             {
-                var notice = AddText(panel, editNotice, 13, FontStyle.Bold, new Vector2(panelWidth - 32f, 24f));
-                SetTopLeft(notice.GetComponent<RectTransform>(), 16f, 84f, panelWidth - 32f, 24f);
+                DrawFeedbackBanner(panel, 16f, 82f, panelWidth - 32f);
             }
 
             if (!mineInstanceGenerated || mine.rows.Count == 0)
             {
-                var emptyText = AddText(panel, "当前没有矿井实例。请在左侧点击“生成矿井”。", 16, FontStyle.Bold, new Vector2(panelWidth - 32f, 32f));
+                var emptyText = AddText(panel, "当前没有预览矿井。请点击顶部或左侧的“生成地图预览”。", 16, FontStyle.Bold, new Vector2(panelWidth - 32f, 32f));
                 SetTopLeft(emptyText.GetComponent<RectTransform>(), 16f, 130f, panelWidth - 32f, 32f);
-                var generateButton = AddButton(panel, "生成矿井", new Vector2(180f, 40f), () =>
+                var generateButton = AddButton(panel, "生成地图预览", new Vector2(180f, 40f), () =>
                 {
-                    GenerateMineInstance(true, "已按当前模板、生成规则和种子生成新的矿井实例。");
+                    GenerateMineInstance(true, "已按当前模板、半随机规则和种子生成地图预览；矿井会按需无限向下延展。");
                     Build();
                 });
                 SetTopLeft(generateButton, 16f, 176f, 180f, 40f);
                 return;
             }
 
-            if (selectedMineSpan != null)
-            {
-                var fields = CreateRow(panel, "Fragment Fields", 580f, 34f);
-                SetTopLeft(fields, 16f, 118f, 580f, 34f);
-                AddButton(fields, $"地图段 #{selectedMineSpan.sequenceIndex:00}", new Vector2(130f, 30f), () => { });
-                AddButton(fields, $"内容 {selectedMineSpan.fragmentId}", new Vector2(120f, 30f), () => { });
-                AddButton(fields, $"类型 {FormatFragmentType(selectedMineSpan.fragmentType)}", new Vector2(160f, 30f), () => { });
-                AddButton(fields, $"行 {selectedMineSpan.startRow:000}-{selectedMineSpan.startRow + selectedMineSpan.height - 1:000}", new Vector2(150f, 30f), () => { });
-            }
+            var previewHint = AddText(panel, "预览不会写入模板库；需要调整内容时，请编辑对应模板或修改生成规则后重新生成。", 13, FontStyle.Normal, new Vector2(panelWidth - 32f, 24f));
+            SetTopLeft(previewHint.GetComponent<RectTransform>(), 16f, 118f, panelWidth - 32f, 24f);
 
-            if (!isApplyingTemplate)
-            {
-                var brushTitle = AddText(panel, "分层画笔", 16, FontStyle.Bold, new Vector2(240f, 24f));
-                SetTopLeft(brushTitle.GetComponent<RectTransform>(), 16f, 124f, 240f, 24f);
-                var layerRow = CreateRow(panel, "Layer Row", 790f, 38f);
-                SetTopLeft(layerRow, 16f, 154f, 790f, 38f);
-                AddLayerButton(layerRow, FossickCellLayer.RewardBackground, "1 藏宝阁");
-                AddLayerButton(layerRow, FossickCellLayer.Terrain, "2 地形");
-                AddLayerButton(layerRow, FossickCellLayer.Reward, "3 奖励");
-                AddLayerButton(layerRow, FossickCellLayer.Tool, "4 道具");
-                AddLayerButton(layerRow, FossickCellLayer.Decoration, "5 装饰");
-                AddLayerButton(layerRow, FossickCellLayer.Fog, "6 阴影");
-
-                var palette = CreateRow(panel, "Brush Row", 900f, BrushTileHeight + 8f);
-                SetTopLeft(palette, 16f, 202f, 900f, BrushTileHeight + 8f);
-                DrawCurrentLayerBrushes(palette);
-            }
-            else
-            {
-                var applyHint = AddText(panel, "当前处于模板应用模式，普通画笔已暂时关闭。请使用左侧行号栏选择应用目标，再确认应用。", 15, FontStyle.Bold, new Vector2(panelWidth - 32f, 30f));
-                SetTopLeft(applyHint.GetComponent<RectTransform>(), 16f, 154f, panelWidth - 32f, 30f);
-            }
-
-            const float controlsTop = 300f;
+            const float controlsTop = 158f;
             const float controlsHeight = 38f;
             const float stageGap = 24f;
-            var controls = CreateRow(panel, "Mine Preview Controls", 260f, controlsHeight);
-            SetTopLeft(controls, 16f, controlsTop, isRowBatchMode ? 720f : 360f, controlsHeight);
-            if (isApplyingTemplate)
-            {
-                var canApply = CanApplySelectedRowsToTemplate();
-                AddButton(controls, GetApplyButtonLabel(), new Vector2(110f, 32f), () =>
-                {
-                    if (canApply)
-                    {
-                        ApplySelectedTemplateToMineRows(GetSelectedRowMin());
-                    }
-                }, canApply);
-                AddButton(controls, "退出应用", new Vector2(90f, 32f), () =>
-                {
-                    CancelTemplateApplication("已退出模板应用模式。");
-                    Build();
-                });
-            }
-            if (!isApplyingTemplate && !isRowBatchMode)
-            {
-                AddButton(controls, "批量行操作", new Vector2(120f, 32f), () =>
-                {
-                    BeginRowBatchMode();
-                });
-                AddButton(controls, "减少行数", new Vector2(100f, 32f), () =>
-                {
-                    minePreviewRows = Mathf.Max(controller.CurrentConfig.visibleHeight * 2, minePreviewRows - controller.CurrentConfig.visibleHeight);
-                    mineScrollNormalizedPosition = 1f;
-                    ClearPendingPaint();
-                    Build();
-                });
-                AddButton(controls, "增加行数", new Vector2(100f, 32f), () =>
-                {
-                    minePreviewRows = Mathf.Min(240, minePreviewRows + controller.CurrentConfig.visibleHeight);
-                    mineScrollNormalizedPosition = 1f;
-                    ClearPendingPaint();
-                    Build();
-                });
-            }
-            else if (isRowBatchMode)
-            {
-                AddButton(controls, "填充选中行", new Vector2(110f, 32f), FillSelectedRowsWithBrush, GetSelectedRowCount() > 0);
-                AddButton(controls, "清空当前层", new Vector2(110f, 32f), ClearSelectedRowsLayer, GetSelectedRowCount() > 0);
-                AddButton(controls, "复制到下方", new Vector2(110f, 32f), DuplicateSelectedRowsDownward, GetSelectedRowCount() > 0);
-                AddButton(controls, "退出批量", new Vector2(90f, 32f), () =>
-                {
-                    EndRowBatchMode("已退出批量行操作。");
-                    Build();
-                });
-            }
+            DrawPreviewCommandBar(panel, 16f, controlsTop, panelWidth - 32f);
 
             var gridWidth = GridLabelWidth + controller.CurrentConfig.boardWidth * MineCellSize;
             var viewportHeight = controller.CurrentConfig.visibleHeight * MineCellSize;
@@ -647,37 +640,306 @@ namespace Fossick.MapStudio.Views
             DrawMineViewportOverlay(viewport, controller.CurrentConfig.boardWidth, controller.CurrentConfig.visibleHeight);
         }
 
+        private void DrawPreviewCommandBar(RectTransform parent, float x, float y, float width)
+        {
+            var bar = CreateRect("Preview Command Bar", parent);
+            SetTopLeft(bar, x, y, width, 42f);
+            AddImage(bar.gameObject, new Color(0.11f, 0.13f, 0.15f));
+
+            AddTextAt(bar, "视图操作", 13, FontStyle.Bold, 12f, 0f, 72f, 42f);
+
+            var row = CreateRow(bar, "Preview Command Row", Mathf.Min(width - 96f, 620f), 34f);
+            SetTopLeft(row, 92f, 4f, Mathf.Min(width - 96f, 620f), 34f);
+            var canReduceRows = minePreviewRows > controller.CurrentConfig.visibleHeight * 2;
+            AddActionButton(row, "减少行数", new Vector2(94f, 30f), canReduceRows ? () =>
+            {
+                minePreviewRows = Mathf.Max(controller.CurrentConfig.visibleHeight * 2, minePreviewRows - controller.CurrentConfig.visibleHeight);
+                mineScrollNormalizedPosition = 1f;
+                ClearPendingPaint();
+                Build();
+            } : null, canReduceRows ? ButtonTone.Default : ButtonTone.Muted);
+            AddActionButton(row, "向下预览", new Vector2(94f, 30f), () =>
+            {
+                minePreviewRows = Mathf.Max(controller.CurrentConfig.visibleHeight * 2, minePreviewRows + controller.CurrentConfig.visibleHeight);
+                mineScrollNormalizedPosition = 1f;
+                ClearPendingPaint();
+                Build();
+            });
+            AddActionButton(row, showFogInEditor ? "隐藏阴影" : "显示阴影", new Vector2(100f, 30f), ToggleFogVisibility, showFogInEditor ? ButtonTone.Primary : ButtonTone.Default);
+            AddActionButton(row, "关闭预览", new Vector2(94f, 30f), () =>
+            {
+                ClearMineInstance("已关闭当前地图预览。");
+                Build();
+            }, ButtonTone.Danger);
+        }
+
         private void DrawMinePreviewPanel()
         {
-            var panel = CreatePanel("Mine Preview Info Panel", root, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(CenterWidth + ColumnGap, 12f), new Vector2(-12f, -HeaderHeight - 24f));
+            var panel = CreatePanel("Context Panel", root, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(CenterWidth + ColumnGap, 12f), new Vector2(-12f, -HeaderHeight - 24f));
             AddVerticalLayout(panel.gameObject, 10, TextAnchor.UpperLeft);
 
             var mine = BuildPreviewMine();
-            AddText(panel, "生成规则与预览", 18, FontStyle.Bold, new Vector2(380f, 28f));
-            AddText(panel, $"实例种子 {mineInstanceSeed} | 行数 {mine.rows.Count} | 可视窗口 {controller.CurrentConfig.boardWidth} x {controller.CurrentConfig.visibleHeight}", 14, FontStyle.Normal, new Vector2(380f, 24f));
-            DrawGenerationRulesSummary(panel);
-
-            DrawMineSelectionInfo(panel, mine);
-
-            DrawValidation(panel);
-
-            AddText(panel, "本次矿井拼接顺序", 18, FontStyle.Bold, new Vector2(380f, 28f));
-            var regularCounter = 0;
-            for (var i = 0; i < Mathf.Min(18, mine.fragments.Count); i++)
+            if (templateLibraryOpen)
             {
-                var span = mine.fragments[i];
-                var tag = span.insertedAsReward ? "奖励插入" : FormatFragmentType(span.fragmentType);
-                var regularTag = string.Empty;
-                if (span.fragmentType == FossickFragmentType.Regular && !span.insertedAsReward)
+                DrawTemplateLibraryContext(panel);
+            }
+            else if (generationRulesOpen)
+            {
+                DrawGenerationRulesContext(panel);
+            }
+            else if (editMode == MapStudioEditMode.Template)
+            {
+                DrawTemplateContext(panel);
+            }
+            else
+            {
+                DrawMineInstanceContext(panel, mine);
+            }
+        }
+
+        private void DrawTemplateContext(RectTransform parent)
+        {
+            var fragment = GetTemplateEditFragment();
+            AddText(parent, "当前模式：模板编辑", 16, FontStyle.Bold, new Vector2(380f, 26f));
+            AddText(parent, "编辑的是模板库，保存后才会影响后续地图生成。", 13, FontStyle.Normal, new Vector2(380f, 40f));
+
+            if (fragment == null)
+            {
+                AddText(parent, "当前没有选中模板。", 13, FontStyle.Normal, new Vector2(380f, 24f));
+                return;
+            }
+
+            DrawTemplateContextInfo(parent, fragment);
+            DrawTemplateContextDifficulty(parent, fragment);
+            DrawTemplateContextSize(parent, fragment);
+        }
+
+        private void DrawTemplateLibraryContext(RectTransform parent)
+        {
+            AddText(parent, "当前模式：模板库", 16, FontStyle.Bold, new Vector2(380f, 26f));
+            AddText(parent, "模板库管理可复用碎片；地图预览会按生成规则抽取这些模板。", 13, FontStyle.Normal, new Vector2(380f, 44f));
+
+            var fragments = controller.CurrentConfig.fragments;
+            var summary = CreateContextSection(parent, "模板库摘要", 148f);
+            AddTextAt(summary, "模板库摘要", 15, FontStyle.Bold, 12f, 10f, 330f, 24f);
+            AddTextAt(summary, FormatTemplateCounts(fragments), 13, FontStyle.Normal, 12f, 42f, 330f, 48f);
+            var selected = GetSelectedFragment();
+            AddTextAt(summary, selected == null ? "当前模板：未选择" : $"当前模板：{selected.id}  {FormatFragmentType(selected.type)}", 13, FontStyle.Bold, 12f, 102f, 330f, 24f);
+
+            var usage = CreateContextSection(parent, "操作说明", 156f);
+            AddTextAt(usage, "操作说明", 15, FontStyle.Bold, 12f, 10f, 330f, 24f);
+            AddTextAt(usage, "1. 左侧选择已有模板或筛选类型。", 13, FontStyle.Normal, 12f, 42f, 330f, 22f);
+            AddTextAt(usage, "2. 右侧选择新建预设后点击创建模板。", 13, FontStyle.Normal, 12f, 70f, 330f, 22f);
+            AddTextAt(usage, "3. 编辑并保存模板后，重新生成地图预览即可参与抽取。", 13, FontStyle.Normal, 12f, 98f, 330f, 40f);
+        }
+
+        private void DrawTemplateContextInfo(RectTransform parent, FossickFragmentConfig fragment)
+        {
+            var section = CreateContextSection(parent, "模板属性", 144f);
+            AddTextAt(section, "模板属性", 15, FontStyle.Bold, 12f, 10f, 330f, 24f);
+            AddTextAt(section, $"ID {fragment.id}", 13, FontStyle.Bold, 12f, 40f, 330f, 24f);
+            var typeRow = CreateRow(section, "Context Template Type Row", 330f, 34f);
+            SetTopLeft(typeRow, 12f, 68f, 330f, 34f);
+            AddButton(typeRow, "新手", new Vector2(76f, 30f), () => SetTemplateDraftType(FossickFragmentType.Tutorial), fragment.type == FossickFragmentType.Tutorial);
+            AddButton(typeRow, "常规", new Vector2(76f, 30f), () => SetTemplateDraftType(FossickFragmentType.Regular), fragment.type == FossickFragmentType.Regular);
+            AddButton(typeRow, "奖励", new Vector2(76f, 30f), () => SetTemplateDraftType(FossickFragmentType.Reward), fragment.type == FossickFragmentType.Reward);
+            var poolText = fragment.type == FossickFragmentType.Regular
+                ? "常规模板进入难度池。"
+                : $"{FormatFragmentType(fragment.type)}模板不参与常规难度池。";
+            AddTextAt(section, poolText, 12, FontStyle.Normal, 12f, 112f, 330f, 22f);
+        }
+
+        private void DrawTemplateContextDifficulty(RectTransform parent, FossickFragmentConfig fragment)
+        {
+            var section = CreateContextSection(parent, "难度", 104f);
+            AddTextAt(section, "难度", 15, FontStyle.Bold, 12f, 10f, 330f, 24f);
+            if (fragment.type != FossickFragmentType.Regular)
+            {
+                AddTextAt(section, "当前类型不需要设置难度。", 13, FontStyle.Normal, 12f, 48f, 330f, 28f);
+                return;
+            }
+
+            var difficultyRow = CreateRow(section, "Context Difficulty Row", 330f, 34f);
+            SetTopLeft(difficultyRow, 12f, 48f, 330f, 34f);
+            AddButton(difficultyRow, "1", new Vector2(58f, 30f), () => SetTemplateDraftDifficulty(1), fragment.difficulty == 1);
+            AddButton(difficultyRow, "2", new Vector2(58f, 30f), () => SetTemplateDraftDifficulty(2), fragment.difficulty == 2);
+            AddButton(difficultyRow, "3", new Vector2(58f, 30f), () => SetTemplateDraftDifficulty(3), fragment.difficulty == 3);
+        }
+
+        private void DrawTemplateContextSize(RectTransform parent, FossickFragmentConfig fragment)
+        {
+            var section = CreateContextSection(parent, "尺寸", 104f);
+            AddTextAt(section, "尺寸", 15, FontStyle.Bold, 12f, 10f, 330f, 24f);
+            var sizeRow = CreateRow(section, "Context Size Row", 330f, 34f);
+            SetTopLeft(sizeRow, 12f, 48f, 330f, 34f);
+            AddButton(sizeRow, "-", new Vector2(52f, 30f), () => ResizeTemplateDraft(Mathf.Max(1, fragment.height - 1)));
+            AddButton(sizeRow, $"高度 {fragment.height}", new Vector2(100f, 30f), () => { }, true);
+            AddButton(sizeRow, "+", new Vector2(52f, 30f), () => ResizeTemplateDraft(Mathf.Min(24, fragment.height + 1)));
+        }
+
+        private void DrawGenerationRulesContext(RectTransform parent)
+        {
+            var generation = EnsureGenerationConfig();
+            AddText(parent, "当前模式：生成规则", 16, FontStyle.Bold, new Vector2(380f, 26f));
+            AddText(parent, generationRulesEditDirty ? "规则有未保存修改。" : "规则已保存。", 13, generationRulesEditDirty ? FontStyle.Bold : FontStyle.Normal, new Vector2(380f, 30f));
+            DrawGenerationRulesSummaryCard(parent, generation);
+            DrawGenerationRulesValidationCard(parent);
+        }
+
+        private void DrawGenerationRulesPanel()
+        {
+            var panelLeft = LeftWidth + 24f;
+            var panelRight = CenterWidth;
+            var panelWidth = panelRight - panelLeft;
+            var panel = CreatePanel("Generation Rules Panel", root, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(panelLeft, 12f), new Vector2(panelRight, -HeaderHeight - 24f));
+            var generation = EnsureGenerationConfig();
+
+            var title = AddText(panel, "生成规则", 20, FontStyle.Bold, new Vector2(panelWidth - 32f, 30f));
+            SetTopLeft(title.GetComponent<RectTransform>(), 16f, 14f, panelWidth - 32f, 30f);
+            DrawModeBadge(panel, panelWidth, 14f, 160f);
+            var backButton = AddActionButton(panel, "返回地图预览", new Vector2(128f, 30f), ReturnFromGenerationRules);
+            SetTopLeft(backButton, panelWidth - 144f, 14f, 128f, 30f);
+
+            var desc = AddText(panel, "配置普通碎片随机抽取、难度配比和藏宝阁插入间隔；保存后写入规则文件，应用后刷新地图预览。", 13, FontStyle.Normal, new Vector2(panelWidth - 32f, 24f));
+            SetTopLeft(desc.GetComponent<RectTransform>(), 16f, 54f, panelWidth - 32f, 24f);
+            if (!string.IsNullOrEmpty(editNotice))
+            {
+                DrawFeedbackBanner(panel, 16f, 82f, panelWidth - 32f);
+            }
+
+            const float contentTop = 128f;
+            var editorWidth = Mathf.Min(660f, panelWidth - 424f);
+            var summaryWidth = 340f;
+            var editor = CreateRect("Generation Rules Editor Card", panel);
+            SetTopLeft(editor, 16f, contentTop, editorWidth, 552f);
+            AddImage(editor.gameObject, new Color(0.1f, 0.13f, 0.15f));
+
+            var summary = CreateRect("Generation Rules Summary Card", panel);
+            SetTopLeft(summary, 16f + editorWidth + 20f, contentTop, summaryWidth, 552f);
+            AddImage(summary.gameObject, new Color(0.1f, 0.13f, 0.15f));
+
+            DrawGenerationRulesEditorCard(editor, generation, editorWidth);
+            DrawGenerationRulesInlineSummary(summary, generation, summaryWidth);
+        }
+
+        private void DrawGenerationRulesEditorCard(RectTransform parent, FossickGenerationConfig generation, float width)
+        {
+            AddTextAt(parent, "规则编辑", 17, FontStyle.Bold, 16f, 14f, width - 32f, 26f);
+
+            AddTextAt(parent, "普通碎片一轮", 13, FontStyle.Bold, 16f, 58f, width - 32f, 22f);
+            DrawStepper(parent, 16f, 86f, "一轮普通碎片", generation.regularGroupSize, 1, value =>
+            {
+                generation.regularGroupSize = Mathf.Max(1, value);
+                MarkGenerationRulesChanged();
+            });
+            AddTextAt(parent, $"当前难度合计 {GetDifficultyCountTotal(generation)} 段", 12, FontStyle.Normal, 270f, 92f, width - 286f, 22f);
+
+            AddTextAt(parent, "难度分布", 13, FontStyle.Bold, 16f, 146f, width - 32f, 22f);
+            for (var difficulty = 1; difficulty <= 3; difficulty++)
+            {
+                DrawDifficultyStepperRow(parent, generation, difficulty, 16f, 176f + (difficulty - 1) * 50f, width - 32f);
+            }
+
+            AddTextAt(parent, "藏宝阁插入", 13, FontStyle.Bold, 16f, 348f, width - 32f, 22f);
+            DrawStepper(parent, 16f, 376f, "最小间隔", generation.rewardInsertMin, 1, value =>
+            {
+                generation.rewardInsertMin = Mathf.Max(1, value);
+                if (generation.rewardInsertMin > generation.rewardInsertMax)
                 {
-                    regularCounter++;
-                    var generation = mineInstanceSourceConfig == null ? controller.CurrentConfig.generation : mineInstanceSourceConfig.generation;
-                    var groupSize = Mathf.Max(1, generation == null ? 1 : generation.regularGroupSize);
-                    regularTag = $" | 常规#{regularCounter} 组{((regularCounter - 1) / groupSize) + 1}";
+                    generation.rewardInsertMax = generation.rewardInsertMin;
                 }
 
-                AddText(panel, $"#{span.sequenceIndex:00} 行 {span.startRow:000}-{span.startRow + span.height - 1:000}  碎片 {span.fragmentId}  {tag}  难度{span.difficulty}{regularTag}", 12, FontStyle.Normal, new Vector2(380f, 20f));
-            }
+                MarkGenerationRulesChanged();
+            });
+            DrawStepper(parent, 16f, 424f, "最大间隔", generation.rewardInsertMax, generation.rewardInsertMin, value =>
+            {
+                generation.rewardInsertMax = Mathf.Max(generation.rewardInsertMin, value);
+                MarkGenerationRulesChanged();
+            });
+            AddTextAt(parent, GetRewardPoolSummary(), 12, FontStyle.Normal, 270f, 398f, width - 286f, 22f);
+
+            var actionRow = CreateRow(parent, "Generation Rules Action Row", width - 32f, 34f);
+            SetTopLeft(actionRow, 16f, 500f, width - 32f, 34f);
+            AddActionButton(actionRow, "放弃修改", new Vector2(104f, 30f), generationRulesEditDirty ? DiscardGenerationRulesChanges : null, generationRulesEditDirty ? ButtonTone.Danger : ButtonTone.Muted);
+            AddActionButton(actionRow, "保存规则", new Vector2(104f, 30f), SaveGenerationRules, ButtonTone.Primary);
+            AddActionButton(actionRow, "应用并更新预览", new Vector2(142f, 30f), ApplyGenerationRulesAndUpdatePreview, ButtonTone.Primary);
+        }
+
+        private void DrawGenerationRulesInlineSummary(RectTransform parent, FossickGenerationConfig generation, float width)
+        {
+            AddTextAt(parent, "摘要与校验", 17, FontStyle.Bold, 16f, 14f, width - 32f, 26f);
+            var valid = GetGenerationRuleIssueCount() == 0;
+            var validationCard = CreateRect("Generation Validation State", parent);
+            SetTopLeft(validationCard, 16f, 58f, width - 32f, 40f);
+            AddImage(validationCard.gameObject, valid ? new Color(0.14f, 0.32f, 0.23f) : new Color(0.38f, 0.29f, 0.17f));
+            AddTextAt(validationCard, valid ? "校验通过" : $"有 {GetGenerationRuleIssueCount()} 个问题", 14, FontStyle.Bold, 12f, 8f, width - 56f, 24f);
+
+            AddTextAt(parent, $"每轮普通矿井：抽取 {generation.regularGroupSize} 段", 13, FontStyle.Normal, 16f, 126f, width - 32f, 22f);
+            AddTextAt(parent, $"难度配比：难度1 {GetDifficultyCount(generation, 1)}段 / 难度2 {GetDifficultyCount(generation, 2)}段 / 难度3 {GetDifficultyCount(generation, 3)}段", 13, FontStyle.Normal, 16f, 154f, width - 32f, 36f);
+            AddTextAt(parent, $"藏宝阁插入：每 {generation.rewardInsertMin}-{generation.rewardInsertMax} 段普通矿井插入 1 个", 13, FontStyle.Normal, 16f, 196f, width - 32f, 36f);
+            AddTextAt(parent, generationRulesEditDirty ? "规则保存：有未保存修改" : "规则保存：已保存", 13, generationRulesEditDirty ? FontStyle.Bold : FontStyle.Normal, 16f, 248f, width - 32f, 22f);
+            AddTextAt(parent, generationRulesDirty ? "地图预览：规则已变化，需要更新预览" : "地图预览：当前预览已同步", 13, generationRulesDirty ? FontStyle.Bold : FontStyle.Normal, 16f, 276f, width - 32f, 22f);
+
+            AddTextAt(parent, "可抽取模板池", 15, FontStyle.Bold, 16f, 326f, width - 32f, 24f);
+            AddTextAt(parent, $"难度 1：{GetRegularPoolCount(1)} 个", 13, FontStyle.Normal, 16f, 348f, width - 32f, 22f);
+            AddTextAt(parent, $"难度 2：{GetRegularPoolCount(2)} 个", 13, FontStyle.Normal, 16f, 376f, width - 32f, 22f);
+            AddTextAt(parent, $"难度 3：{GetRegularPoolCount(3)} 个", 13, FontStyle.Normal, 16f, 404f, width - 32f, 22f);
+            AddTextAt(parent, GetRewardPoolSummary(), 13, FontStyle.Normal, 16f, 432f, width - 32f, 22f);
+
+            var issueText = GetFirstGenerationRuleIssueText();
+            AddTextAt(parent, string.IsNullOrEmpty(issueText) ? "规则可用于生成矿井。" : issueText, 12, string.IsNullOrEmpty(issueText) ? FontStyle.Normal : FontStyle.Bold, 16f, 490f, width - 32f, 44f);
+        }
+
+        private void DrawGenerationRulesSummaryCard(RectTransform parent, FossickGenerationConfig generation)
+        {
+            var section = CreateContextSection(parent, "生成规则摘要", 176f);
+            AddTextAt(section, "生成规则摘要", 15, FontStyle.Bold, 12f, 10f, 330f, 24f);
+            AddTextAt(section, $"每轮普通矿井：抽取 {generation.regularGroupSize} 段", 13, FontStyle.Normal, 12f, 42f, 330f, 22f);
+            AddTextAt(section, $"难度配比：难度1 {GetDifficultyCount(generation, 1)} / 难度2 {GetDifficultyCount(generation, 2)} / 难度3 {GetDifficultyCount(generation, 3)}", 13, FontStyle.Normal, 12f, 68f, 330f, 36f);
+            AddTextAt(section, $"藏宝阁插入：每 {generation.rewardInsertMin}-{generation.rewardInsertMax} 段 1 个", 13, FontStyle.Normal, 12f, 104f, 330f, 22f);
+            AddTextAt(section, generationRulesDirty ? "地图预览需要更新。" : "地图预览已同步。", 13, generationRulesDirty ? FontStyle.Bold : FontStyle.Normal, 12f, 134f, 330f, 22f);
+        }
+
+        private void DrawGenerationRulesValidationCard(RectTransform parent)
+        {
+            var section = CreateContextSection(parent, "规则校验", 128f);
+            var issueCount = GetGenerationRuleIssueCount();
+            AddTextAt(section, "规则校验", 15, FontStyle.Bold, 12f, 10f, 330f, 24f);
+            AddTextAt(section, issueCount == 0 ? "校验：通过" : $"校验：{issueCount} 个问题", 13, issueCount == 0 ? FontStyle.Normal : FontStyle.Bold, 12f, 42f, 330f, 22f);
+            AddTextAt(section, GetFirstGenerationRuleIssueText() ?? "没有发现问题。", 12, FontStyle.Normal, 12f, 72f, 330f, 42f);
+        }
+
+        private void DrawStepper(RectTransform parent, float x, float y, string label, int value, int minValue, Action<int> onChanged)
+        {
+            AddTextAt(parent, label, 13, FontStyle.Normal, x, y + 4f, 106f, 24f);
+            var minus = AddActionButton(parent, "-", new Vector2(32f, 30f), value > minValue ? () => onChanged(value - 1) : null, value > minValue ? ButtonTone.Default : ButtonTone.Muted);
+            SetTopLeft(minus, x + 116f, y, 32f, 30f);
+            var valueRect = CreateRect($"{label} Value", parent);
+            SetTopLeft(valueRect, x + 154f, y, 54f, 30f);
+            AddImage(valueRect.gameObject, ButtonMuted);
+            AddTextAt(valueRect, value.ToString(), 14, FontStyle.Bold, 0f, 3f, 54f, 24f, TextAnchor.MiddleCenter);
+            var plus = AddActionButton(parent, "+", new Vector2(32f, 30f), () => onChanged(value + 1));
+            SetTopLeft(plus, x + 214f, y, 32f, 30f);
+        }
+
+        private void DrawDifficultyStepperRow(RectTransform parent, FossickGenerationConfig generation, int difficulty, float x, float y, float width)
+        {
+            var count = GetDifficultyCount(generation, difficulty);
+            DrawStepper(parent, x, y, $"难度 {difficulty}", count, 0, value =>
+            {
+                SetDifficultyCount(generation, difficulty, value);
+                MarkGenerationRulesChanged();
+            });
+            AddTextAt(parent, GetRegularPoolSummary(difficulty), 12, FontStyle.Normal, x + 270f, y + 4f, width - 270f, 24f);
+        }
+
+        private void DrawMineInstanceContext(RectTransform parent, FossickGeneratedMine mine)
+        {
+            AddText(parent, "当前模式：地图预览", 16, FontStyle.Bold, new Vector2(380f, 26f));
+            AddText(parent, $"预览种子 {mineInstanceSeed} | 当前预览 {mine.rows.Count} 行 | 可视窗口 {controller.CurrentConfig.boardWidth} x {controller.CurrentConfig.visibleHeight}", 13, FontStyle.Normal, new Vector2(380f, 40f));
+            DrawMineSelectionInfo(parent, mine);
+            DrawGenerationRulesSummary(parent);
+            DrawValidationSummary(parent);
         }
 
         private void DrawGenerationRulesSummary(RectTransform parent)
@@ -685,95 +947,14 @@ namespace Fossick.MapStudio.Views
             var generation = mineInstanceSourceConfig == null ? null : mineInstanceSourceConfig.generation;
             if (generation == null)
             {
-                AddText(parent, "当前实例：未生成", 14, FontStyle.Bold, new Vector2(380f, 24f));
+                AddText(parent, "当前预览：未生成", 14, FontStyle.Bold, new Vector2(380f, 24f));
                 return;
             }
 
-            AddText(parent, generationRulesDirty ? "当前实例规则（有未应用修改）" : "当前实例规则", 16, FontStyle.Bold, new Vector2(380f, 24f));
-            AddText(parent, $"一轮 {generation.regularGroupSize} 段普通矿井；难度分布 {FormatDifficultyDistribution(generation)}", 13, FontStyle.Normal, new Vector2(380f, 22f));
-            AddText(parent, $"每隔 {generation.rewardInsertMin}-{generation.rewardInsertMax} 段普通矿井插入藏宝阁。左侧菜单可修改并重新生成。", 13, FontStyle.Normal, new Vector2(380f, 22f));
-        }
-
-        private void DrawGenerationRulesEditor(RectTransform parent)
-        {
-            var generation = controller.CurrentConfig.generation;
-            if (generation == null)
-            {
-                controller.CurrentConfig.generation = new FossickGenerationConfig();
-                generation = controller.CurrentConfig.generation;
-            }
-
-            AddText(parent, "随机生成规则", 16, FontStyle.Bold, new Vector2(380f, 24f));
-            AddText(parent, "先拼接新手矿井；之后按一轮普通矿井随机抽取，并定期插入藏宝阁。", 12, FontStyle.Normal, new Vector2(380f, 36f));
-
-            var groupRow = CreateRow(parent, "Generation Group Row", 380f, 30f);
-            AddButton(groupRow, "本轮-", new Vector2(56f, 28f), () =>
-            {
-                generation.regularGroupSize = Mathf.Max(1, generation.regularGroupSize - 1);
-                MarkGenerationRulesChanged();
-            });
-            AddButton(groupRow, $"一轮 {generation.regularGroupSize} 段普通矿井", new Vector2(160f, 28f), () => { });
-            AddButton(groupRow, "本轮+", new Vector2(56f, 28f), () =>
-            {
-                generation.regularGroupSize++;
-                MarkGenerationRulesChanged();
-            });
-            AddText(groupRow, $"已分配 {GetDifficultyCountTotal(generation)} 段", 12, FontStyle.Normal, new Vector2(108f, 28f), TextAnchor.MiddleLeft);
-
-            for (var difficulty = 1; difficulty <= 3; difficulty++)
-            {
-                DrawDifficultyRuleRow(parent, generation, difficulty);
-            }
-
-            var rewardRow = CreateRow(parent, "Reward Interval Row", 380f, 30f);
-            AddButton(rewardRow, "下限-", new Vector2(52f, 28f), () =>
-            {
-                generation.rewardInsertMin = Mathf.Max(1, generation.rewardInsertMin - 1);
-                if (generation.rewardInsertMin > generation.rewardInsertMax)
-                {
-                    generation.rewardInsertMax = generation.rewardInsertMin;
-                }
-
-                MarkGenerationRulesChanged();
-            });
-            AddButton(rewardRow, $"每隔 {generation.rewardInsertMin}-{generation.rewardInsertMax} 段插藏宝阁", new Vector2(154f, 28f), () => { });
-            AddButton(rewardRow, "下限+", new Vector2(52f, 28f), () =>
-            {
-                generation.rewardInsertMin++;
-                if (generation.rewardInsertMin > generation.rewardInsertMax)
-                {
-                    generation.rewardInsertMax = generation.rewardInsertMin;
-                }
-
-                MarkGenerationRulesChanged();
-            });
-            AddButton(rewardRow, "上限+", new Vector2(52f, 28f), () =>
-            {
-                generation.rewardInsertMax++;
-                MarkGenerationRulesChanged();
-            });
-            AddButton(rewardRow, "上限-", new Vector2(52f, 28f), () =>
-            {
-                generation.rewardInsertMax = Mathf.Max(generation.rewardInsertMin, generation.rewardInsertMax - 1);
-                MarkGenerationRulesChanged();
-            });
-        }
-
-        private void DrawDifficultyRuleRow(RectTransform parent, FossickGenerationConfig generation, int difficulty)
-        {
-            var row = CreateRow(parent, $"Difficulty {difficulty} Rule Row", 380f, 30f);
-            AddButton(row, $"难度{difficulty}-", new Vector2(64f, 28f), () =>
-            {
-                SetDifficultyCount(generation, difficulty, Mathf.Max(0, GetDifficultyCount(generation, difficulty) - 1));
-                MarkGenerationRulesChanged();
-            });
-            AddButton(row, $"本轮放 {GetDifficultyCount(generation, difficulty)} 段", new Vector2(112f, 28f), () => { });
-            AddButton(row, $"难度{difficulty}+", new Vector2(64f, 28f), () =>
-            {
-                SetDifficultyCount(generation, difficulty, GetDifficultyCount(generation, difficulty) + 1);
-                MarkGenerationRulesChanged();
-            });
-            AddText(row, GetRegularPoolSummary(difficulty), 12, FontStyle.Normal, new Vector2(140f, 28f), TextAnchor.MiddleLeft);
+            AddText(parent, generationRulesDirty ? "当前预览规则（有未应用修改）" : "当前预览规则", 16, FontStyle.Bold, new Vector2(380f, 24f));
+            AddText(parent, $"半随机：每轮 {generation.regularGroupSize} 段按难度配比组包，再用种子洗牌。", 13, FontStyle.Normal, new Vector2(380f, 22f));
+            AddText(parent, $"难度分布 {FormatDifficultyDistribution(generation)}；每隔 {generation.rewardInsertMin}-{generation.rewardInsertMax} 段插入藏宝阁。", 13, FontStyle.Normal, new Vector2(380f, 22f));
+            AddText(parent, "预览矿井按需无限向下追加；中间只展示当前预览行。", 13, FontStyle.Normal, new Vector2(380f, 22f));
         }
 
         private int GetDifficultyCountTotal(FossickGenerationConfig generation)
@@ -812,7 +993,8 @@ namespace Fossick.MapStudio.Views
         private void MarkGenerationRulesChanged()
         {
             generationRulesDirty = true;
-            editNotice = "生成规则已修改，点击左侧“生成矿井”后才会替换当前实例。";
+            generationRulesEditDirty = true;
+            editNotice = "生成规则已修改。保存后可应用并更新预览。";
             controller.Validate();
             Build();
         }
@@ -820,6 +1002,234 @@ namespace Fossick.MapStudio.Views
         private void MarkTemplateLibraryChanged()
         {
             generationRulesDirty = true;
+        }
+
+        private void BeginTemplateEdit(int index, string notice)
+        {
+            var fragments = controller.CurrentConfig.fragments;
+            if (fragments == null || fragments.Count == 0)
+            {
+                return;
+            }
+
+            selectedFragmentIndex = Mathf.Clamp(index, 0, fragments.Count - 1);
+            templateEditSourceIndex = selectedFragmentIndex;
+            templateEditDraft = CloneFragmentForMineOccurrence(fragments[templateEditSourceIndex]);
+            NormalizeFragmentDifficulty(templateEditDraft);
+            templateEditDirty = false;
+            templateUndoStack.Clear();
+            templateRedoStack.Clear();
+            editMode = MapStudioEditMode.Template;
+            templateLibraryOpen = false;
+            generationRulesOpen = false;
+            ClearPendingPaint();
+            editNotice = notice;
+            Build();
+        }
+
+        private FossickFragmentConfig GetTemplateEditFragment()
+        {
+            if (editMode != MapStudioEditMode.Template)
+            {
+                return null;
+            }
+
+            var source = GetSelectedFragment();
+            if (source == null)
+            {
+                templateEditDraft = null;
+                templateEditSourceIndex = -1;
+                templateEditDirty = false;
+                templateUndoStack.Clear();
+                templateRedoStack.Clear();
+                return null;
+            }
+
+            if (templateEditDraft == null || templateEditSourceIndex != selectedFragmentIndex)
+            {
+                templateEditSourceIndex = selectedFragmentIndex;
+                templateEditDraft = CloneFragmentForMineOccurrence(source);
+                NormalizeFragmentDifficulty(templateEditDraft);
+                templateEditDirty = false;
+                templateUndoStack.Clear();
+                templateRedoStack.Clear();
+            }
+
+            return templateEditDraft;
+        }
+
+        private void RecordTemplateUndoSnapshot()
+        {
+            if (templateEditDraft == null)
+            {
+                return;
+            }
+
+            templateUndoStack.Add(JsonUtility.ToJson(templateEditDraft));
+            if (templateUndoStack.Count > 50)
+            {
+                templateUndoStack.RemoveAt(0);
+            }
+
+            templateRedoStack.Clear();
+        }
+
+        private void MarkTemplateDraftChanged()
+        {
+            templateEditDirty = true;
+        }
+
+        private void UndoTemplateEdit()
+        {
+            if (templateUndoStack.Count == 0 || templateEditDraft == null)
+            {
+                return;
+            }
+
+            templateRedoStack.Add(JsonUtility.ToJson(templateEditDraft));
+            var last = templateUndoStack[templateUndoStack.Count - 1];
+            templateUndoStack.RemoveAt(templateUndoStack.Count - 1);
+            templateEditDraft = JsonUtility.FromJson<FossickFragmentConfig>(last);
+            NormalizeFragmentDifficulty(templateEditDraft);
+            templateEditDirty = true;
+            ClearPendingPaint();
+            editNotice = "已撤销上一步模板编辑。";
+            Build();
+        }
+
+        private void RedoTemplateEdit()
+        {
+            if (templateRedoStack.Count == 0 || templateEditDraft == null)
+            {
+                return;
+            }
+
+            templateUndoStack.Add(JsonUtility.ToJson(templateEditDraft));
+            var next = templateRedoStack[templateRedoStack.Count - 1];
+            templateRedoStack.RemoveAt(templateRedoStack.Count - 1);
+            templateEditDraft = JsonUtility.FromJson<FossickFragmentConfig>(next);
+            NormalizeFragmentDifficulty(templateEditDraft);
+            templateEditDirty = true;
+            ClearPendingPaint();
+            editNotice = "已重做模板编辑。";
+            Build();
+        }
+
+        private void SaveTemplateEdit()
+        {
+            SaveTemplateEditInternal(true);
+        }
+
+        private bool SaveTemplateEditInternal(bool rebuild)
+        {
+            var fragments = controller.CurrentConfig.fragments;
+            if (templateEditDraft == null || fragments == null || templateEditSourceIndex < 0 || templateEditSourceIndex >= fragments.Count)
+            {
+                return false;
+            }
+
+            NormalizeFragmentDifficulty(templateEditDraft);
+            fragments[templateEditSourceIndex] = CloneFragmentForMineOccurrence(templateEditDraft);
+            selectedFragmentIndex = templateEditSourceIndex;
+            templateEditDraft = CloneFragmentForMineOccurrence(fragments[templateEditSourceIndex]);
+            templateEditDirty = false;
+            templateUndoStack.Clear();
+            templateRedoStack.Clear();
+            MarkTemplateLibraryChanged();
+            controller.Validate();
+            ClearPendingPaint();
+            SaveProjectFiles();
+            editNotice = $"已保存模板 {templateEditDraft.id}。重新生成地图预览后可看到新模板参与拼接。";
+            if (rebuild)
+            {
+                Build();
+            }
+
+            return true;
+        }
+
+        private void DiscardTemplateEdit()
+        {
+            DiscardTemplateEditInternal(true);
+        }
+
+        private bool DiscardTemplateEditInternal(bool rebuild)
+        {
+            var fragments = controller.CurrentConfig.fragments;
+            if (fragments == null || templateEditSourceIndex < 0 || templateEditSourceIndex >= fragments.Count)
+            {
+                editMode = MapStudioEditMode.MineInstance;
+                if (rebuild)
+                {
+                    Build();
+                }
+
+                return false;
+            }
+
+            selectedFragmentIndex = templateEditSourceIndex;
+            templateEditDraft = CloneFragmentForMineOccurrence(fragments[templateEditSourceIndex]);
+            NormalizeFragmentDifficulty(templateEditDraft);
+            templateEditDirty = false;
+            templateUndoStack.Clear();
+            templateRedoStack.Clear();
+            ClearPendingPaint();
+            editNotice = $"已放弃模板 {templateEditDraft.id} 的未保存修改。";
+            if (rebuild)
+            {
+                Build();
+            }
+
+            return true;
+        }
+
+        private void ReturnFromTemplateEdit()
+        {
+            if (templateEditDirty)
+            {
+                ShowUnsavedTemplateDialog("返回地图预览", "当前模板有未保存修改，请选择保存或丢弃。", ReturnToMineInstanceAfterTemplateDecision);
+                return;
+            }
+
+            ReturnToMineInstanceAfterTemplateDecision();
+        }
+
+        private void ReturnToMineInstanceAfterTemplateDecision()
+        {
+            editMode = MapStudioEditMode.MineInstance;
+            ClearPendingPaint();
+            Build();
+        }
+
+        private void OpenGeneratedPreviewFromMenu()
+        {
+            if (editMode == MapStudioEditMode.Template && templateEditDirty)
+            {
+                ShowUnsavedTemplateDialog("查看地图预览", "当前模板有未保存修改，请选择保存或丢弃。", OpenGeneratedPreviewInternal);
+                return;
+            }
+
+            OpenGeneratedPreviewInternal();
+        }
+
+        private void OpenGeneratedPreviewInternal()
+        {
+            editMode = MapStudioEditMode.MineInstance;
+            templateLibraryOpen = false;
+            generationRulesOpen = false;
+            ClearPendingPaint();
+
+            if (!mineInstanceGenerated)
+            {
+                GenerateMineInstance(true, "已按当前模板、半随机规则和种子生成地图预览；矿井会按需无限向下延展。");
+            }
+            else
+            {
+                editNotice = "已切换到地图预览。";
+                controller.Validate();
+            }
+
+            Build();
         }
 
         private void GenerateMineInstance(bool clearEdits, string notice)
@@ -861,7 +1271,6 @@ namespace Fossick.MapStudio.Views
 
         private void ClearMineInstanceEdits()
         {
-            mineOccurrenceOverrides.Clear();
             var generation = controller == null || controller.CurrentConfig == null ? null : controller.CurrentConfig.generation;
             if (generation == null)
             {
@@ -898,6 +1307,40 @@ namespace Fossick.MapStudio.Views
             }
 
             return FossickMapJsonUtility.FromJson(FossickMapJsonUtility.ToJson(source));
+        }
+
+        private FossickGenerationConfig EnsureGenerationConfig()
+        {
+            if (controller.CurrentConfig.generation == null)
+            {
+                controller.CurrentConfig.generation = new FossickGenerationConfig();
+            }
+
+            return controller.CurrentConfig.generation;
+        }
+
+        private static FossickGenerationConfig CloneGenerationConfig(FossickGenerationConfig source)
+        {
+            if (source == null)
+            {
+                return new FossickGenerationConfig();
+            }
+
+            return new FossickGenerationConfig
+            {
+                regularGroupSize = source.regularGroupSize,
+                rewardInsertMin = source.rewardInsertMin,
+                rewardInsertMax = source.rewardInsertMax,
+                difficultyCounts = source.difficultyCounts == null
+                    ? new List<FossickDifficultyCount>()
+                    : source.difficultyCounts.ConvertAll(count => count == null
+                        ? null
+                        : new FossickDifficultyCount
+                        {
+                            difficulty = count.difficulty,
+                            count = count.count
+                        })
+            };
         }
 
         private int GetDifficultyCount(FossickGenerationConfig generation, int difficulty)
@@ -967,6 +1410,12 @@ namespace Fossick.MapStudio.Views
 
         private string GetRegularPoolSummary(int difficulty)
         {
+            var count = GetRegularPoolCount(difficulty);
+            return $"池内常规碎片 {count}";
+        }
+
+        private int GetRegularPoolCount(int difficulty)
+        {
             var count = 0;
             var fragments = controller.CurrentConfig.fragments;
             for (var i = 0; i < fragments.Count; i++)
@@ -978,93 +1427,163 @@ namespace Fossick.MapStudio.Views
                 }
             }
 
-            return $"池内常规碎片 {count}";
+            return count;
         }
 
-        private void DrawSelection(RectTransform parent)
+        private string GetRewardPoolSummary()
         {
-            var fragment = GetSelectedFragment();
-            AddText(parent, "当前选择", 18, FontStyle.Bold, new Vector2(380f, 28f));
-            AddText(parent, fragment == null ? "未选择" : $"碎片 {fragment.id} | 画笔 {FormatTerrain(selectedTerrain)}", 15, FontStyle.Normal, new Vector2(380f, 24f));
-            if (!string.IsNullOrEmpty(exportStatus))
+            var count = 0;
+            var fragments = controller.CurrentConfig.fragments;
+            for (var i = 0; i < fragments.Count; i++)
             {
-                AddText(parent, exportStatus, 13, FontStyle.Normal, new Vector2(380f, 42f));
+                var fragment = fragments[i];
+                if (fragment != null && fragment.type == FossickFragmentType.Reward)
+                {
+                    count++;
+                }
             }
+
+            return $"奖励模板：{count} 个";
+        }
+
+        private int GetGenerationRuleIssueCount()
+        {
+            var result = controller.LastValidation ?? controller.Validate();
+            var count = 0;
+            for (var i = 0; i < result.issues.Count; i++)
+            {
+                var issue = result.issues[i];
+                if (issue != null && issue.category == FossickValidationCategory.GenerationRules)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private string GetFirstGenerationRuleIssueText()
+        {
+            var result = controller.LastValidation ?? controller.Validate();
+            for (var i = 0; i < result.issues.Count; i++)
+            {
+                var issue = result.issues[i];
+                if (issue != null && issue.category == FossickValidationCategory.GenerationRules)
+                {
+                    return FormatIssue(issue);
+                }
+            }
+
+            return null;
         }
 
         private void DrawMineSelectionInfo(RectTransform parent, FossickGeneratedMine mine)
         {
             var span = FindGeneratedSpan(mine, selectedMineSequenceIndex);
-            AddText(parent, "当前地图段", 18, FontStyle.Bold, new Vector2(380f, 28f));
+            AddText(parent, "当前预览段", 18, FontStyle.Bold, new Vector2(380f, 28f));
             if (span == null)
             {
-                AddText(parent, "未选择。点击中间矿井格子后，这里会显示当前编辑的地图段。", 13, FontStyle.Normal, new Vector2(380f, 40f));
+                AddText(parent, "未选择。点击中间矿井格子后，这里会显示来源模板。", 13, FontStyle.Normal, new Vector2(380f, 40f));
                 return;
             }
 
-            AddText(parent, $"地图段 #{span.sequenceIndex:00} | 内容 {span.fragmentId} | {FormatFragmentType(span.fragmentType)} | 行 {span.startRow:000}-{span.startRow + span.height - 1:000}", 13, FontStyle.Normal, new Vector2(380f, 44f));
+            AddText(parent, $"预览段 #{span.sequenceIndex:00} | 来源模板 {span.fragmentId} | {FormatFragmentType(span.fragmentType)} | 行 {span.startRow:000}-{span.startRow + span.height - 1:000}", 13, FontStyle.Normal, new Vector2(380f, 44f));
         }
 
-        private void DrawValidation(RectTransform parent)
+        private void DrawValidationSummary(RectTransform parent)
         {
             var validation = controller.LastValidation;
-            AddText(parent, validation != null && validation.HasErrors ? "校验：有错误" : "校验：通过", 18, FontStyle.Bold, new Vector2(380f, 28f));
+            var issueCount = validation == null || validation.issues == null ? 0 : validation.issues.Count;
+            AddText(parent, validation != null && validation.HasErrors ? "校验：有错误" : "校验：通过", 16, FontStyle.Bold, new Vector2(380f, 26f));
+            AddText(parent, issueCount == 0 ? "没有发现问题。" : $"发现 {issueCount} 个问题，请检查模板、生成规则或地图配置。", 13, FontStyle.Normal, new Vector2(380f, 44f));
+        }
 
-            if (validation == null || validation.issues.Count == 0)
+        private void DrawFeedbackBanner(RectTransform parent, float x, float y, float width)
+        {
+            if (string.IsNullOrEmpty(currentFeedbackMessage))
             {
-                AddText(parent, "没有发现问题。", 14, FontStyle.Normal, new Vector2(380f, 24f));
                 return;
             }
 
-            for (var i = 0; i < Mathf.Min(6, validation.issues.Count); i++)
+            var color = GetFeedbackColor(currentFeedbackKind);
+            var banner = CreateRect("Feedback Banner", parent);
+            SetTopLeft(banner, x, y, width, 32f);
+            AddImage(banner.gameObject, new Color(color.r, color.g, color.b, 0.16f)).raycastTarget = false;
+
+            var stripe = CreateRect("Feedback Stripe", banner);
+            SetTopLeft(stripe, 0f, 0f, 4f, 32f);
+            AddImage(stripe.gameObject, color).raycastTarget = false;
+
+            var text = AddText(
+                banner,
+                $"{GetFeedbackLabel(currentFeedbackKind)}  {currentFeedbackMessage}",
+                13,
+                FontStyle.Bold,
+                new Vector2(width - 20f, 32f));
+            SetTopLeft(text.GetComponent<RectTransform>(), 12f, 0f, width - 20f, 32f);
+            text.color = currentFeedbackKind == MapStudioFeedbackKind.Warning
+                ? new Color(1f, 0.91f, 0.65f)
+                : TextColor;
+        }
+
+        private void SetFeedback(string message, MapStudioFeedbackKind kind)
+        {
+            currentFeedbackMessage = message;
+            currentFeedbackKind = kind;
+        }
+
+        private static MapStudioFeedbackKind InferFeedbackKind(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
             {
-                AddText(parent, FormatIssue(validation.issues[i]), 12, FontStyle.Normal, new Vector2(380f, 22f));
+                return MapStudioFeedbackKind.Info;
+            }
+
+            if (message.Contains("错误") || message.Contains("失败") || message.Contains("无法") || message.Contains("不能") || message.Contains("超出") || message.Contains("不支持"))
+            {
+                return MapStudioFeedbackKind.Error;
+            }
+
+            if (message.Contains("需要") || message.Contains("未保存") || message.Contains("请先") || message.Contains("不再是") || message.Contains("不会写入") || message.Contains("不可直接编辑"))
+            {
+                return MapStudioFeedbackKind.Warning;
+            }
+
+            if (message.StartsWith("已", StringComparison.Ordinal) || message.Contains("保存后生效") || message.Contains("切换为"))
+            {
+                return MapStudioFeedbackKind.Success;
+            }
+
+            return MapStudioFeedbackKind.Info;
+        }
+
+        private static string GetFeedbackLabel(MapStudioFeedbackKind kind)
+        {
+            switch (kind)
+            {
+                case MapStudioFeedbackKind.Success:
+                    return "完成";
+                case MapStudioFeedbackKind.Warning:
+                    return "注意";
+                case MapStudioFeedbackKind.Error:
+                    return "错误";
+                default:
+                    return "提示";
             }
         }
 
-        private void DrawGeneratedPreview(RectTransform parent)
+        private static Color GetFeedbackColor(MapStudioFeedbackKind kind)
         {
-            AddText(parent, "抽取预览", 18, FontStyle.Bold, new Vector2(380f, 28f));
-
-            try
+            switch (kind)
             {
-                var generator = new FossickFragmentGenerator(controller.CurrentConfig, controller.Seed);
-                var generated = generator.GenerateInitialFragments();
-                while (generated.Count < 8)
-                {
-                    generated.Add(generator.Next());
-                }
-
-                for (var i = 0; i < generated.Count; i++)
-                {
-                    var item = generated[i];
-                    var fragment = item.config;
-                    var tag = item.insertedAsReward ? "奖励插入" : FormatFragmentType(fragment.type);
-                    AddText(parent, $"#{item.sequenceIndex:00}  碎片 {fragment.id}  {tag}", 13, FontStyle.Normal, new Vector2(380f, 20f));
-                    DrawMiniFragment(parent, fragment);
-                }
-            }
-            catch (Exception ex)
-            {
-                AddText(parent, $"预览不可用：{ex.Message}", 13, FontStyle.Normal, new Vector2(380f, 44f));
-            }
-        }
-
-        private void DrawMiniFragment(RectTransform parent, FossickFragmentConfig fragment)
-        {
-            var mini = CreateRect($"Mini Fragment {fragment.id}", parent);
-            var miniCell = 16f;
-            mini.sizeDelta = new Vector2(fragment.width * miniCell, fragment.height * miniCell);
-
-            for (var y = 0; y < fragment.height; y++)
-            {
-                for (var x = 0; x < fragment.width; x++)
-                {
-                    var cell = FindOrCreateCell(fragment, x, y);
-                    var tile = CreateRect($"Mini {x},{y}", mini);
-                    SetTopLeft(tile, x * miniCell, y * miniCell, miniCell, miniCell);
-                    var image = AddImage(tile.gameObject, GetTerrainColor(cell.terrain));
-                }
+                case MapStudioFeedbackKind.Success:
+                    return new Color(0.26f, 0.65f, 0.42f);
+                case MapStudioFeedbackKind.Warning:
+                    return new Color(0.94f, 0.62f, 0.18f);
+                case MapStudioFeedbackKind.Error:
+                    return new Color(0.78f, 0.28f, 0.22f);
+                default:
+                    return new Color(0.24f, 0.47f, 0.72f);
             }
         }
 
@@ -1078,7 +1597,7 @@ namespace Fossick.MapStudio.Views
                     return new FossickGeneratedMine();
                 }
 
-                return FossickMineLayoutBuilder.Build(config, mineInstanceSeed, minePreviewRows, mineOccurrenceOverrides);
+                return FossickMineLayoutBuilder.Build(config, mineInstanceSeed, minePreviewRows);
             }
             catch (Exception)
             {
@@ -1104,13 +1623,6 @@ namespace Fossick.MapStudio.Views
                 config.generation = new FossickGenerationConfig();
             }
 
-            var currentGeneration = controller.CurrentConfig == null ? null : controller.CurrentConfig.generation;
-            if (currentGeneration != null)
-            {
-                config.generation.sequenceOverrides = currentGeneration.sequenceOverrides;
-                config.generation.rowOverrides = currentGeneration.rowOverrides;
-            }
-
             return config;
         }
 
@@ -1134,19 +1646,10 @@ namespace Fossick.MapStudio.Views
                 DrawMinePreviewCell(parent, mineCellRows, row, x, displayY);
             }
 
-            if ((IsApplyingTemplate || IsRowBatchMode) && IsSelectedRow(row.rowIndex))
-            {
-                DrawMineRowOverlay(parent, $"Selected Mine Row {row.rowIndex}", displayY, row.cells.Length, IsApplyingTemplate ? new Color(1f, 0.72f, 0.16f, 0.38f) : new Color(0.24f, 0.55f, 0.86f, 0.34f));
-            }
-
             var rowLabelRect = CreateRect($"Mine Row Label {row.rowIndex}", parent);
             SetTopLeft(rowLabelRect, 0f, displayY * MineCellSize, GridLabelWidth - 4f, MineCellSize);
             var rowBackground = AddImage(rowLabelRect.gameObject, GetRowBarColor(row.rowIndex));
-            rowBackground.raycastTarget = IsApplyingTemplate || IsRowBatchMode;
-            if (IsApplyingTemplate || IsRowBatchMode)
-            {
-                AddRowBarEvents(rowLabelRect.gameObject, row.rowIndex);
-            }
+            rowBackground.raycastTarget = false;
 
             var rowTextRect = CreateRect("Row Number", rowLabelRect);
             Stretch(rowTextRect);
@@ -1158,7 +1661,7 @@ namespace Fossick.MapStudio.Views
             rowLabel.alignment = TextAnchor.MiddleCenter;
             rowLabel.raycastTarget = false;
 
-            if (IsApplyingTemplate && row.localRow == 0)
+            if (row.localRow == 0)
             {
                 var boundary = CreateRect($"Fragment Boundary {row.rowIndex}", parent);
                 SetTopLeft(boundary, GridLabelWidth, displayY * MineCellSize, row.cells.Length * MineCellSize, 3f);
@@ -1197,21 +1700,19 @@ namespace Fossick.MapStudio.Views
             text.alignment = TextAnchor.MiddleCenter;
             text.raycastTarget = false;
 
-            RegisterCellSelectionRect(GetMineSelectionKey(row.rowIndex, x), rect);
-
-            AddMineCellPaintEvents(rect.gameObject, row, x, image, text, layerRoot);
+            AddMineCellInspectEvents(rect.gameObject, row, x);
         }
 
-        private void DrawTemplateGridEditor(RectTransform panel, FossickFragmentConfig fragment, float panelWidth, float top)
+        private void DrawTemplateGridEditor(RectTransform panel, FossickFragmentConfig fragment, float left, float width, float top)
         {
             var gridWidth = GridLabelWidth + fragment.width * MineCellSize;
             var viewportHeight = Mathf.Min(fragment.height, controller.CurrentConfig.visibleHeight) * MineCellSize;
             var scrollViewWidth = gridWidth + 28f;
             var stage = CreateRect("Template Stage", panel);
-            SetTopLeft(stage, 16f, top, panelWidth - 32f, viewportHeight + 40f);
+            SetTopLeft(stage, left, top, width, viewportHeight + 40f);
 
             var scrollView = CreateRect("Template Scroll View", stage);
-            SetTopLeft(scrollView, Mathf.Max(0f, (panelWidth - 32f - scrollViewWidth) * 0.5f), 20f, scrollViewWidth, viewportHeight);
+            SetTopLeft(scrollView, Mathf.Max(0f, (width - scrollViewWidth) * 0.5f), 20f, scrollViewWidth, viewportHeight);
             AddImage(scrollView.gameObject, new Color(0.08f, 0.1f, 0.1f));
 
             var viewport = CreateRect("Template Viewport", scrollView);
@@ -1374,50 +1875,17 @@ namespace Fossick.MapStudio.Views
             });
         }
 
-        private void AddMineCellPaintEvents(GameObject target, FossickGeneratedMineRow row, int x, Image image, Text text, RectTransform layerRoot)
+        private void AddMineCellInspectEvents(GameObject target, FossickGeneratedMineRow row, int x)
         {
             var trigger = target.AddComponent<EventTrigger>();
             AddEventTriggerEntry(trigger, EventTriggerType.PointerDown, _ =>
             {
-                isDragPainting = true;
-                BeginPaintSelection();
-                SelectMineCell(row, x, target.transform);
-                if (!PaintMineCell(row, x, image, text, layerRoot))
-                {
-                    isDragPainting = false;
-                }
-            });
-            AddEventTriggerEntry(trigger, EventTriggerType.PointerEnter, _ =>
-            {
-                if (isDragPainting && Input.GetMouseButton(0))
-                {
-                    SelectMineCell(row, x, target.transform);
-                    PaintMineCell(row, x, image, text, layerRoot);
-                }
-            });
-            AddEventTriggerEntry(trigger, EventTriggerType.PointerUp, _ =>
-            {
-                FinishDragPainting();
-            });
-        }
-
-        private void AddRowBarEvents(GameObject target, int rowIndex)
-        {
-            var trigger = target.AddComponent<EventTrigger>();
-            AddEventTriggerEntry(trigger, EventTriggerType.PointerDown, _ =>
-            {
-                BeginRowSelection(rowIndex);
-            });
-            AddEventTriggerEntry(trigger, EventTriggerType.PointerEnter, _ =>
-            {
-                if (isRowSelecting && Input.GetMouseButton(0))
-                {
-                    ExtendRowSelection(rowIndex);
-                }
-            });
-            AddEventTriggerEntry(trigger, EventTriggerType.PointerUp, _ =>
-            {
-                FinishRowSelection();
+                selectedMineSequenceIndex = row == null || row.fragment == null ? -1 : row.fragment.sequenceIndex;
+                var fragmentId = row == null || row.fragment == null ? 0 : row.fragment.fragmentId;
+                editNotice = row == null
+                    ? "未选中有效预览格。"
+                    : $"当前格 ({x},{row.rowIndex:000}) 来自碎片 {fragmentId}，预览内容不可直接编辑。";
+                Build();
             });
         }
 
@@ -1429,16 +1897,6 @@ namespace Fossick.MapStudio.Views
             };
             entry.callback.AddListener(data => callback(data));
             trigger.triggers.Add(entry);
-        }
-
-        private void SelectMineCell(FossickGeneratedMineRow row, int x, Transform target)
-        {
-            if (row == null)
-            {
-                return;
-            }
-
-            AddPaintSelection(GetMineSelectionKey(row.rowIndex, x), target);
         }
 
         private void SelectTemplateCell(FossickFragmentConfig fragment, FossickCellConfig cell, Transform target)
@@ -1554,15 +2012,6 @@ namespace Fossick.MapStudio.Views
             }
 
             var parts = key.Split(':');
-            if (parts.Length == 3 && parts[0] == "m")
-            {
-                if (int.TryParse(parts[1], out var row) && int.TryParse(parts[2], out var x))
-                {
-                    neighborKey = GetMineSelectionKey(row + dy, x + dx);
-                    return true;
-                }
-            }
-
             if (parts.Length == 4 && parts[0] == "t")
             {
                 if (int.TryParse(parts[1], out var id) && int.TryParse(parts[2], out var x) && int.TryParse(parts[3], out var y))
@@ -1573,11 +2022,6 @@ namespace Fossick.MapStudio.Views
             }
 
             return false;
-        }
-
-        private static string GetMineSelectionKey(int rowIndex, int x)
-        {
-            return $"m:{rowIndex}:{x}";
         }
 
         private static string GetTemplateSelectionKey(int fragmentId, int x, int y)
@@ -1638,7 +2082,7 @@ namespace Fossick.MapStudio.Views
                 AddImage(rect.gameObject, new Color(0.18f, 0.55f, 0.24f, 0.85f)).raycastTarget = false;
             }
 
-            if (cell.fog == FossickFogType.Covered)
+            if (showFogInEditor && cell.fog == FossickFogType.Covered)
             {
                 var rect = CreateRect("Fog Layer", parent);
                 SetTopLeft(rect, 0f, 0f, size, size);
@@ -1790,7 +2234,6 @@ namespace Fossick.MapStudio.Views
                     height = 2;
                     return true;
                 case TreasureRoomLargeId:
-                case "treasure_room_7x2":
                     width = 7;
                     height = 2;
                     return true;
@@ -1886,199 +2329,109 @@ namespace Fossick.MapStudio.Views
             return -1;
         }
 
-        private void AddLayerButton(RectTransform parent, FossickCellLayer layer, string label)
+        private void DrawBrushLayerTabs(RectTransform parent)
         {
-            AddButton(parent, label, new Vector2(120f, 34f), () =>
-            {
-                CancelBlockingEditModes();
-                selectedLayer = layer;
-                EnsureBrushForLayer(layer);
-                ClearPendingPaint();
-                editNotice = $"编辑层已切换为 {FormatLayer(layer)}。";
-                Build();
-            }, selectedLayer == layer);
+            brushPaletteView.DrawLayerTabs(parent, CreateBrushPaletteState(), CreateBrushPaletteCallbacks());
         }
 
-        private void DrawCurrentLayerBrushes(RectTransform parent)
+        private void DrawBrushPalette(RectTransform parent)
         {
-            if (selectedLayer == FossickCellLayer.RewardBackground)
-            {
-                AddRewardBackgroundBrushTile(parent, string.Empty, "清空", 0, 0);
-                AddRewardBackgroundBrushTile(parent, TreasureRoomSmallId, "小藏宝阁 3x2", 3, 2);
-                AddRewardBackgroundBrushTile(parent, TreasureRoomMediumId, "中藏宝阁 5x2", 5, 2);
-                AddRewardBackgroundBrushTile(parent, TreasureRoomLargeId, "大藏宝阁 7x2", 7, 2);
-                return;
-            }
-
-            if (selectedLayer == FossickCellLayer.Terrain)
-            {
-                AddTerrainBrushTile(parent, FossickTerrainType.Empty, "空格");
-                AddTerrainBrushTile(parent, FossickTerrainType.Dirt, "土");
-                AddTerrainBrushTile(parent, FossickTerrainType.Stone, "石头");
-                AddTerrainBrushTile(parent, FossickTerrainType.Unbreakable, "基岩");
-                return;
-            }
-
-            if (selectedLayer == FossickCellLayer.Reward)
-            {
-                AddRewardBrushTile(parent, FossickElementType.None, "清空", null);
-                AddRewardBrushTile(parent, FossickElementType.Coin, "金币", "coin_pile");
-                AddRewardBrushTile(parent, FossickElementType.Ore, "铜矿", "ore_copper");
-                AddRewardBrushTile(parent, FossickElementType.Ore, "银矿", "ore_silver");
-                AddRewardBrushTile(parent, FossickElementType.Ore, "金矿", "ore_gold");
-                AddRewardBrushTile(parent, FossickElementType.Ore, "宝石矿", "ore_gem");
-                AddRewardBrushTile(parent, FossickElementType.Chest, "宝箱", "treasure_chest");
-                AddRewardBrushTile(parent, FossickElementType.Collection, "收藏品", "collection_piece");
-                return;
-            }
-
-            if (selectedLayer == FossickCellLayer.Tool)
-            {
-                AddRewardBrushTile(parent, FossickElementType.None, "清空", null);
-                AddRewardBrushTile(parent, FossickElementType.Item, "矿镐", "pickaxe");
-                AddRewardBrushTile(parent, FossickElementType.Item, "雷管", "dynamite");
-                AddRewardBrushTile(parent, FossickElementType.Item, "炸药", "tnt");
-                AddRewardBrushTile(parent, FossickElementType.Item, "雷达", "radar");
-                return;
-            }
-
-            if (selectedLayer == FossickCellLayer.Decoration)
-            {
-                AddDecorationBrushTile(parent, string.Empty, "清空");
-                AddDecorationBrushTile(parent, "grass_large", "草丛");
-                AddDecorationBrushTile(parent, "grass_small", "小草");
-                AddDecorationBrushTile(parent, "mushroom", "蘑菇");
-                return;
-            }
-
-            if (selectedLayer == FossickCellLayer.Fog)
-            {
-                AddFogBrushTile(parent, FossickFogType.None, "无阴影");
-                AddFogBrushTile(parent, FossickFogType.Covered, "阴影");
-                return;
-            }
-
+            brushPaletteView.DrawBrushes(parent, CreateBrushPaletteState(), CreateBrushPaletteCallbacks());
         }
 
-        private void AddRewardBackgroundBrushTile(RectTransform parent, string id, string label, int width, int height)
+        private FossickBrushPaletteView.State CreateBrushPaletteState()
         {
-            var selected = selectedLayer == FossickCellLayer.RewardBackground
-                && selectedRewardBackgroundId == id
-                && selectedRewardBackgroundWidth == width
-                && selectedRewardBackgroundHeight == height;
-            var sprite = string.IsNullOrEmpty(id) ? null : FossickArtLibrary.GetBackgroundSprite(id);
-            AddBrushTile(parent, label, selected, sprite, string.IsNullOrEmpty(id) ? "×" : null, string.IsNullOrEmpty(id) ? new Color(0.11f, 0.13f, 0.15f) : new Color(0.38f, 0.27f, 0.1f, 0.9f), () =>
+            return new FossickBrushPaletteView.State
             {
-                CancelBlockingEditModes();
-                selectedLayer = FossickCellLayer.RewardBackground;
-                selectedRewardBackgroundId = id;
-                selectedRewardBackgroundWidth = width;
-                selectedRewardBackgroundHeight = height;
-                ClearPendingPaint();
-                editNotice = string.IsNullOrEmpty(id)
-                    ? "藏宝阁画笔已切换为清空。"
-                    : $"藏宝阁画笔已切换为 {label}，点击左上角格子放置区域。";
-                Build();
-            });
+                selectedLayer = selectedLayer,
+                selectedTerrain = selectedTerrain,
+                selectedRewardType = selectedRewardType,
+                selectedRewardId = selectedRewardId,
+                selectedRewardBackgroundId = selectedRewardBackgroundId,
+                selectedRewardBackgroundWidth = selectedRewardBackgroundWidth,
+                selectedRewardBackgroundHeight = selectedRewardBackgroundHeight,
+                selectedDecorationId = selectedDecorationId,
+                selectedFog = selectedFog
+            };
         }
 
-        private void AddRewardBrushTile(RectTransform parent, FossickElementType type, string label, string rewardId)
+        private FossickBrushPaletteView.Callbacks CreateBrushPaletteCallbacks()
         {
-            var id = rewardId ?? GetDefaultRewardId(type);
-            var selected = selectedRewardType == type && selectedRewardId == id && (selectedLayer == FossickCellLayer.Reward || selectedLayer == FossickCellLayer.Tool);
-            var sprite = type == FossickElementType.None
-                ? null
-                : FossickArtLibrary.GetRewardSprite(new FossickElementConfig
-                {
-                    type = type,
-                    id = id,
-                    amount = GetDefaultRewardAmount(type, id)
-                });
-
-            AddBrushTile(parent, label, selected, type == FossickElementType.None ? null : sprite, type == FossickElementType.None ? "×" : null, type == FossickElementType.None ? new Color(0.11f, 0.13f, 0.15f) : GetRewardColor(type), () =>
+            return new FossickBrushPaletteView.Callbacks
             {
-                CancelBlockingEditModes();
-                selectedRewardType = type;
-                selectedRewardId = id;
-                ClearPendingPaint();
-                editNotice = $"{FormatLayer(selectedLayer)}画笔已切换为 {label}。";
-                Build();
-            });
+                selectLayer = SelectBrushLayer,
+                selectTerrain = SelectTerrainBrush,
+                selectReward = SelectRewardBrush,
+                selectRewardBackground = SelectRewardBackgroundBrush,
+                selectDecoration = SelectDecorationBrush,
+                selectFog = SelectFogBrush
+            };
         }
 
-        private void AddTerrainBrushTile(RectTransform parent, FossickTerrainType terrain, string label)
+        private void SelectBrushLayer(FossickCellLayer layer)
         {
-            var sprite = terrain == FossickTerrainType.Empty ? null : FossickArtLibrary.GetAutoTileSprite(terrain, 15);
-            AddBrushTile(parent, label, selectedTerrain == terrain, sprite, terrain == FossickTerrainType.Empty ? "." : null, GetTerrainColor(terrain), () =>
-            {
-                CancelBlockingEditModes();
-                selectedLayer = FossickCellLayer.Terrain;
-                selectedTerrain = terrain;
-                ClearPendingPaint();
-                editNotice = $"画笔已切换为 {FormatTerrain(terrain)}。";
-                Build();
-            });
+            selectedLayer = layer;
+            EnsureBrushForLayer(layer);
+            ClearPendingPaint();
+            editNotice = $"编辑层已切换为 {FormatLayer(layer)}。";
+            Build();
         }
 
-        private void AddDecorationBrushTile(RectTransform parent, string id, string label)
+        private void SelectTerrainBrush(FossickTerrainType terrain)
         {
-            var sprite = string.IsNullOrEmpty(id) ? null : FossickArtLibrary.GetDecorationSprite(id);
-            AddBrushTile(parent, label, selectedDecorationId == id, sprite, string.IsNullOrEmpty(id) ? "×" : null, string.IsNullOrEmpty(id) ? new Color(0.11f, 0.13f, 0.15f) : new Color(0.18f, 0.55f, 0.24f, 0.85f), () =>
-            {
-                CancelBlockingEditModes();
-                selectedLayer = FossickCellLayer.Decoration;
-                selectedDecorationId = id;
-                ClearPendingPaint();
-                editNotice = $"装饰画笔已切换为 {label}。";
-                Build();
-            });
+            selectedLayer = FossickCellLayer.Terrain;
+            selectedTerrain = terrain;
+            ClearPendingPaint();
+            editNotice = $"画笔已切换为 {FormatTerrain(terrain)}。";
+            Build();
         }
 
-        private void AddFogBrushTile(RectTransform parent, FossickFogType fog, string label)
+        private void SelectRewardBrush(FossickElementType type, string id, string label)
         {
-            var sprite = fog == FossickFogType.Covered ? FossickArtLibrary.GetFogAutoTileSprite(15) : null;
-            AddBrushTile(parent, label, selectedFog == fog, sprite, fog == FossickFogType.None ? "×" : null, fog == FossickFogType.None ? new Color(0.11f, 0.13f, 0.15f) : FossickArtLibrary.GetFogColor(), () =>
-            {
-                CancelBlockingEditModes();
-                selectedLayer = FossickCellLayer.Fog;
-                selectedFog = fog;
-                ClearPendingPaint();
-                editNotice = $"阴影画笔已切换为 {label}。";
-                Build();
-            });
+            selectedRewardType = type;
+            selectedRewardId = id;
+            ClearPendingPaint();
+            editNotice = $"{FormatLayer(selectedLayer)}画笔已切换为 {label}。";
+            Build();
         }
 
-        private void AddBrushTile(RectTransform parent, string label, bool selected, Sprite sprite, string placeholderText, Color backgroundColor, Action onClick)
+        private void SelectRewardBackgroundBrush(string id, string label, int width, int height)
         {
-            var rect = CreateRect(label, parent);
-            rect.sizeDelta = new Vector2(BrushTileWidth, BrushTileHeight);
-            var background = AddImage(rect.gameObject, selected ? new Color(0.24f, 0.45f, 0.7f) : new Color(0.17f, 0.19f, 0.21f));
+            selectedLayer = FossickCellLayer.RewardBackground;
+            selectedRewardBackgroundId = id;
+            selectedRewardBackgroundWidth = width;
+            selectedRewardBackgroundHeight = height;
+            ClearPendingPaint();
+            editNotice = string.IsNullOrEmpty(id)
+                ? "藏宝阁画笔已切换为清空。"
+                : $"藏宝阁画笔已切换为 {label}，点击左上角格子放置区域。";
+            Build();
+        }
 
-            var button = rect.gameObject.AddComponent<Button>();
-            button.targetGraphic = background;
-            button.onClick.AddListener(() => onClick?.Invoke());
+        private void SelectDecorationBrush(string id, string label)
+        {
+            selectedLayer = FossickCellLayer.Decoration;
+            selectedDecorationId = id;
+            ClearPendingPaint();
+            editNotice = $"装饰画笔已切换为 {label}。";
+            Build();
+        }
 
-            var iconFrame = CreateRect("Icon", rect);
-            SetTopLeft(iconFrame, 8f, 5f, BrushTileWidth - 16f, 48f);
-            var iconBackground = AddImage(iconFrame.gameObject, sprite == null ? backgroundColor : new Color(0.08f, 0.1f, 0.11f));
-            iconBackground.raycastTarget = false;
+        private void SelectFogBrush(FossickFogType fog, string label)
+        {
+            selectedLayer = FossickCellLayer.Fog;
+            selectedFog = fog;
+            ClearPendingPaint();
+            editNotice = $"阴影画笔已切换为 {label}。";
+            Build();
+        }
 
-            if (sprite != null)
-            {
-                var icon = CreateRect("Sprite", iconFrame);
-                Stretch(icon);
-                var image = AddImage(icon.gameObject, Color.white);
-                image.sprite = sprite;
-                image.preserveAspect = true;
-                image.raycastTarget = false;
-            }
-            else if (!string.IsNullOrEmpty(placeholderText))
-            {
-                AddText(iconFrame, placeholderText, placeholderText == "×" ? 28 : 20, FontStyle.Bold, new Vector2(BrushTileWidth - 16f, 48f), TextAnchor.MiddleCenter);
-            }
-
-            var text = AddText(rect, label, 12, FontStyle.Bold, new Vector2(BrushTileWidth, 22f), TextAnchor.MiddleCenter);
-            SetTopLeft(text.GetComponent<RectTransform>(), 0f, BrushTileHeight - 23f, BrushTileWidth, 22f);
+        private void ToggleFogVisibility()
+        {
+            showFogInEditor = !showFogInEditor;
+            ClearPendingPaint();
+            editNotice = showFogInEditor ? "编辑器中已显示阴影；地图数据未改变。" : "编辑器中已隐藏阴影；地图数据未改变。";
+            Build();
         }
 
         private void EnsureBrushForLayer(FossickCellLayer layer)
@@ -2195,9 +2548,19 @@ namespace Fossick.MapStudio.Views
 
         private void OpenTemplateLibrary()
         {
+            if (editMode == MapStudioEditMode.Template && templateEditDirty)
+            {
+                ShowUnsavedTemplateDialog("打开模板库", "当前模板有未保存修改，请选择保存或丢弃。", OpenTemplateLibraryInternal);
+                return;
+            }
+
+            OpenTemplateLibraryInternal();
+        }
+
+        private void OpenTemplateLibraryInternal()
+        {
             templateLibraryOpen = true;
             generationRulesOpen = false;
-            CancelTemplateApplication(null);
             ClearPendingPaint();
             Build();
         }
@@ -2205,6 +2568,8 @@ namespace Fossick.MapStudio.Views
         private void CloseTemplateLibrary()
         {
             templateLibraryOpen = false;
+            editMode = MapStudioEditMode.MineInstance;
+            ClearPendingPaint();
             Build();
         }
 
@@ -2212,7 +2577,9 @@ namespace Fossick.MapStudio.Views
         {
             templateLibraryOpen = false;
             generationRulesOpen = true;
-            CancelTemplateApplication(null);
+            generationRulesSnapshot = CloneGenerationConfig(EnsureGenerationConfig());
+            generationRulesDirtySnapshot = generationRulesDirty;
+            generationRulesEditDirty = false;
             ClearPendingPaint();
             Build();
         }
@@ -2223,82 +2590,158 @@ namespace Fossick.MapStudio.Views
             Build();
         }
 
-        private void DrawGenerationRulesWindow()
+        private void ReturnFromGenerationRules()
         {
-            var shade = CreateRect("Generation Rules Shade", root);
-            Stretch(shade);
-            AddImage(shade.gameObject, new Color(0f, 0f, 0f, 0.46f)).raycastTarget = true;
-
-            var panel = CreatePanel("Generation Rules Window", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-            panel.pivot = new Vector2(0.5f, 0.5f);
-            panel.anchoredPosition = new Vector2(0f, 8f);
-            panel.sizeDelta = new Vector2(560f, 430f);
-
-            var title = AddText(panel, "生成规则", 22, FontStyle.Bold, new Vector2(220f, 34f));
-            SetTopLeft(title.GetComponent<RectTransform>(), 28f, 24f, 220f, 34f);
-            var desc = AddText(panel, "这里配置整条矿井的随机拼接规则；右侧栏只展示本次生成结果。", 14, FontStyle.Normal, new Vector2(420f, 24f));
-            SetTopLeft(desc.GetComponent<RectTransform>(), 28f, 62f, 420f, 24f);
-            var close = AddButton(panel, "关闭", new Vector2(96f, 34f), CloseGenerationRules);
-            SetTopLeft(close, 436f, 24f, 96f, 34f);
-
-            var content = CreateRect("Generation Rules Content", panel);
-            SetTopLeft(content, 28f, 112f, 500f, 270f);
-            AddVerticalLayout(content.gameObject, 8, TextAnchor.UpperLeft);
-            DrawGenerationRulesEditor(content);
-        }
-
-        private void BeginMapReplacementPick()
-        {
-            if (GetSelectedFragment() == null)
+            if (!generationRulesEditDirty)
             {
-                CancelTemplateApplication("需要先在模板库中选择一个模板。");
-                Build();
+                ExitGenerationRulesToPreview();
                 return;
             }
 
-            templateLibraryOpen = false;
-            waitingForReplacementTarget = true;
-            pendingReplacementStartRow = -1;
-            selectedRowStart = -1;
-            selectedRowEnd = -1;
-            isRowSelecting = false;
-            rowSelectionAnchor = -1;
+            ShowOperationDialog(
+                "返回地图预览前需要处理修改",
+                "当前生成规则有未保存修改。返回前请选择保存或丢弃。",
+                "保存",
+                SaveGenerationRulesAndReturn,
+                "丢弃",
+                DiscardGenerationRulesChangesAndReturn,
+                "取消",
+                null);
+        }
+
+        private void ExitGenerationRulesToPreview()
+        {
+            generationRulesOpen = false;
             editMode = MapStudioEditMode.MineInstance;
-            editNotice = $"请选择左侧行号栏中的 {GetSelectedFragment().height} 行作为应用目标。";
             ClearPendingPaint();
             Build();
         }
 
-        private void DrawTemplateLibraryWindow()
+        private void SaveGenerationRulesAndReturn()
         {
-            var shade = CreateRect("Template Library Shade", root);
-            Stretch(shade);
-            AddImage(shade.gameObject, new Color(0f, 0f, 0f, 0.46f)).raycastTarget = true;
-
-            var panel = CreatePanel("Template Library Window", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-            panel.pivot = new Vector2(0.5f, 0.5f);
-            panel.anchoredPosition = new Vector2(0f, 8f);
-            panel.sizeDelta = new Vector2(1040f, 650f);
-
-            var title = AddText(panel, "模板库", 22, FontStyle.Bold, new Vector2(500f, 34f));
-            SetTopLeft(title.GetComponent<RectTransform>(), 28f, 24f, 500f, 34f);
-            var desc = AddText(panel, "这里管理可复用碎片模板；选中模板后可单独编辑，也可把它应用到地图上的指定位置。", 14, FontStyle.Normal, new Vector2(760f, 24f));
-            SetTopLeft(desc.GetComponent<RectTransform>(), 28f, 62f, 680f, 24f);
-            var close = AddButton(panel, "关闭", new Vector2(96f, 34f), CloseTemplateLibrary);
-            SetTopLeft(close, 916f, 24f, 96f, 34f);
-
-            var existingTitle = AddText(panel, "已有模板", 18, FontStyle.Bold, new Vector2(180f, 28f));
-            SetTopLeft(existingTitle.GetComponent<RectTransform>(), 28f, 104f, 180f, 28f);
-            DrawExistingTemplateCards(panel);
-
-            var presetTitle = AddText(panel, "新建预设", 18, FontStyle.Bold, new Vector2(180f, 28f));
-            SetTopLeft(presetTitle.GetComponent<RectTransform>(), 552f, 104f, 180f, 28f);
-            DrawTemplatePresetCard(panel, 552f, 144f, "空白", CreateBlankFragmentPreview(), AddBlankRegularFragment);
-            DrawTemplatePresetCard(panel, 716f, 144f, "全土", CreateFilledRegularFragmentPreview(), AddFilledRegularFragment);
-            DrawTemplatePresetCard(panel, 880f, 144f, "奖励房", CreateRewardRoomFragmentPreview(), AddRewardFragment);
+            controller.Validate();
+            SaveProjectFiles();
+            generationRulesSnapshot = CloneGenerationConfig(EnsureGenerationConfig());
+            generationRulesDirtySnapshot = generationRulesDirty;
+            generationRulesEditDirty = false;
+            editNotice = "生成规则已保存，已返回地图预览。";
+            ExitGenerationRulesToPreview();
         }
 
-        private void DrawExistingTemplateCards(RectTransform parent)
+        private void DiscardGenerationRulesChangesAndReturn()
+        {
+            if (generationRulesSnapshot != null)
+            {
+                controller.CurrentConfig.generation = CloneGenerationConfig(generationRulesSnapshot);
+            }
+
+            generationRulesDirty = generationRulesDirtySnapshot;
+            generationRulesEditDirty = false;
+            controller.Validate();
+            editNotice = "已放弃生成规则修改，已返回地图预览。";
+            ExitGenerationRulesToPreview();
+        }
+
+        private void SaveGenerationRules()
+        {
+            controller.Validate();
+            SaveProjectFiles();
+            generationRulesSnapshot = CloneGenerationConfig(EnsureGenerationConfig());
+            generationRulesDirtySnapshot = generationRulesDirty;
+            generationRulesEditDirty = false;
+            editNotice = "生成规则已保存。需要刷新矿井时，请点击“应用并更新预览”。";
+            Build();
+        }
+
+        private void DiscardGenerationRulesChanges()
+        {
+            if (generationRulesSnapshot != null)
+            {
+                controller.CurrentConfig.generation = CloneGenerationConfig(generationRulesSnapshot);
+            }
+
+            generationRulesDirty = generationRulesDirtySnapshot;
+            generationRulesEditDirty = false;
+            controller.Validate();
+            editNotice = "已放弃生成规则的未保存修改。";
+            Build();
+        }
+
+        private void ApplyGenerationRulesAndUpdatePreview()
+        {
+            controller.Validate();
+            GenerateMineInstance(true, "已按当前生成规则更新矿井预览。");
+            generationRulesSnapshot = CloneGenerationConfig(EnsureGenerationConfig());
+            generationRulesDirtySnapshot = generationRulesDirty;
+            Build();
+        }
+
+        private void DrawTemplateLibraryPanel()
+        {
+            var panelLeft = LeftWidth + 24f;
+            var panelRight = CenterWidth;
+            var panelWidth = panelRight - panelLeft;
+            var panel = CreatePanel("Template Library Panel", root, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(panelLeft, 12f), new Vector2(panelRight, -HeaderHeight - 24f));
+
+            var title = AddText(panel, "模板库", 20, FontStyle.Bold, new Vector2(panelWidth - 32f, 30f));
+            SetTopLeft(title.GetComponent<RectTransform>(), 16f, 14f, panelWidth - 32f, 30f);
+            DrawModeBadge(panel, panelWidth, 14f, 160f);
+            var close = AddActionButton(panel, "返回地图预览", new Vector2(128f, 30f), CloseTemplateLibrary);
+            SetTopLeft(close, panelWidth - 144f, 14f, 128f, 30f);
+
+            var desc = AddText(panel, "这里管理可复用碎片模板；地图预览会按规则抽取这些模板，不在这里修改预览结果。", 14, FontStyle.Normal, new Vector2(panelWidth - 32f, 26f));
+            SetTopLeft(desc.GetComponent<RectTransform>(), 16f, 54f, panelWidth - 32f, 26f);
+            if (!string.IsNullOrEmpty(editNotice))
+            {
+                DrawFeedbackBanner(panel, 16f, 82f, panelWidth - 32f);
+            }
+
+            const float contentTop = 128f;
+            var existingWidth = Mathf.Min(520f, panelWidth * 0.52f);
+            var presetWidth = Mathf.Min(500f, panelWidth - existingWidth - 52f);
+
+            var existingCard = CreateRect("Template Library Existing Card", panel);
+            SetTopLeft(existingCard, 16f, contentTop, existingWidth, 552f);
+            AddImage(existingCard.gameObject, new Color(0.1f, 0.13f, 0.15f));
+
+            var presetCard = CreateRect("Template Library Preset Card", panel);
+            SetTopLeft(presetCard, 36f + existingWidth, contentTop, presetWidth, 552f);
+            AddImage(presetCard.gameObject, new Color(0.1f, 0.13f, 0.15f));
+
+            var existingTitle = AddText(existingCard, "已有模板", 18, FontStyle.Bold, new Vector2(existingWidth - 32f, 28f));
+            SetTopLeft(existingTitle.GetComponent<RectTransform>(), 16f, 16f, existingWidth - 32f, 28f);
+            DrawTemplateLibraryFilters(existingCard);
+            DrawExistingTemplateCards(existingCard, existingWidth);
+
+            var presetTitle = AddText(presetCard, "新建预设", 18, FontStyle.Bold, new Vector2(presetWidth - 32f, 28f));
+            SetTopLeft(presetTitle.GetComponent<RectTransform>(), 16f, 16f, presetWidth - 32f, 28f);
+            DrawTemplatePresetCard(presetCard, 16f, 60f, "空白", CreateBlankFragmentPreview(), TemplatePresetType.Blank);
+            DrawTemplatePresetCard(presetCard, 180f, 60f, "全土", CreateFilledRegularFragmentPreview(), TemplatePresetType.FilledRegular);
+            DrawTemplatePresetCard(presetCard, 344f, 60f, "奖励房", CreateRewardRoomFragmentPreview(), TemplatePresetType.RewardRoom);
+
+            var create = AddActionButton(presetCard, "创建模板", new Vector2(240f, 34f), CreateSelectedTemplatePreset, ButtonTone.Primary);
+            SetTopLeft(create, 16f, 240f, 240f, 34f);
+        }
+
+        private void DrawTemplateLibraryFilters(RectTransform parent)
+        {
+            DrawTemplateLibraryFilterButton(parent, 16f, "全部", TemplateLibraryFilter.All);
+            DrawTemplateLibraryFilterButton(parent, 98f, "新手", TemplateLibraryFilter.Tutorial);
+            DrawTemplateLibraryFilterButton(parent, 180f, "常规", TemplateLibraryFilter.Regular);
+            DrawTemplateLibraryFilterButton(parent, 262f, "奖励", TemplateLibraryFilter.Reward);
+        }
+
+        private void DrawTemplateLibraryFilterButton(RectTransform parent, float x, string label, TemplateLibraryFilter filter)
+        {
+            var button = AddButton(parent, label, new Vector2(72f, 30f), () =>
+            {
+                templateLibraryFilter = filter;
+                Build();
+            }, templateLibraryFilter == filter);
+            SetTopLeft(button, x, 56f, 72f, 30f);
+        }
+
+        private void DrawExistingTemplateCards(RectTransform parent, float width)
         {
             var fragments = controller.CurrentConfig.fragments;
             if (fragments == null)
@@ -2306,7 +2749,8 @@ namespace Fossick.MapStudio.Views
                 return;
             }
 
-            for (var i = 0; i < Mathf.Min(8, fragments.Count); i++)
+            var visibleIndex = 0;
+            for (var i = 0; i < fragments.Count && visibleIndex < 6; i++)
             {
                 var index = i;
                 var fragment = fragments[i];
@@ -2315,54 +2759,72 @@ namespace Fossick.MapStudio.Views
                     continue;
                 }
 
-                var col = i % 2;
-                var row = i / 2;
-                DrawTemplateCard(parent, 28f + col * 250f, 144f + row * 112f, fragment, selectedFragmentIndex == index, () =>
+                if (!MatchesTemplateLibraryFilter(fragment))
                 {
-                    selectedFragmentIndex = index;
-                    editMode = MapStudioEditMode.Template;
-                    ClearPendingPaint();
-                    editNotice = $"已选择模板 {fragment.id}，可在中间区域单独编辑。";
-                    Build();
-                });
+                    continue;
+                }
+
+                var col = visibleIndex % 2;
+                var row = visibleIndex / 2;
+                visibleIndex++;
+                DrawTemplateCard(parent, 16f + col * 250f, 104f + row * 112f, fragment, selectedFragmentIndex == index, index);
             }
 
-            var edit = AddButton(parent, "编辑当前模板", new Vector2(150f, 34f), () =>
+            if (visibleIndex == 0)
             {
-                templateLibraryOpen = false;
-                editMode = MapStudioEditMode.Template;
-                ClearPendingPaint();
-                editNotice = "已进入模板编辑。";
-                Build();
-            });
-            SetTopLeft(edit, 28f, 548f, 150f, 34f);
+                AddText(parent, "当前筛选下没有模板。", 13, FontStyle.Normal, new Vector2(420f, 24f));
+            }
 
-            var apply = AddButton(parent, "应用到地图", new Vector2(150f, 34f), () =>
+            var actionY = 456f;
+            var edit = AddActionButton(parent, "编辑模板", new Vector2(150f, 34f), () =>
             {
-                BeginMapReplacementPick();
-            });
-            SetTopLeft(apply, 188f, 548f, 150f, 34f);
+                BeginTemplateEdit(selectedFragmentIndex, "已进入模板编辑。修改会先保存在临时副本中。");
+            }, ButtonTone.Primary);
+            SetTopLeft(edit, 16f, actionY, 150f, 34f);
 
-            var copy = AddButton(parent, "复制当前模板", new Vector2(150f, 34f), () =>
+            var copy = AddActionButton(parent, "复制模板", new Vector2(150f, 34f), () =>
             {
                 templateLibraryOpen = false;
                 CopySelectedFragment();
             });
-            SetTopLeft(copy, 28f, 592f, 150f, 34f);
+            SetTopLeft(copy, 176f, actionY, 150f, 34f);
 
-            var delete = AddButton(parent, "删除当前模板", new Vector2(150f, 34f), () =>
+            var delete = AddActionButton(parent, "删除模板", new Vector2(150f, 34f), () =>
             {
                 templateLibraryOpen = false;
-                DeleteSelectedFragment();
-            });
-            SetTopLeft(delete, 188f, 592f, 150f, 34f);
+                RequestDeleteSelectedFragment();
+            }, ButtonTone.Danger);
+            SetTopLeft(delete, 16f, actionY + 44f, 150f, 34f);
         }
 
-        private void DrawTemplateCard(RectTransform parent, float x, float y, FossickFragmentConfig fragment, bool selected, Action select)
+        private bool MatchesTemplateLibraryFilter(FossickFragmentConfig fragment)
+        {
+            if (fragment == null || templateLibraryFilter == TemplateLibraryFilter.All)
+            {
+                return true;
+            }
+
+            switch (templateLibraryFilter)
+            {
+                case TemplateLibraryFilter.Tutorial:
+                    return fragment.type == FossickFragmentType.Tutorial;
+                case TemplateLibraryFilter.Regular:
+                    return fragment.type == FossickFragmentType.Regular;
+                case TemplateLibraryFilter.Reward:
+                    return fragment.type == FossickFragmentType.Reward;
+                default:
+                    return true;
+            }
+        }
+
+        private void DrawTemplateCard(RectTransform parent, float x, float y, FossickFragmentConfig fragment, bool selected, int fragmentIndex)
         {
             var card = CreatePanel($"Template Card {fragment.id}", parent, new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero, Vector2.zero);
             SetTopLeft(card, x, y, 226f, 96f);
             card.GetComponent<Image>().color = selected ? new Color(0.23f, 0.47f, 0.72f) : Panel;
+            var cardButton = card.gameObject.AddComponent<Button>();
+            cardButton.targetGraphic = card.GetComponent<Image>();
+            cardButton.onClick.AddListener(() => SelectTemplateFromLibrary(fragmentIndex, fragment));
 
             var preview = CreateRect("Template Preview", card);
             SetTopLeft(preview, 12f, 12f, 112f, 72f);
@@ -2371,16 +2833,33 @@ namespace Fossick.MapStudio.Views
 
             var label = AddText(card, $"{fragment.id}\n{FormatFragmentType(fragment.type)}{(fragment.type == FossickFragmentType.Regular ? " D" + fragment.difficulty : string.Empty)}", 13, FontStyle.Bold, new Vector2(82f, 48f), TextAnchor.MiddleLeft);
             SetTopLeft(label.GetComponent<RectTransform>(), 136f, 16f, 82f, 48f);
-
-            var button = card.gameObject.AddComponent<Button>();
-            button.targetGraphic = card.GetComponent<Image>();
-            button.onClick.AddListener(() => select?.Invoke());
         }
 
-        private void DrawTemplatePresetCard(RectTransform parent, float x, float y, string title, FossickFragmentConfig previewFragment, Action create)
+        private void SelectTemplateFromLibrary(int fragmentIndex, FossickFragmentConfig fragment)
+        {
+            selectedFragmentIndex = Mathf.Clamp(fragmentIndex, 0, controller.CurrentConfig.fragments.Count - 1);
+            templateEditDraft = null;
+            templateEditSourceIndex = -1;
+            templateEditDirty = false;
+            templateUndoStack.Clear();
+            templateRedoStack.Clear();
+            ClearPendingPaint();
+            editNotice = fragment == null ? "已选择模板。" : $"已选择模板 {fragment.id}。";
+            Build();
+        }
+
+        private void DrawTemplatePresetCard(RectTransform parent, float x, float y, string title, FossickFragmentConfig previewFragment, TemplatePresetType preset)
         {
             var card = CreatePanel(title, parent, new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero, Vector2.zero);
-            SetTopLeft(card, x, y, 136f, 164f);
+            SetTopLeft(card, x, y, 136f, 142f);
+            card.GetComponent<Image>().color = selectedTemplatePreset == preset ? new Color(0.23f, 0.47f, 0.72f) : Panel;
+            var button = card.gameObject.AddComponent<Button>();
+            button.targetGraphic = card.GetComponent<Image>();
+            button.onClick.AddListener(() =>
+            {
+                selectedTemplatePreset = preset;
+                Build();
+            });
 
             var name = AddText(card, title, 15, FontStyle.Bold, new Vector2(112f, 24f), TextAnchor.MiddleCenter);
             SetTopLeft(name.GetComponent<RectTransform>(), 12f, 12f, 112f, 24f);
@@ -2389,13 +2868,23 @@ namespace Fossick.MapStudio.Views
             SetTopLeft(preview, 12f, 44f, 112f, 72f);
             AddImage(preview.gameObject, new Color(0.08f, 0.1f, 0.1f));
             DrawFragmentThumbnail(preview, previewFragment, 112f, 72f);
+        }
 
-            var button = AddButton(card, "创建", new Vector2(90f, 30f), () =>
+        private void CreateSelectedTemplatePreset()
+        {
+            templateLibraryOpen = false;
+            switch (selectedTemplatePreset)
             {
-                templateLibraryOpen = false;
-                create();
-            }, true);
-            SetTopLeft(button, 23f, 126f, 90f, 30f);
+                case TemplatePresetType.FilledRegular:
+                    AddFilledRegularFragment();
+                    break;
+                case TemplatePresetType.RewardRoom:
+                    AddRewardFragment();
+                    break;
+                default:
+                    AddBlankRegularFragment();
+                    break;
+            }
         }
 
         private void DrawFragmentThumbnail(RectTransform parent, FossickFragmentConfig fragment, float width, float height)
@@ -2538,27 +3027,100 @@ namespace Fossick.MapStudio.Views
             Build();
         }
 
-        private void ExportJson()
+        private void RequestDeleteSelectedFragment()
         {
-            if (generationRulesDirty)
+            var selected = GetSelectedFragment();
+            if (selected == null)
             {
-                exportStatus = "模板或生成规则已修改，请先点击“生成矿井”再导出。";
-                editNotice = exportStatus;
-                Build();
                 return;
             }
 
-            var absolutePath = Path.Combine(Application.dataPath, "Fossick/MapStudio/Maps/FossickMapDraft.json");
-            FossickMapFileService.Save(absolutePath, controller.CurrentConfig);
-            exportStatus = $"已导出：{DraftAssetPath}";
+            ShowOperationDialog(
+                "删除模板",
+                "删除后该模板不会再参与后续生成。已生成的预览可重新生成。",
+                "删除",
+                DeleteSelectedFragment,
+                cancelLabel: "取消");
+        }
+
+        private void ExportJson()
+        {
+            SaveProjectFiles();
             ClearPendingPaint();
             editNotice = exportStatus;
+            Build();
+        }
+
+        private void OpenDataFolder()
+        {
+            SaveProjectFiles();
+            ClearPendingPaint();
+
+            var folder = FossickMapProjectFileService.GetEditableMapsFolder();
+            Directory.CreateDirectory(folder);
+            Application.OpenURL(new Uri(folder).AbsoluteUri);
+            editNotice = $"已打开数据目录：{folder}";
+            Build();
+        }
+
+        private void SaveProjectFiles()
+        {
+            var project = FossickMapProjectConfig.FromRuntimeConfig(controller.CurrentConfig, mineInstanceSeed);
+            FossickMapProjectFileService.SaveEditableProject(project);
+            exportStatus = $"已保存到：{FossickMapProjectFileService.GetEditableMapsFolder()}";
 
 #if UNITY_EDITOR
             AssetDatabase.Refresh();
 #endif
+        }
 
-            Build();
+        private void PlayPreviewScene()
+        {
+            if (templateEditDirty && !SaveTemplateEditInternal(false))
+            {
+                ShowOperationDialog(
+                    "无法试玩",
+                    "当前模板修改无法保存，请先检查模板状态。",
+                    "知道了",
+                    Build,
+                    cancelLabel: null);
+                return;
+            }
+
+            controller.Validate();
+            if (controller.LastValidation != null && controller.LastValidation.HasErrors)
+            {
+                ShowOperationDialog(
+                    "校验未通过",
+                    "当前模板或生成规则还有错误。请先修复校验问题，再进入试玩。",
+                    "知道了",
+                    Build,
+                    cancelLabel: null);
+                return;
+            }
+
+            SaveProjectFiles();
+            ClearPendingPaint();
+            editNotice = "已保存当前配置，正在进入 Preview 场景试玩。";
+
+#if UNITY_EDITOR
+            if (Application.isPlaying)
+            {
+                SceneManager.LoadScene(PreviewSceneName);
+                return;
+            }
+
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                Build();
+                return;
+            }
+
+            EditorSceneManager.OpenScene(PreviewScenePath, OpenSceneMode.Single);
+            EditorApplication.isPlaying = true;
+#else
+            SceneManager.LoadScene(PreviewSceneName);
+#endif
         }
 
         private FossickFragmentConfig GetSelectedFragment()
@@ -2614,7 +3176,7 @@ namespace Fossick.MapStudio.Views
             for (var i = 0; i < fragment.cells.Count; i++)
             {
                 var cell = fragment.cells[i];
-                cell.rewardBackgroundId = "treasure_room";
+                cell.rewardBackgroundId = TreasureRoomLargeId;
                 cell.fog = FossickFogType.None;
                 if (cell.y == fragment.height / 2 && cell.x > 0 && cell.x < fragment.width - 1)
                 {
@@ -2723,65 +3285,6 @@ namespace Fossick.MapStudio.Views
             selectedPaintCells.Clear();
             ClearLiveSelectionHighlights();
             editNotice = $"已在模板 {fragment.id} 放置 {FormatCurrentBrush()}，范围 ({startX},{startY}) - ({startX + selectedRewardBackgroundWidth - 1},{startY + selectedRewardBackgroundHeight - 1})。";
-            controller.Validate();
-            Build();
-            return true;
-        }
-
-        private bool TryPaintRewardBackgroundArea(FossickGeneratedMineRow row, int startX)
-        {
-            if (!IsRewardBackgroundAreaBrush())
-            {
-                return false;
-            }
-
-            if (row == null || controller == null || controller.CurrentConfig == null)
-            {
-                return true;
-            }
-
-            var startRow = row.rowIndex;
-            var width = controller.CurrentConfig.boardWidth;
-            var mine = BuildPreviewMine();
-            var maxRows = mine == null || mine.rows == null ? 0 : mine.rows.Count;
-            if (!CanPlaceRewardBackgroundArea(startX, startRow, width, maxRows))
-            {
-                editNotice = $"藏宝阁 {selectedRewardBackgroundWidth}x{selectedRewardBackgroundHeight} 超出当前矿井预览范围，请从更靠左或更靠上的格子开始放置。";
-                return true;
-            }
-
-            var rows = BuildConfigRows(mine);
-            var intersectingRooms = FindIntersectingRewardBackgroundRooms(rows, width, maxRows, startX, startRow, selectedRewardBackgroundWidth, selectedRewardBackgroundHeight);
-            var overrideStartRow = startRow;
-            var overrideEndRow = startRow + selectedRewardBackgroundHeight - 1;
-            for (var i = 0; i < intersectingRooms.Count; i++)
-            {
-                overrideStartRow = Mathf.Min(overrideStartRow, intersectingRooms[i].startY);
-                overrideEndRow = Mathf.Max(overrideEndRow, intersectingRooms[i].endY);
-            }
-
-            var fragment = CreateMapContentFragmentFromRows(overrideStartRow, overrideEndRow - overrideStartRow + 1, cell =>
-            {
-                var worldY = overrideStartRow + cell.y;
-                if (IsInsideAnyRegion(cell.x, worldY, intersectingRooms))
-                {
-                    ClearRewardBackgroundCell(cell);
-                }
-
-                if (cell.x >= startX
-                    && cell.x < startX + selectedRewardBackgroundWidth
-                    && worldY >= startRow
-                    && worldY < startRow + selectedRewardBackgroundHeight)
-                {
-                    ApplyRewardBackgroundCell(cell);
-                }
-            });
-            SaveMineRowOverride(overrideStartRow, fragment);
-            selectedMineSequenceIndex = -1;
-            isDragPainting = false;
-            selectedPaintCells.Clear();
-            ClearLiveSelectionHighlights();
-            editNotice = $"已在第 {startRow:000}-{startRow + selectedRewardBackgroundHeight - 1:000} 行放置 {FormatCurrentBrush()}，并清理重叠的旧藏宝阁。";
             controller.Validate();
             Build();
             return true;
@@ -2991,50 +3494,6 @@ namespace Fossick.MapStudio.Views
             };
         }
 
-        private bool PaintMineCell(FossickGeneratedMineRow row, int x, Image image, Text text, RectTransform layerRoot)
-        {
-            if (row == null || row.fragment == null || row.fragment.config == null)
-            {
-                return false;
-            }
-
-            if (IsApplyingTemplate)
-            {
-                return false;
-            }
-
-            if (IsRowBatchMode)
-            {
-                editNotice = "当前处于批量行操作模式，格子绘制已暂时关闭。";
-                return false;
-            }
-
-            if (TryPaintRewardBackgroundArea(row, x))
-            {
-                return true;
-            }
-
-            if (TryFindRowOverride(row.rowIndex, out var rowOverride, out var overrideLocalRow) && rowOverride.fragment != null)
-            {
-                selectedMineSequenceIndex = row.fragment.sequenceIndex;
-                var overrideCell = FindOrCreateCell(rowOverride.fragment, x, overrideLocalRow);
-                PaintCell(overrideCell, false);
-                CopyCellVisualState(overrideCell, row.cells[x]);
-                UpdateMineCellVisual(image, text, layerRoot, row.cells[x]);
-                editNotice = $"正在编辑第 {row.rowIndex:000} 行的地图格子 ({x},{overrideLocalRow})。";
-                return true;
-            }
-
-            selectedMineSequenceIndex = row.fragment.sequenceIndex;
-            var occurrenceFragment = GetOrCreateMineOccurrenceOverride(row.fragment);
-            var cell = FindOrCreateCell(occurrenceFragment, x, row.localRow);
-            PaintCell(cell, false);
-            CopyCellVisualState(cell, row.cells[x]);
-            UpdateMineCellVisual(image, text, layerRoot, row.cells[x]);
-            editNotice = $"正在编辑地图段 #{row.fragment.sequenceIndex:00} 的格子 ({x},{row.localRow})。";
-            return true;
-        }
-
         private bool PaintTemplateCell(FossickFragmentConfig fragment, FossickCellConfig cell, Image image, Text text, RectTransform layerRoot)
         {
             if (fragment == null || cell == null)
@@ -3042,336 +3501,19 @@ namespace Fossick.MapStudio.Views
                 return false;
             }
 
+            RecordTemplateUndoSnapshot();
             if (TryPaintRewardBackgroundArea(fragment, cell.x, cell.y))
             {
-                MarkTemplateLibraryChanged();
+                MarkTemplateDraftChanged();
+                editNotice = $"正在编辑模板 {fragment.id} 的藏宝阁区域。保存后生效。";
                 return true;
             }
 
             PaintCell(cell, false);
             UpdateMineCellVisual(image, text, layerRoot, cell);
-            editNotice = $"正在编辑模板 {fragment.id} 的格子 ({cell.x},{cell.y})。模板用于后续生成，不会改动已经放进地图里的内容。";
-            MarkTemplateLibraryChanged();
+            editNotice = $"正在编辑模板 {fragment.id} 的格子 ({cell.x},{cell.y})。保存前不会改动模板库。";
+            MarkTemplateDraftChanged();
             return true;
-        }
-
-        private void CancelTemplateApplication(string notice)
-        {
-            waitingForReplacementTarget = false;
-            pendingReplacementStartRow = -1;
-            selectedRowStart = -1;
-            selectedRowEnd = -1;
-            isRowSelecting = false;
-            rowSelectionAnchor = -1;
-            if (!string.IsNullOrEmpty(notice))
-            {
-                editNotice = notice;
-            }
-        }
-
-        private void CancelBlockingEditModes()
-        {
-            CancelTemplateApplication(null);
-            if (editMode == MapStudioEditMode.RowBatch)
-            {
-                editMode = MapStudioEditMode.MineInstance;
-                selectedRowStart = -1;
-                selectedRowEnd = -1;
-                rowSelectionAnchor = -1;
-                isRowSelecting = false;
-            }
-        }
-
-        private void BeginRowSelection(int rowIndex)
-        {
-            if (!IsApplyingTemplate && !IsRowBatchMode)
-            {
-                return;
-            }
-
-            isRowSelecting = true;
-            rowSelectionAnchor = rowIndex;
-            selectedRowStart = rowIndex;
-            selectedRowEnd = IsApplyingTemplate
-                ? rowIndex + Mathf.Max(1, GetSelectedFragment().height) - 1
-                : rowIndex;
-            SyncPendingReplacementFromSelectedRows();
-            editNotice = IsApplyingTemplate
-                ? $"已选择第 {selectedRowStart:000}-{selectedRowEnd:000} 行作为模板应用目标。"
-                : $"已选择第 {selectedRowStart:000} 行，可继续拖选更多行。";
-            Build();
-        }
-
-        private void ExtendRowSelection(int rowIndex)
-        {
-            if ((!IsApplyingTemplate && !IsRowBatchMode) || !isRowSelecting)
-            {
-                return;
-            }
-
-            selectedRowStart = Mathf.Min(rowSelectionAnchor, rowIndex);
-            selectedRowEnd = Mathf.Max(rowSelectionAnchor, rowIndex);
-            SyncPendingReplacementFromSelectedRows();
-            editNotice = IsApplyingTemplate
-                ? $"已拖选第 {selectedRowStart:000}-{selectedRowEnd:000} 行作为模板应用目标。"
-                : $"已拖选第 {selectedRowStart:000}-{selectedRowEnd:000} 行。";
-            Build();
-        }
-
-        private void FinishRowSelection()
-        {
-            if (!isRowSelecting)
-            {
-                return;
-            }
-
-            isRowSelecting = false;
-            rowSelectionAnchor = -1;
-            SyncPendingReplacementFromSelectedRows();
-        }
-
-        private void SyncPendingReplacementFromSelectedRows()
-        {
-            pendingReplacementStartRow = IsApplyingTemplate ? GetSelectedRowMin() : -1;
-        }
-
-        private void BeginRowBatchMode()
-        {
-            CancelTemplateApplication(null);
-            editMode = MapStudioEditMode.RowBatch;
-            selectedRowStart = -1;
-            selectedRowEnd = -1;
-            rowSelectionAnchor = -1;
-            isRowSelecting = false;
-            ClearPendingPaint();
-            editNotice = "已进入批量行操作。请在左侧行号栏点选或拖选行。";
-            Build();
-        }
-
-        private void EndRowBatchMode(string notice)
-        {
-            if (editMode == MapStudioEditMode.RowBatch)
-            {
-                editMode = MapStudioEditMode.MineInstance;
-            }
-
-            selectedRowStart = -1;
-            selectedRowEnd = -1;
-            rowSelectionAnchor = -1;
-            isRowSelecting = false;
-            if (!string.IsNullOrEmpty(notice))
-            {
-                editNotice = notice;
-            }
-        }
-
-        private void ApplySelectedTemplateToMineRows(int startRow)
-        {
-            var fragment = GetSelectedFragment();
-            if (fragment == null)
-            {
-                editNotice = "需要先在模板库中选择要应用的模板。";
-                Build();
-                return;
-            }
-
-            if (!CanApplySelectedRowsToTemplate())
-            {
-                editNotice = $"当前选择 {GetSelectedRowCount()} 行，模板需要 {fragment.height} 行。请在左侧行号栏重新选择。";
-                Build();
-                return;
-            }
-
-            var mine = BuildPreviewMine();
-            if (startRow < 0 || mine == null || mine.rows == null || startRow >= mine.rows.Count)
-            {
-                editNotice = $"第 {startRow:000} 行不存在，无法应用模板。";
-                Build();
-                return;
-            }
-
-            var clone = CloneFragmentForMineOccurrence(fragment);
-            if (clone == null)
-            {
-                return;
-            }
-
-            SaveMineRowOverride(startRow, clone);
-            editMode = MapStudioEditMode.MineInstance;
-            selectedMineSequenceIndex = -1;
-            CancelTemplateApplication(null);
-            selectedRowStart = -1;
-            selectedRowEnd = -1;
-            ClearPendingPaint();
-            editNotice = $"已将模板 {fragment.id} 放入第 {startRow:000}-{startRow + clone.height - 1:000} 行。之后这里就是地图内容，可以直接编辑。";
-            controller.Validate();
-            Build();
-        }
-
-        private void FillSelectedRowsWithBrush()
-        {
-            if (!IsRowBatchMode || GetSelectedRowCount() <= 0)
-            {
-                return;
-            }
-
-            var startRow = GetSelectedRowMin();
-            var count = GetSelectedRowCount();
-            var fragment = CreateMapContentFragmentFromRows(startRow, count, cell => PaintCell(cell, false));
-            SaveMineRowOverride(startRow, fragment);
-            EndRowBatchMode($"已用当前画笔填充第 {startRow:000}-{startRow + count - 1:000} 行。");
-            controller.Validate();
-            Build();
-        }
-
-        private void ClearSelectedRowsLayer()
-        {
-            if (!IsRowBatchMode || GetSelectedRowCount() <= 0)
-            {
-                return;
-            }
-
-            var startRow = GetSelectedRowMin();
-            var count = GetSelectedRowCount();
-            var fragment = CreateMapContentFragmentFromRows(startRow, count, ClearCurrentLayer);
-            SaveMineRowOverride(startRow, fragment);
-            EndRowBatchMode($"已清空第 {startRow:000}-{startRow + count - 1:000} 行的 {FormatLayer(selectedLayer)}。");
-            controller.Validate();
-            Build();
-        }
-
-        private void DuplicateSelectedRowsDownward()
-        {
-            if (!IsRowBatchMode || GetSelectedRowCount() <= 0)
-            {
-                return;
-            }
-
-            var sourceStart = GetSelectedRowMin();
-            var count = GetSelectedRowCount();
-            var targetStart = GetSelectedRowMax() + 1;
-            var fragment = CreateMapContentFragmentFromRows(sourceStart, count, null);
-            SaveMineRowOverride(targetStart, fragment);
-            minePreviewRows = Mathf.Max(minePreviewRows, targetStart + count + controller.CurrentConfig.visibleHeight);
-            EndRowBatchMode($"已把第 {sourceStart:000}-{sourceStart + count - 1:000} 行复制到第 {targetStart:000}-{targetStart + count - 1:000} 行。");
-            controller.Validate();
-            Build();
-        }
-
-        private FossickFragmentConfig CreateMapContentFragmentFromRows(int startRow, int count, Action<FossickCellConfig> mutate)
-        {
-            var mine = BuildPreviewMine();
-            var width = controller.CurrentConfig.boardWidth;
-            var fragment = new FossickFragmentConfig
-            {
-                id = 800000 + startRow,
-                type = FossickFragmentType.Regular,
-                difficulty = 0,
-                weight = 0,
-                width = width,
-                height = count,
-                cells = new List<FossickCellConfig>()
-            };
-
-            for (var localY = 0; localY < count; localY++)
-            {
-                var row = FindGeneratedRow(mine, startRow + localY);
-                for (var x = 0; x < width; x++)
-                {
-                    var source = row != null && row.cells != null && x < row.cells.Length
-                        ? row.cells[x]
-                        : null;
-                    var cell = CloneCellForRowContent(source, x, localY);
-                    mutate?.Invoke(cell);
-                    fragment.cells.Add(cell);
-                }
-            }
-
-            return fragment;
-        }
-
-        private static FossickGeneratedMineRow FindGeneratedRow(FossickGeneratedMine mine, int rowIndex)
-        {
-            if (mine == null || mine.rows == null)
-            {
-                return null;
-            }
-
-            for (var i = 0; i < mine.rows.Count; i++)
-            {
-                var row = mine.rows[i];
-                if (row != null && row.rowIndex == rowIndex)
-                {
-                    return row;
-                }
-            }
-
-            return null;
-        }
-
-        private static FossickCellConfig CloneCellForRowContent(FossickCellConfig source, int x, int y)
-        {
-            if (source == null)
-            {
-                return new FossickCellConfig
-                {
-                    x = x,
-                    y = y,
-                    terrain = FossickTerrainType.Empty,
-                    hp = 0,
-                    fog = FossickFogType.None
-                };
-            }
-
-            return new FossickCellConfig
-            {
-                x = x,
-                y = y,
-                backgroundId = source.backgroundId,
-                rewardBackgroundId = source.rewardBackgroundId,
-                terrain = source.terrain,
-                hp = source.hp,
-                reward = source.reward,
-                decorations = source.decorations == null ? new List<string>() : new List<string>(source.decorations),
-                decor = source.decor == null ? new List<string>() : new List<string>(source.decor),
-                fog = source.fog,
-                element = source.element,
-                mask = source.mask
-            };
-        }
-
-        private void ClearCurrentLayer(FossickCellConfig cell)
-        {
-            if (cell == null)
-            {
-                return;
-            }
-
-            if (selectedLayer == FossickCellLayer.Terrain)
-            {
-                cell.terrain = FossickTerrainType.Empty;
-                cell.hp = 0;
-                cell.mask = cell.fog == FossickFogType.Covered;
-            }
-            else if (selectedLayer == FossickCellLayer.Reward || selectedLayer == FossickCellLayer.Tool)
-            {
-                cell.reward = null;
-                cell.element = null;
-            }
-            else if (selectedLayer == FossickCellLayer.Decoration)
-            {
-                cell.decorations = new List<string>();
-                cell.decor = new List<string>();
-            }
-            else if (selectedLayer == FossickCellLayer.Fog)
-            {
-                cell.fog = FossickFogType.None;
-                cell.mask = cell.terrain != FossickTerrainType.Empty;
-            }
-            else if (selectedLayer == FossickCellLayer.RewardBackground)
-            {
-                cell.rewardBackgroundId = null;
-            }
         }
 
         private void FinishDragPainting()
@@ -3388,106 +3530,9 @@ namespace Fossick.MapStudio.Views
             Build();
         }
 
-        private bool IsSelectedRow(int rowIndex)
-        {
-            if (selectedRowStart < 0 || selectedRowEnd < 0)
-            {
-                return false;
-            }
-
-            return rowIndex >= GetSelectedRowMin() && rowIndex <= GetSelectedRowMax();
-        }
-
-        private int GetSelectedRowMin()
-        {
-            if (selectedRowStart < 0 || selectedRowEnd < 0)
-            {
-                return -1;
-            }
-
-            return Mathf.Min(selectedRowStart, selectedRowEnd);
-        }
-
-        private int GetSelectedRowMax()
-        {
-            if (selectedRowStart < 0 || selectedRowEnd < 0)
-            {
-                return -1;
-            }
-
-            return Mathf.Max(selectedRowStart, selectedRowEnd);
-        }
-
-        private int GetSelectedRowCount()
-        {
-            var min = GetSelectedRowMin();
-            var max = GetSelectedRowMax();
-            return min < 0 || max < 0 ? 0 : max - min + 1;
-        }
-
-        private bool CanApplySelectedRowsToTemplate()
-        {
-            var fragment = GetSelectedFragment();
-            if (!IsApplyingTemplate || fragment == null)
-            {
-                return false;
-            }
-
-            var count = GetSelectedRowCount();
-            return count == Mathf.Max(1, fragment.height);
-        }
-
-        private string GetApplyButtonLabel()
-        {
-            var fragment = GetSelectedFragment();
-            if (fragment == null || GetSelectedRowCount() <= 0)
-            {
-                return "先选行";
-            }
-
-            return CanApplySelectedRowsToTemplate() ? "确认应用" : $"需选{fragment.height}行";
-        }
-
-        private string FormatSelectedRows()
-        {
-            var min = GetSelectedRowMin();
-            var max = GetSelectedRowMax();
-            if (min < 0 || max < 0)
-            {
-                return "未选择";
-            }
-
-            return min == max ? $"{min:000}" : $"{min:000}-{max:000}";
-        }
-
         private Color GetRowBarColor(int rowIndex)
         {
-            if ((!IsApplyingTemplate && !IsRowBatchMode) || !IsSelectedRow(rowIndex))
-            {
-                return new Color(0.07f, 0.09f, 0.09f, 1f);
-            }
-
-            return IsApplyingTemplate
-                ? new Color(0.75f, 0.48f, 0.12f, 0.95f)
-                : new Color(0.18f, 0.42f, 0.72f, 0.95f);
-        }
-
-        private static void CopyCellVisualState(FossickCellConfig source, FossickCellConfig target)
-        {
-            if (source == null || target == null)
-            {
-                return;
-            }
-
-            target.terrain = source.terrain;
-            target.hp = source.hp;
-            target.backgroundId = source.backgroundId;
-            target.rewardBackgroundId = source.rewardBackgroundId;
-            target.reward = source.reward;
-            target.decorations = source.decorations == null ? new List<string>() : new List<string>(source.decorations);
-            target.fog = source.fog;
-            target.element = source.element;
-            target.mask = source.mask;
+            return new Color(0.07f, 0.09f, 0.09f, 1f);
         }
 
         private void UpdateMineCellVisual(Image image, Text text, RectTransform layerRoot, FossickCellConfig cell)
@@ -3565,21 +3610,10 @@ namespace Fossick.MapStudio.Views
         {
             if (span == null)
             {
-                return "当前地图段 未选择";
+                return "当前预览段 未选择";
             }
 
-            return $"当前地图段 #{span.sequenceIndex:00}";
-        }
-
-        private string FormatSelectedTemplateForReplacement()
-        {
-            var fragment = GetSelectedFragment();
-            if (fragment == null)
-            {
-                return "未选择";
-            }
-
-            return $"{fragment.id}（{FormatFragmentType(fragment.type)}）";
+            return $"当前预览段 #{span.sequenceIndex:00}";
         }
 
         private static string FormatTemplateCounts(List<FossickFragmentConfig> fragments)
@@ -3641,236 +3675,17 @@ namespace Fossick.MapStudio.Views
         {
             if (!mineInstanceGenerated || mineInstanceSourceConfig == null)
             {
-                return "当前实例：未生成";
+                return "状态：未生成地图预览";
             }
 
             var generation = mineInstanceSourceConfig.generation;
-            var dirty = generationRulesDirty ? "\n有未应用的生成规则修改" : string.Empty;
+            var dirty = generationRulesDirty ? "\n模板或规则已修改" : "\n模板和规则已同步";
             if (generation == null)
             {
-                return $"当前实例种子：{mineInstanceSeed}{dirty}";
+                return $"预览 {minePreviewRows} 行 / {controller.CurrentConfig.boardWidth} x {controller.CurrentConfig.visibleHeight}{dirty}";
             }
 
-            return $"当前实例种子：{mineInstanceSeed}\n一轮 {generation.regularGroupSize} 段，藏宝阁 {generation.rewardInsertMin}-{generation.rewardInsertMax}{dirty}";
-        }
-
-        private FossickFragmentConfig GetOrCreateMineOccurrenceOverride(FossickGeneratedFragmentSpan span)
-        {
-            if (span == null)
-            {
-                return null;
-            }
-
-            if (mineOccurrenceOverrides.TryGetValue(span.sequenceIndex, out var fragment) && fragment != null)
-            {
-                return fragment;
-            }
-
-            fragment = CloneFragmentForMineOccurrence(span.config);
-            mineOccurrenceOverrides[span.sequenceIndex] = fragment;
-            SaveMineOccurrenceOverride(span.sequenceIndex, fragment);
-            return fragment;
-        }
-
-        private void LoadMineOccurrenceOverrides()
-        {
-            mineOccurrenceOverrides.Clear();
-            var generation = controller == null || controller.CurrentConfig == null ? null : controller.CurrentConfig.generation;
-            if (generation == null || generation.sequenceOverrides == null)
-            {
-                return;
-            }
-
-            for (var i = 0; i < generation.sequenceOverrides.Count; i++)
-            {
-                var item = generation.sequenceOverrides[i];
-                if (item != null && item.fragment != null)
-                {
-                    mineOccurrenceOverrides[item.sequenceIndex] = item.fragment;
-                }
-            }
-        }
-
-        private void SaveMineOccurrenceOverride(int sequenceIndex, FossickFragmentConfig fragment)
-        {
-            var generation = controller == null || controller.CurrentConfig == null ? null : controller.CurrentConfig.generation;
-            if (generation == null)
-            {
-                return;
-            }
-
-            if (generation.sequenceOverrides == null)
-            {
-                generation.sequenceOverrides = new List<FossickSequenceOverrideConfig>();
-            }
-
-            for (var i = 0; i < generation.sequenceOverrides.Count; i++)
-            {
-                var item = generation.sequenceOverrides[i];
-                if (item != null && item.sequenceIndex == sequenceIndex)
-                {
-                    item.fragment = fragment;
-                    return;
-                }
-            }
-
-            generation.sequenceOverrides.Add(new FossickSequenceOverrideConfig
-            {
-                sequenceIndex = sequenceIndex,
-                fragment = fragment
-            });
-        }
-
-        private void SaveMineRowOverride(int startRow, FossickFragmentConfig fragment)
-        {
-            var generation = controller == null || controller.CurrentConfig == null ? null : controller.CurrentConfig.generation;
-            if (generation == null || fragment == null || fragment.height <= 0)
-            {
-                return;
-            }
-
-            if (generation.rowOverrides == null)
-            {
-                generation.rowOverrides = new List<FossickRowOverrideConfig>();
-            }
-
-            var targetStart = startRow;
-            var targetEnd = startRow + fragment.height - 1;
-            var mergeStart = targetStart;
-            var mergeEnd = targetEnd;
-            var hasIntersectingOverride = false;
-            for (var i = generation.rowOverrides.Count - 1; i >= 0; i--)
-            {
-                var item = generation.rowOverrides[i];
-                if (item == null || item.fragment == null || item.fragment.height <= 0)
-                {
-                    continue;
-                }
-
-                var itemEnd = item.startRow + item.fragment.height - 1;
-                if (item.startRow <= targetEnd && itemEnd >= targetStart)
-                {
-                    hasIntersectingOverride = true;
-                    mergeStart = Mathf.Min(mergeStart, item.startRow);
-                    mergeEnd = Mathf.Max(mergeEnd, itemEnd);
-                }
-            }
-
-            if (hasIntersectingOverride)
-            {
-                fragment = MergeRowOverrideFragment(mergeStart, mergeEnd, startRow, fragment);
-                startRow = mergeStart;
-            }
-
-            for (var i = generation.rowOverrides.Count - 1; i >= 0; i--)
-            {
-                var item = generation.rowOverrides[i];
-                if (item == null || item.fragment == null || item.fragment.height <= 0)
-                {
-                    continue;
-                }
-
-                var itemEnd = item.startRow + item.fragment.height - 1;
-                if (item.startRow <= mergeEnd && itemEnd >= mergeStart)
-                {
-                    generation.rowOverrides.RemoveAt(i);
-                }
-            }
-
-            generation.rowOverrides.Add(new FossickRowOverrideConfig
-            {
-                startRow = startRow,
-                fragment = fragment
-            });
-        }
-
-        private FossickFragmentConfig MergeRowOverrideFragment(int mergeStartRow, int mergeEndRow, int incomingStartRow, FossickFragmentConfig incoming)
-        {
-            var count = mergeEndRow - mergeStartRow + 1;
-            var mine = BuildPreviewMine();
-            var width = controller.CurrentConfig.boardWidth;
-            var merged = new FossickFragmentConfig
-            {
-                id = 800000 + mergeStartRow,
-                type = FossickFragmentType.Regular,
-                difficulty = 0,
-                weight = 0,
-                width = width,
-                height = count,
-                cells = new List<FossickCellConfig>()
-            };
-
-            for (var localY = 0; localY < count; localY++)
-            {
-                var row = FindGeneratedRow(mine, mergeStartRow + localY);
-                for (var x = 0; x < width; x++)
-                {
-                    var source = row != null && row.cells != null && x < row.cells.Length
-                        ? row.cells[x]
-                        : null;
-                    merged.cells.Add(CloneCellForRowContent(source, x, localY));
-                }
-            }
-
-            for (var y = 0; y < incoming.height; y++)
-            {
-                var mergedY = incomingStartRow + y - mergeStartRow;
-                if (mergedY < 0 || mergedY >= merged.height)
-                {
-                    continue;
-                }
-
-                for (var x = 0; x < width; x++)
-                {
-                    var incomingCell = FindCell(incoming, x, y);
-                    if (incomingCell == null)
-                    {
-                        continue;
-                    }
-
-                    var index = mergedY * width + x;
-                    if (index >= 0 && index < merged.cells.Count)
-                    {
-                        merged.cells[index] = CloneCellForRowContent(incomingCell, x, mergedY);
-                    }
-                }
-            }
-
-            return merged;
-        }
-
-        private bool TryFindRowOverride(int rowIndex, out FossickRowOverrideConfig rowOverride, out int localRow)
-        {
-            rowOverride = null;
-            localRow = -1;
-
-            var generation = controller == null || controller.CurrentConfig == null ? null : controller.CurrentConfig.generation;
-            var overrides = generation == null ? null : generation.rowOverrides;
-            if (overrides == null)
-            {
-                return false;
-            }
-
-            for (var i = overrides.Count - 1; i >= 0; i--)
-            {
-                var item = overrides[i];
-                if (item == null || item.fragment == null)
-                {
-                    continue;
-                }
-
-                var height = Mathf.Max(1, item.fragment.height);
-                if (rowIndex < item.startRow || rowIndex >= item.startRow + height)
-                {
-                    continue;
-                }
-
-                rowOverride = item;
-                localRow = rowIndex - item.startRow;
-                return true;
-            }
-
-            return false;
+            return $"预览 {minePreviewRows} 行 / {controller.CurrentConfig.boardWidth} x {controller.CurrentConfig.visibleHeight}{dirty}";
         }
 
         private static FossickFragmentConfig CloneFragmentForMineOccurrence(FossickFragmentConfig source)
@@ -4001,6 +3816,14 @@ namespace Fossick.MapStudio.Views
             return row;
         }
 
+        private RectTransform CreateContextSection(Transform parent, string name, float height)
+        {
+            var section = CreateRect(name, parent);
+            section.sizeDelta = new Vector2(380f, height);
+            AddImage(section.gameObject, new Color(0.14f, 0.17f, 0.19f));
+            return section;
+        }
+
         private RectTransform CreateRect(string name, Transform parent)
         {
             var go = new GameObject(name, typeof(RectTransform));
@@ -4012,14 +3835,38 @@ namespace Fossick.MapStudio.Views
         {
             var rect = CreateRect(label, parent);
             rect.sizeDelta = size;
-            AddImage(rect.gameObject, selected ? new Color(0.24f, 0.45f, 0.7f) : tint ?? new Color(0.22f, 0.24f, 0.27f));
+            AddImage(rect.gameObject, selected ? ButtonSelected : tint ?? ButtonDefault);
 
             var button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = rect.GetComponent<Image>();
-            button.onClick.AddListener(() => onClick?.Invoke());
+            button.interactable = onClick != null;
+            if (onClick != null)
+            {
+                button.onClick.AddListener(() => onClick.Invoke());
+            }
 
             AddText(rect, label, 13, FontStyle.Bold, size, TextAnchor.MiddleCenter);
             return rect;
+        }
+
+        private RectTransform AddActionButton(Transform parent, string label, Vector2 size, Action onClick, ButtonTone tone = ButtonTone.Default)
+        {
+            return AddButton(parent, label, size, onClick, false, GetButtonToneColor(tone));
+        }
+
+        private static Color GetButtonToneColor(ButtonTone tone)
+        {
+            switch (tone)
+            {
+                case ButtonTone.Primary:
+                    return ButtonPrimary;
+                case ButtonTone.Danger:
+                    return ButtonDanger;
+                case ButtonTone.Muted:
+                    return ButtonMuted;
+                default:
+                    return ButtonDefault;
+            }
         }
 
         private Text AddText(Transform parent, string value, int size, FontStyle style, Vector2 rectSize, TextAnchor anchor = TextAnchor.MiddleLeft)
@@ -4036,6 +3883,13 @@ namespace Fossick.MapStudio.Views
             text.alignment = anchor;
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.verticalOverflow = VerticalWrapMode.Truncate;
+            return text;
+        }
+
+        private Text AddTextAt(Transform parent, string value, int size, FontStyle style, float x, float y, float width, float height, TextAnchor anchor = TextAnchor.MiddleLeft)
+        {
+            var text = AddText(parent, value, size, style, new Vector2(width, height), anchor);
+            SetTopLeft(text.GetComponent<RectTransform>(), x, y, width, height);
             return text;
         }
 
@@ -4056,11 +3910,76 @@ namespace Fossick.MapStudio.Views
             return scrollbar;
         }
 
+        private RectTransform CreateVerticalScrollContent(RectTransform parent, string name)
+        {
+            const float padding = 8f;
+            const float scrollbarWidth = 12f;
+            const float scrollbarGap = 6f;
+
+            var viewport = CreateRect($"{name} Viewport", parent);
+            Stretch(viewport);
+            viewport.offsetMin = new Vector2(padding, padding);
+            viewport.offsetMax = new Vector2(-(padding + scrollbarWidth + scrollbarGap), -padding);
+            var viewportImage = AddImage(viewport.gameObject, new Color(0f, 0f, 0f, 0f));
+            viewportImage.raycastTarget = true;
+            var mask = viewport.gameObject.AddComponent<Mask>();
+            mask.showMaskGraphic = false;
+
+            var content = CreateRect($"{name} Content", viewport);
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = Vector2.zero;
+            AddVerticalLayout(content.gameObject, 8, TextAnchor.UpperLeft);
+            var fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var scrollbarRect = CreateRect($"{name} Scrollbar", parent);
+            scrollbarRect.anchorMin = new Vector2(1f, 0f);
+            scrollbarRect.anchorMax = new Vector2(1f, 1f);
+            scrollbarRect.pivot = new Vector2(1f, 0.5f);
+            scrollbarRect.offsetMin = new Vector2(-(padding + scrollbarWidth), padding);
+            scrollbarRect.offsetMax = new Vector2(-padding, -padding);
+            AddImage(scrollbarRect.gameObject, new Color(0.15f, 0.17f, 0.19f));
+
+            var handle = CreateRect($"{name} Scrollbar Handle", scrollbarRect);
+            Stretch(handle);
+            var handleImage = AddImage(handle.gameObject, new Color(0.4f, 0.46f, 0.54f));
+
+            var scrollbar = scrollbarRect.gameObject.AddComponent<Scrollbar>();
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            scrollbar.targetGraphic = handleImage;
+            scrollbar.handleRect = handle;
+
+            var scrollRect = parent.gameObject.AddComponent<ScrollRect>();
+            scrollRect.viewport = viewport;
+            scrollRect.content = content;
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = 34f;
+            scrollRect.verticalScrollbar = scrollbar;
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+            scrollRect.verticalNormalizedPosition = 1f;
+            scrollbar.value = 1f;
+            return content;
+        }
+
         private static void AddSpacer(Transform parent, float flexibleWidth)
         {
             var spacer = new GameObject("Spacer", typeof(RectTransform), typeof(LayoutElement));
             spacer.transform.SetParent(parent, false);
             spacer.GetComponent<LayoutElement>().flexibleWidth = flexibleWidth;
+        }
+
+        private static void AddVerticalSpace(Transform parent, float height)
+        {
+            var spacer = new GameObject("Vertical Space", typeof(RectTransform), typeof(LayoutElement));
+            spacer.transform.SetParent(parent, false);
+            var element = spacer.GetComponent<LayoutElement>();
+            element.minHeight = height;
+            element.preferredHeight = height;
         }
 
         private static Image AddImage(GameObject go, Color color)
@@ -4630,10 +4549,14 @@ namespace Fossick.MapStudio.Views
                     return "奖励被埋在基岩下。";
                 case "Ore must be attached to diggable terrain.":
                     return "矿石只能埋在可挖掘地形上。";
+                case "Buried reward must be attached to diggable terrain.":
+                    return "埋藏奖励或道具只能放在可挖掘地形上。";
                 case "Cell uses both legacy decor and layered decorations.":
                     return "格子同时使用了旧装饰字段和新装饰层。";
                 case "Reward background is usually reserved for reward fragments.":
                     return "奖励层背景通常只应放在奖励碎片中。";
+                case "Reward background region shape is invalid.":
+                    return "藏宝阁背景区域形状不符合固定规格。";
                 default:
                     return message
                         .Replace("Fragment id", "碎片 ID")
@@ -4645,7 +4568,8 @@ namespace Fossick.MapStudio.Views
                         .Replace("Difficulty", "难度")
                         .Replace("is duplicated in generation config.", "在生成配置中重复。")
                         .Replace("Generation requires difficulty", "生成配置需要难度")
-                        .Replace("but no regular fragment uses it.", "但没有常规碎片使用该难度。");
+                        .Replace("but no regular fragment uses it.", "但没有常规碎片使用该难度。")
+                        .Replace("Unknown reward background id", "未知藏宝阁背景 ID");
             }
         }
     }

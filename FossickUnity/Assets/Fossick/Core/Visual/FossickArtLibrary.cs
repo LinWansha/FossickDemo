@@ -81,6 +81,12 @@ namespace Fossick.Core.Visual
                 return null;
             }
 
+            var catalogSprite = ActiveCatalog == null ? null : ActiveCatalog.GetFogAutoTileSprite(assetIndex);
+            if (catalogSprite != null)
+            {
+                return catalogSprite;
+            }
+
             var sprites = LoadAutoTileSet("Fog");
             Sprite sprite;
             return sprites.TryGetValue(assetIndex, out sprite) ? sprite : null;
@@ -532,7 +538,7 @@ namespace Fossick.Core.Visual
 
         public static Color GetFogColor()
         {
-            return ActiveCatalog == null ? new Color(0.08f, 0.06f, 0.045f, 0.58f) : ActiveCatalog.fogColor;
+            return new Color(0.08f, 0.06f, 0.045f, 0.58f);
         }
 
         public static Color GetPreviewColor()
@@ -540,23 +546,52 @@ namespace Fossick.Core.Visual
             return ActiveCatalog == null ? new Color(0.32f, 0.9f, 0.48f, 0.95f) : ActiveCatalog.previewColor;
         }
 
-        public static Color GetFallbackTerrainColor(FossickTerrainType terrain)
+        public static List<string> ValidateRequiredSprites()
         {
-            if (ActiveCatalog != null)
-            {
-                return ActiveCatalog.GetFallbackTerrainColor(terrain);
-            }
+            var issues = new List<string>();
+            ValidateAutoTileSet(issues, FossickTerrainType.Dirt, 18, "土块四方连续");
+            ValidateAutoTileSet(issues, FossickTerrainType.Stone, 19, "石头四方连续");
+            ValidateAutoTileSet(issues, FossickTerrainType.Unbreakable, 18, "基岩四方连续");
+            ValidateFogAutoTileSet(issues, 15);
+            ValidateResourceSet(issues, DiggableAttachmentRoot, "可挖掘附着物", "1", "2", "3", "4", "10", "11", "12", "13", "14", "15", "16", "17", "18");
+            ValidateResourceSet(issues, StaticAttachmentRoot, "装饰物", "21", "22", "23");
+            ValidateResourceSet(issues, DiggedRewardRoot, "挖出实体奖励", "5", "6", "8", "9", "24", "25", "26", "27");
+            ValidateResourceSet(issues, GeneralRewardRoot, "通用奖励", "20", "28", "29", "30", "34", "35", "36");
+            ValidateResourceSet(issues, TreasureBackgroundRoot, "藏宝阁背景", "31", "32", "33");
+            ValidateResourceSet(issues, BackgroundRoot, "矿井背景", "地图1", "底图2", "底图3");
+            return issues;
+        }
 
-            switch (terrain)
+        private static void ValidateAutoTileSet(List<string> issues, FossickTerrainType terrain, int requiredMaxIndex, string label)
+        {
+            for (var i = 1; i <= requiredMaxIndex; i++)
             {
-                case FossickTerrainType.Dirt:
-                    return new Color(0.56f, 0.38f, 0.25f);
-                case FossickTerrainType.Stone:
-                    return new Color(0.48f, 0.53f, 0.58f);
-                case FossickTerrainType.Unbreakable:
-                    return new Color(0.07f, 0.07f, 0.09f);
-                default:
-                    return GetEmptyCellColor();
+                if (GetAutoTileSprite(terrain, i) == null)
+                {
+                    issues.Add($"{label}缺少 {i}。");
+                }
+            }
+        }
+
+        private static void ValidateFogAutoTileSet(List<string> issues, int requiredMaxIndex)
+        {
+            for (var i = 1; i <= requiredMaxIndex; i++)
+            {
+                if (GetFogAutoTileSprite(i) == null)
+                {
+                    issues.Add($"阴影四方连续缺少 {i}。");
+                }
+            }
+        }
+
+        private static void ValidateResourceSet(List<string> issues, string root, string label, params string[] ids)
+        {
+            for (var i = 0; i < ids.Length; i++)
+            {
+                if (GetResourceSprite(root, ids[i]) == null)
+                {
+                    issues.Add($"{label}缺少 {ids[i]}。");
+                }
             }
         }
 

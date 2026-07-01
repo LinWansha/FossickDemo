@@ -9,17 +9,26 @@ namespace Fossick.Core.Validation
         Error
     }
 
+    public enum FossickValidationCategory
+    {
+        MapDefinition,
+        GenerationRules,
+        Template
+    }
+
     public sealed class FossickValidationIssue
     {
         public FossickValidationSeverity severity;
+        public FossickValidationCategory category;
         public string message;
         public int fragmentId;
         public int x = -1;
         public int y = -1;
 
-        public FossickValidationIssue(FossickValidationSeverity severity, string message, int fragmentId = 0, int x = -1, int y = -1)
+        public FossickValidationIssue(FossickValidationSeverity severity, string message, int fragmentId = 0, int x = -1, int y = -1, FossickValidationCategory category = FossickValidationCategory.Template)
         {
             this.severity = severity;
+            this.category = category;
             this.message = message;
             this.fragmentId = fragmentId;
             this.x = x;
@@ -47,9 +56,9 @@ namespace Fossick.Core.Validation
             }
         }
 
-        public void Add(FossickValidationSeverity severity, string message, int fragmentId = 0, int x = -1, int y = -1)
+        public void Add(FossickValidationSeverity severity, string message, int fragmentId = 0, int x = -1, int y = -1, FossickValidationCategory category = FossickValidationCategory.Template)
         {
-            issues.Add(new FossickValidationIssue(severity, message, fragmentId, x, y));
+            issues.Add(new FossickValidationIssue(severity, message, fragmentId, x, y, category));
         }
     }
 }
