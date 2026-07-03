@@ -60,7 +60,7 @@ namespace Fossick.MapStudio.Views
         private int pendingPaintX = -1;
         private int pendingPaintY = -1;
         private bool isDragPainting;
-        private FossickCellLayer selectedLayer = FossickCellLayer.Terrain;
+        private FossickBrushMode selectedBrushMode = FossickBrushMode.Terrain;
         private FossickElementType selectedRewardType = FossickElementType.Coin;
         private string selectedRewardId = "coin_pile";
         private string selectedRewardBackgroundId = string.Empty;
@@ -449,7 +449,7 @@ namespace Fossick.MapStudio.Views
 
             var summary = AddText(panel, fragment == null
                 ? "当前模板 未选择"
-                : $"当前模板 {fragment.id}   {FormatTemplatePool(fragment)}   编辑层 {FormatLayer(selectedLayer)}   画笔 {FormatCurrentBrush()}   {(templateEditDirty ? "有未保存修改" : "已保存")}",
+                : $"当前模板 {fragment.id}   {FormatTemplatePool(fragment)}   画笔模式 {FormatBrushMode(selectedBrushMode)}   画笔 {FormatCurrentBrush()}   {(templateEditDirty ? "有未保存修改" : "已保存")}",
                 14, FontStyle.Normal, new Vector2(editorWidth, 26f));
             SetTopLeft(summary.GetComponent<RectTransform>(), padding, 54f, editorWidth, 26f);
 
@@ -469,7 +469,7 @@ namespace Fossick.MapStudio.Views
             SetTopLeft(brushTitle.GetComponent<RectTransform>(), padding, 176f, 240f, 24f);
             var layerRow = CreateRow(panel, "Template Layer Row", Mathf.Min(790f, editorWidth), 38f);
             SetTopLeft(layerRow, padding, 206f, Mathf.Min(790f, editorWidth), 38f);
-            DrawBrushLayerTabs(layerRow);
+            DrawBrushModeTabs(layerRow);
 
             var palette = CreateRow(panel, "Template Brush Row", editorWidth, BrushTileHeight + 8f);
             SetTopLeft(palette, padding, 256f, editorWidth, BrushTileHeight + 8f);
@@ -2329,9 +2329,9 @@ namespace Fossick.MapStudio.Views
             return -1;
         }
 
-        private void DrawBrushLayerTabs(RectTransform parent)
+        private void DrawBrushModeTabs(RectTransform parent)
         {
-            brushPaletteView.DrawLayerTabs(parent, CreateBrushPaletteState(), CreateBrushPaletteCallbacks());
+            brushPaletteView.DrawBrushModeTabs(parent, CreateBrushPaletteState(), CreateBrushPaletteCallbacks());
         }
 
         private void DrawBrushPalette(RectTransform parent)
@@ -2343,7 +2343,7 @@ namespace Fossick.MapStudio.Views
         {
             return new FossickBrushPaletteView.State
             {
-                selectedLayer = selectedLayer,
+                selectedBrushMode = selectedBrushMode,
                 selectedTerrain = selectedTerrain,
                 selectedRewardType = selectedRewardType,
                 selectedRewardId = selectedRewardId,
@@ -2359,7 +2359,7 @@ namespace Fossick.MapStudio.Views
         {
             return new FossickBrushPaletteView.Callbacks
             {
-                selectLayer = SelectBrushLayer,
+                selectBrushMode = SelectBrushMode,
                 selectTerrain = SelectTerrainBrush,
                 selectReward = SelectRewardBrush,
                 selectRewardBackground = SelectRewardBackgroundBrush,
@@ -2368,18 +2368,18 @@ namespace Fossick.MapStudio.Views
             };
         }
 
-        private void SelectBrushLayer(FossickCellLayer layer)
+        private void SelectBrushMode(FossickBrushMode mode)
         {
-            selectedLayer = layer;
-            EnsureBrushForLayer(layer);
+            selectedBrushMode = mode;
+            EnsureBrushForMode(mode);
             ClearPendingPaint();
-            editNotice = $"编辑层已切换为 {FormatLayer(layer)}。";
+            editNotice = $"画笔模式已切换为 {FormatBrushMode(mode)}。";
             Build();
         }
 
         private void SelectTerrainBrush(FossickTerrainType terrain)
         {
-            selectedLayer = FossickCellLayer.Terrain;
+            selectedBrushMode = FossickBrushMode.Terrain;
             selectedTerrain = terrain;
             ClearPendingPaint();
             editNotice = $"画笔已切换为 {FormatTerrain(terrain)}。";
@@ -2391,13 +2391,13 @@ namespace Fossick.MapStudio.Views
             selectedRewardType = type;
             selectedRewardId = id;
             ClearPendingPaint();
-            editNotice = $"{FormatLayer(selectedLayer)}画笔已切换为 {label}。";
+            editNotice = $"{FormatBrushMode(selectedBrushMode)}画笔已切换为 {label}。";
             Build();
         }
 
         private void SelectRewardBackgroundBrush(string id, string label, int width, int height)
         {
-            selectedLayer = FossickCellLayer.RewardBackground;
+            selectedBrushMode = FossickBrushMode.RewardBackground;
             selectedRewardBackgroundId = id;
             selectedRewardBackgroundWidth = width;
             selectedRewardBackgroundHeight = height;
@@ -2410,7 +2410,7 @@ namespace Fossick.MapStudio.Views
 
         private void SelectDecorationBrush(string id, string label)
         {
-            selectedLayer = FossickCellLayer.Decoration;
+            selectedBrushMode = FossickBrushMode.Decoration;
             selectedDecorationId = id;
             ClearPendingPaint();
             editNotice = $"装饰画笔已切换为 {label}。";
@@ -2419,7 +2419,7 @@ namespace Fossick.MapStudio.Views
 
         private void SelectFogBrush(FossickFogType fog, string label)
         {
-            selectedLayer = FossickCellLayer.Fog;
+            selectedBrushMode = FossickBrushMode.Fog;
             selectedFog = fog;
             ClearPendingPaint();
             editNotice = $"阴影画笔已切换为 {label}。";
@@ -2434,19 +2434,19 @@ namespace Fossick.MapStudio.Views
             Build();
         }
 
-        private void EnsureBrushForLayer(FossickCellLayer layer)
+        private void EnsureBrushForMode(FossickBrushMode mode)
         {
-            if (layer == FossickCellLayer.Reward && selectedRewardType == FossickElementType.Item)
+            if (mode == FossickBrushMode.Reward && selectedRewardType == FossickElementType.Item)
             {
                 selectedRewardType = FossickElementType.Coin;
                 selectedRewardId = "coin_pile";
             }
-            else if (layer == FossickCellLayer.Tool && selectedRewardType != FossickElementType.Item && selectedRewardType != FossickElementType.None)
+            else if (mode == FossickBrushMode.Tool && selectedRewardType != FossickElementType.Item && selectedRewardType != FossickElementType.None)
             {
                 selectedRewardType = FossickElementType.Item;
                 selectedRewardId = "pickaxe";
             }
-            else if (layer == FossickCellLayer.RewardBackground && selectedRewardBackgroundWidth <= 0 && !string.IsNullOrEmpty(selectedRewardBackgroundId))
+            else if (mode == FossickBrushMode.RewardBackground && selectedRewardBackgroundWidth <= 0 && !string.IsNullOrEmpty(selectedRewardBackgroundId))
             {
                 selectedRewardBackgroundId = TreasureRoomLargeId;
                 selectedRewardBackgroundWidth = 7;
@@ -3292,7 +3292,7 @@ namespace Fossick.MapStudio.Views
 
         private bool IsRewardBackgroundAreaBrush()
         {
-            return selectedLayer == FossickCellLayer.RewardBackground
+            return selectedBrushMode == FossickBrushMode.RewardBackground
                 && !string.IsNullOrEmpty(selectedRewardBackgroundId)
                 && selectedRewardBackgroundWidth > 0
                 && selectedRewardBackgroundHeight > 0;
@@ -3417,7 +3417,7 @@ namespace Fossick.MapStudio.Views
 
         private void PaintCell(FossickCellConfig cell, bool validate = true)
         {
-            if (selectedLayer == FossickCellLayer.Terrain)
+            if (selectedBrushMode == FossickBrushMode.Terrain)
             {
                 cell.terrain = selectedTerrain;
                 cell.hp = selectedTerrain == FossickTerrainType.Stone ? 2 : selectedTerrain == FossickTerrainType.Dirt ? 1 : 0;
@@ -3429,7 +3429,7 @@ namespace Fossick.MapStudio.Views
                     editNotice = "当前格不再是可挖掘地形，已移除矿石。";
                 }
             }
-            else if (selectedLayer == FossickCellLayer.Reward || selectedLayer == FossickCellLayer.Tool)
+            else if (selectedBrushMode == FossickBrushMode.Reward || selectedBrushMode == FossickBrushMode.Tool)
             {
                 var reward = CreateSelectedReward();
                 if (IsOreReward(reward) && !CanAttachOre(cell))
@@ -3441,19 +3441,19 @@ namespace Fossick.MapStudio.Views
                 cell.reward = reward;
                 cell.element = cell.reward;
             }
-            else if (selectedLayer == FossickCellLayer.Decoration)
+            else if (selectedBrushMode == FossickBrushMode.Decoration)
             {
                 cell.decorations = string.IsNullOrEmpty(selectedDecorationId)
                     ? new List<string>()
                     : new List<string> { selectedDecorationId };
                 cell.decor = new List<string>(cell.decorations);
             }
-            else if (selectedLayer == FossickCellLayer.Fog)
+            else if (selectedBrushMode == FossickBrushMode.Fog)
             {
                 cell.fog = selectedFog;
                 cell.mask = selectedFog == FossickFogType.Covered || cell.terrain != FossickTerrainType.Empty;
             }
-            else if (selectedLayer == FossickCellLayer.RewardBackground)
+            else if (selectedBrushMode == FossickBrushMode.RewardBackground)
             {
                 cell.rewardBackgroundId = string.IsNullOrEmpty(selectedRewardBackgroundId) ? null : selectedRewardBackgroundId;
             }
@@ -4133,43 +4133,41 @@ namespace Fossick.MapStudio.Views
             }
         }
 
-        private static string FormatLayer(FossickCellLayer layer)
+        private static string FormatBrushMode(FossickBrushMode mode)
         {
-            switch (layer)
+            switch (mode)
             {
-                case FossickCellLayer.Background:
-                    return "背景";
-                case FossickCellLayer.RewardBackground:
+                case FossickBrushMode.RewardBackground:
                     return "藏宝阁";
-                case FossickCellLayer.Terrain:
+                case FossickBrushMode.Terrain:
                     return "挖掘物材质";
-                case FossickCellLayer.Reward:
+                case FossickBrushMode.Reward:
                     return "奖励堆";
-                case FossickCellLayer.Tool:
+                case FossickBrushMode.Tool:
                     return "道具";
-                case FossickCellLayer.Decoration:
+                case FossickBrushMode.Decoration:
                     return "装饰";
-                case FossickCellLayer.Fog:
+                case FossickBrushMode.Fog:
                     return "阴影";
                 default:
-                    return layer.ToString();
+                    return mode.ToString();
             }
         }
 
         private string FormatCurrentBrush()
         {
-            switch (selectedLayer)
+            switch (selectedBrushMode)
             {
-                case FossickCellLayer.Terrain:
+                case FossickBrushMode.Terrain:
                     return FormatTerrain(selectedTerrain);
-                case FossickCellLayer.Reward:
-                case FossickCellLayer.Tool:
+                case FossickBrushMode.Reward:
+                case FossickBrushMode.Tool:
                     return FormatRewardBrush(selectedRewardType, selectedRewardId);
-                case FossickCellLayer.Decoration:
+                case FossickBrushMode.Decoration:
                     return string.IsNullOrEmpty(selectedDecorationId) ? "清空装饰" : selectedDecorationId;
-                case FossickCellLayer.Fog:
+                case FossickBrushMode.Fog:
                     return selectedFog == FossickFogType.Covered ? "迷雾" : "无阴影";
-                case FossickCellLayer.RewardBackground:
+                case FossickBrushMode.RewardBackground:
                     if (string.IsNullOrEmpty(selectedRewardBackgroundId))
                     {
                         return "清空藏宝阁";
@@ -4177,7 +4175,7 @@ namespace Fossick.MapStudio.Views
 
                     return $"{FormatRewardBackgroundBrush(selectedRewardBackgroundId)} {selectedRewardBackgroundWidth}x{selectedRewardBackgroundHeight}";
                 default:
-                    return selectedLayer.ToString();
+                    return selectedBrushMode.ToString();
             }
         }
 

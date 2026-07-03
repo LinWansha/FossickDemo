@@ -239,8 +239,14 @@ namespace Fossick.Core.Gameplay
                 return;
             }
 
-            while (Board.TryScrollDown())
+            while (Board.CanScrollDown())
             {
+                FossickActionResolver.CollectOutgoingTopRowBeforeScroll(Board, action);
+                if (!Board.TryScrollDown())
+                {
+                    break;
+                }
+
                 Board.RefreshFogFromOpenSpace();
                 EnsureGeneratedRowsAhead();
                 action.scrolled = true;

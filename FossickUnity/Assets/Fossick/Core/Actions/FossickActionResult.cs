@@ -30,7 +30,9 @@ namespace Fossick.Core.Actions
         RewardCollected = 5,
         BoardScrolled = 6,
         FogRevealed = 7,
-        RadarScanned = 8
+        RadarScanned = 8,
+        RewardAutoCollected = 9,
+        RewardMissed = 10
     }
 
     public sealed class FossickActionStep

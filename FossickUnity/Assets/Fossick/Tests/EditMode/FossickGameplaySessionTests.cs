@@ -293,6 +293,7 @@ namespace Fossick.Core.Tests
             config.fragments.Clear();
             var tutorial = CreateSolidFragment(1001, FossickFragmentType.Tutorial, 6, FossickTerrainType.Dirt);
             FillFragmentRow(tutorial, 0, FossickTerrainType.Empty, FossickFogType.None);
+            FillFragmentRow(tutorial, 1, FossickTerrainType.Empty, FossickFogType.None);
             SetFragmentCell(tutorial, 3, 5, FossickTerrainType.Empty, 0, FossickFogType.None);
             config.fragments.Add(tutorial);
 
@@ -323,11 +324,14 @@ namespace Fossick.Core.Tests
             config.fragments.Clear();
             var tutorial = CreateSolidFragment(1001, FossickFragmentType.Tutorial, 6, FossickTerrainType.Dirt);
             FillFragmentRow(tutorial, 0, FossickTerrainType.Empty, FossickFogType.None);
+            FillFragmentRow(tutorial, 1, FossickTerrainType.Empty, FossickFogType.None);
             FillFragmentRow(tutorial, 5, FossickTerrainType.Empty, FossickFogType.None);
             config.fragments.Add(tutorial);
 
             var regular = CreateSolidFragment(2001, FossickFragmentType.Regular, 6, FossickTerrainType.Dirt);
             regular.difficulty = 1;
+            FillFragmentRow(regular, 0, FossickTerrainType.Empty, FossickFogType.None);
+            FillFragmentRow(regular, 1, FossickTerrainType.Empty, FossickFogType.None);
             FillFragmentRow(regular, 5, FossickTerrainType.Empty, FossickFogType.None);
             config.fragments.Add(regular);
             return config;

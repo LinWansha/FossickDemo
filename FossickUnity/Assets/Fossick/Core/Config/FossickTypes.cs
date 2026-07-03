@@ -34,15 +34,25 @@ namespace Fossick.Core.Config
         Radar = 3
     }
 
-    public enum FossickCellLayer
+    public enum FossickVisualLayer
     {
         Background = 0,
         RewardBackground = 1,
         Terrain = 2,
-        Reward = 3,
+        TerrainAttachment = 3,
+        Reward = 4,
+        Decoration = 5,
+        Fog = 6
+    }
+
+    public enum FossickBrushMode
+    {
+        RewardBackground = 0,
+        Terrain = 1,
+        Reward = 2,
+        Tool = 3,
         Decoration = 4,
-        Fog = 5,
-        Tool = 6
+        Fog = 5
     }
 
     public enum FossickFogType

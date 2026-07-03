@@ -239,12 +239,45 @@ namespace Fossick.Core.Actions
 
         private static void TryScroll(FossickBoard board, FossickActionResult result, int x, int y)
         {
-            while (board.TryScrollDown())
+            while (board.CanScrollDown())
             {
+                CollectOutgoingTopRowBeforeScroll(board, result);
+                if (!board.TryScrollDown())
+                {
+                    break;
+                }
+
                 AddFogRevealDeltas(board.RefreshFogFromOpenSpace(), result);
                 result.scrolled = true;
                 result.scrollCount++;
                 AddStep(result, FossickActionStepType.BoardScrolled, x, y);
+            }
+        }
+
+        public static void CollectOutgoingTopRowBeforeScroll(FossickBoard board, FossickActionResult result)
+        {
+            if (board == null || result == null)
+            {
+                return;
+            }
+
+            var rowIndex = board.TopVisibleRow;
+            for (var x = 0; x < board.Spec.width; x++)
+            {
+                var cell = board.GetCellAtAbsoluteRow(x, rowIndex);
+                if (cell == null || !cell.HasCollectableReward)
+                {
+                    continue;
+                }
+
+                if (IsMissedWhenScrolledOut(cell.reward))
+                {
+                    MissReward(cell, result);
+                }
+                else
+                {
+                    CollectReward(cell, result, FossickActionStepType.RewardAutoCollected);
+                }
             }
         }
 
@@ -392,7 +425,7 @@ namespace Fossick.Core.Actions
             });
         }
 
-        private static bool CollectReward(FossickCellState cell, FossickActionResult result)
+        private static bool CollectReward(FossickCellState cell, FossickActionResult result, FossickActionStepType stepType = FossickActionStepType.RewardCollected)
         {
             if (cell == null || !cell.HasCollectableReward)
             {
@@ -410,7 +443,7 @@ namespace Fossick.Core.Actions
             });
             result.steps.Add(new FossickActionStep
             {
-                type = FossickActionStepType.RewardCollected,
+                type = stepType,
                 x = cell.x,
                 y = cell.y,
                 elementType = cell.reward.type,
@@ -418,6 +451,30 @@ namespace Fossick.Core.Actions
                 amount = cell.reward.amount
             });
             return true;
+        }
+
+        private static bool IsMissedWhenScrolledOut(FossickElementConfig reward)
+        {
+            if (reward == null || reward.type != FossickElementType.Chest)
+            {
+                return false;
+            }
+
+            return reward.id == "locked_chest" || reward.id == "lockedChest";
+        }
+
+        private static void MissReward(FossickCellState cell, FossickActionResult result)
+        {
+            cell.collected = true;
+            result.steps.Add(new FossickActionStep
+            {
+                type = FossickActionStepType.RewardMissed,
+                x = cell.x,
+                y = cell.y,
+                elementType = cell.reward.type,
+                id = cell.reward.id,
+                amount = cell.reward.amount
+            });
         }
 
         private static void MarkInvalid(FossickActionResult result, int x, int y, string reason)

@@ -274,34 +274,95 @@ namespace Fossick.Core.Board
                 return false;
             }
 
-            return BottomVisibleRowHasVisibleEmptyCell();
+            return TopTwoVisibleRowsHaveNoDiggableTerrain() && HasVisibleOpenPathToBottomRow();
         }
 
-        private bool BottomVisibleRowHasVisibleEmptyCell()
+        private bool TopTwoVisibleRowsHaveNoDiggableTerrain()
         {
-            var rowIndex = TopVisibleRow + Spec.visibleHeight - 1;
-            if (rowIndex < 0 || rowIndex >= RowCount)
+            if (Spec.visibleHeight < 2)
             {
                 return false;
             }
 
-            var localRow = rowIndex - firstLoadedRow;
-            if (localRow < 0 || localRow >= rows.Count)
+            for (var offset = 0; offset < 2; offset++)
             {
-                return false;
-            }
-
-            var row = rows[localRow];
-            for (var x = 0; x < row.Length; x++)
-            {
-                var cell = row[x];
-                if (cell != null && !cell.HasObstacle && cell.fog == FossickFogType.None)
+                var rowIndex = TopVisibleRow + offset;
+                if (rowIndex < 0 || rowIndex >= RowCount)
                 {
-                    return true;
+                    return false;
+                }
+
+                var localRow = rowIndex - firstLoadedRow;
+                if (localRow < 0 || localRow >= rows.Count)
+                {
+                    return false;
+                }
+
+                var row = rows[localRow];
+                for (var x = 0; x < row.Length; x++)
+                {
+                    if (row[x] != null && row[x].IsBreakable)
+                    {
+                        return false;
+                    }
                 }
             }
 
+            return true;
+        }
+
+        private bool HasVisibleOpenPathToBottomRow()
+        {
+            if (Spec.visibleHeight <= 0)
+            {
+                return false;
+            }
+
+            var visited = new bool[Spec.visibleHeight, Spec.width];
+            var queue = new Queue<FossickCellState>();
+            var seedRows = Spec.visibleHeight < 2 ? Spec.visibleHeight : 2;
+
+            for (var y = 0; y < seedRows; y++)
+            {
+                for (var x = 0; x < Spec.width; x++)
+                {
+                    EnqueueVisiblePassableCell(x, y, visited, queue);
+                }
+            }
+
+            while (queue.Count > 0)
+            {
+                var cell = queue.Dequeue();
+                var visibleY = cell.y - TopVisibleRow;
+                if (visibleY == Spec.visibleHeight - 1)
+                {
+                    return true;
+                }
+
+                EnqueueVisiblePassableCell(cell.x - 1, visibleY, visited, queue);
+                EnqueueVisiblePassableCell(cell.x + 1, visibleY, visited, queue);
+                EnqueueVisiblePassableCell(cell.x, visibleY - 1, visited, queue);
+                EnqueueVisiblePassableCell(cell.x, visibleY + 1, visited, queue);
+            }
+
             return false;
+        }
+
+        private void EnqueueVisiblePassableCell(int x, int visibleY, bool[,] visited, Queue<FossickCellState> queue)
+        {
+            if (x < 0 || x >= Spec.width || visibleY < 0 || visibleY >= Spec.visibleHeight || visited[visibleY, x])
+            {
+                return;
+            }
+
+            var cell = GetCellAtAbsoluteRow(x, TopVisibleRow + visibleY);
+            if (cell == null || cell.HasObstacle || cell.fog != FossickFogType.None)
+            {
+                return;
+            }
+
+            visited[visibleY, x] = true;
+            queue.Enqueue(cell);
         }
 
         public List<FossickFogReveal> RefreshFogFromOpenSpace()

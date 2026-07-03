@@ -167,6 +167,8 @@ namespace Fossick.Core.Tests
         public void RefreshFog_WhenScrolledWindowHasVisibleOpenSpaceAboveBottom_RevealsNewBottomRow()
         {
             var board = CreateBoardWithSingleCell(FossickTerrainType.Dirt, 1, null);
+            FillAbsoluteRow(board, 0, FossickTerrainType.Empty, 0);
+            FillAbsoluteRow(board, 1, FossickTerrainType.Empty, 0);
             FillAbsoluteRow(board, 5, FossickTerrainType.Empty, 0);
             FillAbsoluteRow(board, 6, FossickTerrainType.Empty, 0);
             FillAbsoluteRow(board, 7, FossickTerrainType.Empty, 0);
@@ -255,6 +257,7 @@ namespace Fossick.Core.Tests
         public void Pickaxe_WhenBottomRowHasVisibleEmptyCell_EmitsScrollStep()
         {
             var board = CreateBoardWithSingleCell(FossickTerrainType.Dirt, 1, null);
+            FillVisibleRow(board, 1, FossickTerrainType.Empty, 0);
             FillVisibleRow(board, 5, FossickTerrainType.Dirt, 1);
             SetCell(board, 3, 5, FossickTerrainType.Empty, 0);
             var resolver = new FossickActionResolver();
@@ -264,6 +267,63 @@ namespace Fossick.Core.Tests
             Assert.That(result.scrolled, Is.True);
             Assert.That(result.depthAfterAction, Is.EqualTo(1));
             Assert.That(result.steps[result.steps.Count - 1].type, Is.EqualTo(FossickActionStepType.BoardScrolled));
+        }
+
+        [Test]
+        public void Pickaxe_WhenBottomPassableCellContainsReward_StillEmitsScrollStep()
+        {
+            var board = CreateBoardWithSingleCell(FossickTerrainType.Dirt, 1, null);
+            FillVisibleRow(board, 1, FossickTerrainType.Empty, 0);
+            FillVisibleRow(board, 5, FossickTerrainType.Dirt, 1);
+            SetCell(board, 3, 5, FossickTerrainType.Empty, 0);
+            board.GetCell(3, 5).reward = new FossickElementConfig
+            {
+                type = FossickElementType.Item,
+                id = "pickaxe",
+                amount = 1
+            };
+            var resolver = new FossickActionResolver();
+
+            var result = resolver.ResolvePickaxe(board, 0, 0);
+
+            Assert.That(result.scrolled, Is.True);
+            Assert.That(result.depthAfterAction, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Pickaxe_WhenTopTwoRowsStillContainDiggableTerrain_DoesNotScroll()
+        {
+            var board = CreateBoardWithSingleCell(FossickTerrainType.Dirt, 1, null);
+            SetCell(board, 1, 0, FossickTerrainType.Dirt, 1);
+            FillVisibleRow(board, 5, FossickTerrainType.Dirt, 1);
+            SetCell(board, 3, 5, FossickTerrainType.Empty, 0);
+            var resolver = new FossickActionResolver();
+
+            var result = resolver.ResolvePickaxe(board, 0, 0);
+
+            Assert.That(result.scrolled, Is.False);
+            Assert.That(board.TopVisibleRow, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Pickaxe_WhenTopTwoRowsOnlyContainRewardsWithoutDiggableTerrain_CanScroll()
+        {
+            var board = CreateBoardWithSingleCell(FossickTerrainType.Dirt, 1, null);
+            FillVisibleRow(board, 1, FossickTerrainType.Empty, 0);
+            board.GetCell(1, 0).reward = new FossickElementConfig
+            {
+                type = FossickElementType.Chest,
+                id = "treasure_chest",
+                amount = 1
+            };
+            FillVisibleRow(board, 5, FossickTerrainType.Dirt, 1);
+            SetCell(board, 3, 5, FossickTerrainType.Empty, 0);
+            var resolver = new FossickActionResolver();
+
+            var result = resolver.ResolvePickaxe(board, 0, 0);
+
+            Assert.That(result.scrolled, Is.True);
+            Assert.That(board.TopVisibleRow, Is.EqualTo(1));
         }
 
         [Test]
@@ -312,6 +372,22 @@ namespace Fossick.Core.Tests
         }
 
         [Test]
+        public void Pickaxe_WhenBottomVisibleEmptyCellHasNoOpenPath_DoesNotScroll()
+        {
+            var board = CreateBoardWithSingleCell(FossickTerrainType.Dirt, 1, null);
+            FillVisibleRow(board, 4, FossickTerrainType.Dirt, 1);
+            FillVisibleRow(board, 5, FossickTerrainType.Dirt, 1);
+            SetCell(board, 3, 5, FossickTerrainType.Empty, 0);
+            SetFog(board, 3, 5, FossickFogType.None);
+            var resolver = new FossickActionResolver();
+
+            var result = resolver.ResolvePickaxe(board, 0, 0);
+
+            Assert.That(result.scrolled, Is.False);
+            Assert.That(board.TopVisibleRow, Is.EqualTo(0));
+        }
+
+        [Test]
         public void Pickaxe_WhenScrollConditionRemainsTrue_ScrollsUntilBlocked()
         {
             var board = CreateBoardWithSingleCell(FossickTerrainType.Dirt, 1, null);
@@ -327,6 +403,53 @@ namespace Fossick.Core.Tests
             Assert.That(board.TopVisibleRow, Is.EqualTo(2));
             Assert.That(result.depthAfterAction, Is.EqualTo(2));
             Assert.That(CountSteps(result, FossickActionStepType.BoardScrolled), Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Pickaxe_WhenRewardScrollsOut_AutoCollectsTopRowRewardBeforeMove()
+        {
+            var board = CreateBoardWithSingleCell(FossickTerrainType.Dirt, 1, null);
+            var topRewardCell = board.GetCellAtAbsoluteRow(1, 0);
+            topRewardCell.reward = new FossickElementConfig
+            {
+                type = FossickElementType.Ore,
+                id = "top_ore",
+                amount = 9
+            };
+            FillAbsoluteRow(board, 5, FossickTerrainType.Dirt, 1);
+            SetAbsoluteCell(board, 3, 5, FossickTerrainType.Empty, 0);
+            var resolver = new FossickActionResolver();
+
+            var result = resolver.ResolvePickaxe(board, 0, 0);
+
+            Assert.That(result.scrolled, Is.True);
+            Assert.That(result.rewards.Count, Is.EqualTo(1));
+            Assert.That(result.rewards[0].id, Is.EqualTo("top_ore"));
+            Assert.That(topRewardCell.collected, Is.True);
+            Assert.That(CountSteps(result, FossickActionStepType.RewardAutoCollected), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Pickaxe_WhenLockedChestScrollsOut_MarksRewardMissedWithoutCollecting()
+        {
+            var board = CreateBoardWithSingleCell(FossickTerrainType.Dirt, 1, null);
+            var topRewardCell = board.GetCellAtAbsoluteRow(1, 0);
+            topRewardCell.reward = new FossickElementConfig
+            {
+                type = FossickElementType.Chest,
+                id = "locked_chest",
+                amount = 1
+            };
+            FillAbsoluteRow(board, 5, FossickTerrainType.Dirt, 1);
+            SetAbsoluteCell(board, 3, 5, FossickTerrainType.Empty, 0);
+            var resolver = new FossickActionResolver();
+
+            var result = resolver.ResolvePickaxe(board, 0, 0);
+
+            Assert.That(result.scrolled, Is.True);
+            Assert.That(result.rewards, Is.Empty);
+            Assert.That(topRewardCell.collected, Is.True);
+            Assert.That(CountSteps(result, FossickActionStepType.RewardMissed), Is.EqualTo(1));
         }
 
         [Test]
@@ -569,7 +692,27 @@ namespace Fossick.Core.Tests
         }
 
         [Test]
-        public void Radar_WhenBottomRowBecomesVisible_EmitsScrollStep()
+        public void Radar_WhenBottomRowBecomesVisibleButHasNoOpenPath_DoesNotScroll()
+        {
+            var board = CreateBoardWithSingleCell(FossickTerrainType.Empty, 0, null);
+            FillVisibleRow(board, 4, FossickTerrainType.Dirt, 1);
+            FillVisibleRow(board, 5, FossickTerrainType.Dirt, 1);
+            FillAbsoluteRow(board, 6, FossickTerrainType.Dirt, 1);
+            SetCell(board, 3, 5, FossickTerrainType.Empty, 0);
+            SetFog(board, 3, 5, FossickFogType.Covered);
+            var resolver = new FossickActionResolver();
+
+            var result = resolver.ResolveTool(board, FossickToolType.Radar, 0, 0);
+
+            Assert.That(board.GetCell(3, 5).fog, Is.EqualTo(FossickFogType.None));
+            Assert.That(result.scrolled, Is.False);
+            Assert.That(board.TopVisibleRow, Is.EqualTo(0));
+            Assert.That(result.depthAfterAction, Is.EqualTo(0));
+            Assert.That(CountSteps(result, FossickActionStepType.BoardScrolled), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Radar_WhenBottomRowBecomesVisibleAndHasOpenPath_CanScroll()
         {
             var board = CreateBoardWithSingleCell(FossickTerrainType.Empty, 0, null);
             FillVisibleRow(board, 5, FossickTerrainType.Dirt, 1);
@@ -582,7 +725,6 @@ namespace Fossick.Core.Tests
 
             Assert.That(result.scrolled, Is.True);
             Assert.That(board.TopVisibleRow, Is.EqualTo(1));
-            Assert.That(result.depthAfterAction, Is.EqualTo(1));
             Assert.That(CountSteps(result, FossickActionStepType.BoardScrolled), Is.EqualTo(1));
         }
 

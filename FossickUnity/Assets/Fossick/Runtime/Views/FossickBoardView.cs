@@ -213,13 +213,13 @@ namespace Fossick.Runtime.Views
             labelRoot = CreateRect("Row Labels", root);
             clipRoot = CreateRect("Grid Clip", root);
             clipRoot.gameObject.AddComponent<RectMask2D>();
-            backgroundRoot = CreateLayer("0 Background", clipRoot);
-            rewardBackgroundRoot = CreateLayer("1 Reward Background", clipRoot);
-            terrainRoot = CreateLayer("2 Terrain", clipRoot);
-            attachmentRoot = CreateLayer("3 Terrain Attachment", clipRoot);
-            rewardRoot = CreateLayer("4 Reward", clipRoot);
-            decorationRoot = CreateLayer("5 Decoration", clipRoot);
-            fogRoot = CreateLayer("6 Fog", clipRoot);
+            backgroundRoot = CreateLayer(GetVisualLayerName(FossickVisualLayer.Background), clipRoot);
+            rewardBackgroundRoot = CreateLayer(GetVisualLayerName(FossickVisualLayer.RewardBackground), clipRoot);
+            terrainRoot = CreateLayer(GetVisualLayerName(FossickVisualLayer.Terrain), clipRoot);
+            attachmentRoot = CreateLayer(GetVisualLayerName(FossickVisualLayer.TerrainAttachment), clipRoot);
+            rewardRoot = CreateLayer(GetVisualLayerName(FossickVisualLayer.Reward), clipRoot);
+            decorationRoot = CreateLayer(GetVisualLayerName(FossickVisualLayer.Decoration), clipRoot);
+            fogRoot = CreateLayer(GetVisualLayerName(FossickVisualLayer.Fog), clipRoot);
             previewRoot = CreateLayer("Selection Preview", clipRoot);
             interactionRoot = CreateLayer("Interaction", clipRoot);
 
@@ -939,6 +939,29 @@ namespace Fossick.Runtime.Views
         private static string GetCellKey(int x, int y)
         {
             return x + ":" + y;
+        }
+
+        private static string GetVisualLayerName(FossickVisualLayer layer)
+        {
+            switch (layer)
+            {
+                case FossickVisualLayer.Background:
+                    return "0 Background";
+                case FossickVisualLayer.RewardBackground:
+                    return "1 Reward Background";
+                case FossickVisualLayer.Terrain:
+                    return "2 Terrain";
+                case FossickVisualLayer.TerrainAttachment:
+                    return "3 Terrain Attachment";
+                case FossickVisualLayer.Reward:
+                    return "4 Reward";
+                case FossickVisualLayer.Decoration:
+                    return "5 Decoration";
+                case FossickVisualLayer.Fog:
+                    return "6 Fog";
+                default:
+                    return ((int)layer) + " " + layer;
+            }
         }
 
         private static RectTransform CreateLayer(string name, Transform parent)

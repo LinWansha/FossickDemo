@@ -20,7 +20,7 @@ namespace Fossick.MapStudio.Views
 
         public struct State
         {
-            public FossickCellLayer selectedLayer;
+            public FossickBrushMode selectedBrushMode;
             public FossickTerrainType selectedTerrain;
             public FossickElementType selectedRewardType;
             public string selectedRewardId;
@@ -33,7 +33,7 @@ namespace Fossick.MapStudio.Views
 
         public sealed class Callbacks
         {
-            public Action<FossickCellLayer> selectLayer;
+            public Action<FossickBrushMode> selectBrushMode;
             public Action<FossickTerrainType> selectTerrain;
             public Action<FossickElementType, string, string> selectReward;
             public Action<string, string, int, int> selectRewardBackground;
@@ -41,19 +41,19 @@ namespace Fossick.MapStudio.Views
             public Action<FossickFogType, string> selectFog;
         }
 
-        public void DrawLayerTabs(RectTransform parent, State state, Callbacks callbacks)
+        public void DrawBrushModeTabs(RectTransform parent, State state, Callbacks callbacks)
         {
-            AddLayerButton(parent, state, callbacks, FossickCellLayer.RewardBackground, "1 藏宝阁");
-            AddLayerButton(parent, state, callbacks, FossickCellLayer.Terrain, "2 地形");
-            AddLayerButton(parent, state, callbacks, FossickCellLayer.Reward, "3 奖励");
-            AddLayerButton(parent, state, callbacks, FossickCellLayer.Tool, "4 道具");
-            AddLayerButton(parent, state, callbacks, FossickCellLayer.Decoration, "5 装饰");
-            AddLayerButton(parent, state, callbacks, FossickCellLayer.Fog, "6 阴影");
+            AddBrushModeButton(parent, state, callbacks, FossickBrushMode.RewardBackground, "1 藏宝阁");
+            AddBrushModeButton(parent, state, callbacks, FossickBrushMode.Terrain, "2 地形");
+            AddBrushModeButton(parent, state, callbacks, FossickBrushMode.Reward, "3 奖励");
+            AddBrushModeButton(parent, state, callbacks, FossickBrushMode.Tool, "4 道具");
+            AddBrushModeButton(parent, state, callbacks, FossickBrushMode.Decoration, "5 装饰");
+            AddBrushModeButton(parent, state, callbacks, FossickBrushMode.Fog, "6 阴影");
         }
 
         public void DrawBrushes(RectTransform parent, State state, Callbacks callbacks)
         {
-            if (state.selectedLayer == FossickCellLayer.RewardBackground)
+            if (state.selectedBrushMode == FossickBrushMode.RewardBackground)
             {
                 AddRewardBackgroundBrushTile(parent, state, callbacks, string.Empty, "清空", 0, 0);
                 AddRewardBackgroundBrushTile(parent, state, callbacks, "treasure_room_3x2", "小藏宝阁 3x2", 3, 2);
@@ -62,7 +62,7 @@ namespace Fossick.MapStudio.Views
                 return;
             }
 
-            if (state.selectedLayer == FossickCellLayer.Terrain)
+            if (state.selectedBrushMode == FossickBrushMode.Terrain)
             {
                 AddTerrainBrushTile(parent, state, callbacks, FossickTerrainType.Empty, "空格");
                 AddTerrainBrushTile(parent, state, callbacks, FossickTerrainType.Dirt, "土");
@@ -71,7 +71,7 @@ namespace Fossick.MapStudio.Views
                 return;
             }
 
-            if (state.selectedLayer == FossickCellLayer.Reward)
+            if (state.selectedBrushMode == FossickBrushMode.Reward)
             {
                 AddRewardBrushTile(parent, state, callbacks, FossickElementType.None, "清空", null);
                 AddRewardBrushTile(parent, state, callbacks, FossickElementType.Coin, "金币", "coin_pile");
@@ -84,7 +84,7 @@ namespace Fossick.MapStudio.Views
                 return;
             }
 
-            if (state.selectedLayer == FossickCellLayer.Tool)
+            if (state.selectedBrushMode == FossickBrushMode.Tool)
             {
                 AddRewardBrushTile(parent, state, callbacks, FossickElementType.None, "清空", null);
                 AddRewardBrushTile(parent, state, callbacks, FossickElementType.Item, "矿镐", "pickaxe");
@@ -94,7 +94,7 @@ namespace Fossick.MapStudio.Views
                 return;
             }
 
-            if (state.selectedLayer == FossickCellLayer.Decoration)
+            if (state.selectedBrushMode == FossickBrushMode.Decoration)
             {
                 AddDecorationBrushTile(parent, state, callbacks, string.Empty, "清空");
                 AddDecorationBrushTile(parent, state, callbacks, "grass_large", "草丛");
@@ -103,21 +103,21 @@ namespace Fossick.MapStudio.Views
                 return;
             }
 
-            if (state.selectedLayer == FossickCellLayer.Fog)
+            if (state.selectedBrushMode == FossickBrushMode.Fog)
             {
                 AddFogBrushTile(parent, state, callbacks, FossickFogType.None, "无阴影");
                 AddFogBrushTile(parent, state, callbacks, FossickFogType.Covered, "阴影");
             }
         }
 
-        private void AddLayerButton(RectTransform parent, State state, Callbacks callbacks, FossickCellLayer layer, string label)
+        private void AddBrushModeButton(RectTransform parent, State state, Callbacks callbacks, FossickBrushMode mode, string label)
         {
-            AddButton(parent, label, new Vector2(120f, 34f), () => callbacks.selectLayer?.Invoke(layer), state.selectedLayer == layer);
+            AddButton(parent, label, new Vector2(120f, 34f), () => callbacks.selectBrushMode?.Invoke(mode), state.selectedBrushMode == mode);
         }
 
         private void AddRewardBackgroundBrushTile(RectTransform parent, State state, Callbacks callbacks, string id, string label, int width, int height)
         {
-            var selected = state.selectedLayer == FossickCellLayer.RewardBackground
+            var selected = state.selectedBrushMode == FossickBrushMode.RewardBackground
                 && state.selectedRewardBackgroundId == id
                 && state.selectedRewardBackgroundWidth == width
                 && state.selectedRewardBackgroundHeight == height;
@@ -131,7 +131,7 @@ namespace Fossick.MapStudio.Views
         private void AddRewardBrushTile(RectTransform parent, State state, Callbacks callbacks, FossickElementType type, string label, string rewardId)
         {
             var id = rewardId ?? GetDefaultRewardId(type);
-            var selected = state.selectedRewardType == type && state.selectedRewardId == id && (state.selectedLayer == FossickCellLayer.Reward || state.selectedLayer == FossickCellLayer.Tool);
+            var selected = state.selectedRewardType == type && state.selectedRewardId == id && (state.selectedBrushMode == FossickBrushMode.Reward || state.selectedBrushMode == FossickBrushMode.Tool);
             var sprite = type == FossickElementType.None
                 ? null
                 : FossickArtLibrary.GetRewardSprite(new FossickElementConfig

@@ -14,227 +14,278 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   emptyCellColor: {r: 0.08, g: 0.18, b: 0.22, a: 1}
   previewColor: {r: 0.32, g: 0.9, b: 0.48, a: 0.95}
-  autoTileSets:
-  - kind: 0
-    terrain: 1
-    sprites:
-    - index: 1
-      sprite: {fileID: 21300000, guid: 90ea6f2cc3f204330bf4bf408fa2e4b0, type: 3}
-    - index: 2
-      sprite: {fileID: 21300000, guid: 058ecf8c28bf04c9aa0dcad31cb9b198, type: 3}
-    - index: 3
-      sprite: {fileID: 21300000, guid: effbdf78238484707b9ab8003f296a15, type: 3}
-    - index: 4
-      sprite: {fileID: 21300000, guid: 101228dad34c04f73960c5b7f0bd99a7, type: 3}
-    - index: 5
-      sprite: {fileID: 21300000, guid: bc55b7ed83dca470083193fab057e8a9, type: 3}
-    - index: 6
-      sprite: {fileID: 21300000, guid: dc547ae3cf9c740938f6c0460c51ab88, type: 3}
-    - index: 7
-      sprite: {fileID: 21300000, guid: d4cd91fb9e0fe4ca4adc3264e95140e0, type: 3}
-    - index: 8
-      sprite: {fileID: 21300000, guid: 7635d9fc7794c4d528d5d97a0cc044b4, type: 3}
-    - index: 9
-      sprite: {fileID: 21300000, guid: 7de038e0917fe4cc492b9231a579a9eb, type: 3}
-    - index: 10
-      sprite: {fileID: 21300000, guid: 0da862ad91d10408a9bab082710b83c9, type: 3}
-    - index: 11
-      sprite: {fileID: 21300000, guid: c00d581e664c947eda58c819c382c6af, type: 3}
-    - index: 12
-      sprite: {fileID: 21300000, guid: 517f7f5c17fcc439eb6f00ce799cdd13, type: 3}
-    - index: 13
-      sprite: {fileID: 21300000, guid: ee901fb0a5e3a4f26b1e44e4fa735549, type: 3}
-    - index: 14
-      sprite: {fileID: 21300000, guid: 799cb7eb46d334eebb5e907bb338714d, type: 3}
-    - index: 15
-      sprite: {fileID: 21300000, guid: c232cddde45ac4022806bb5202ac7de6, type: 3}
-    - index: 16
-      sprite: {fileID: 21300000, guid: 404f92f200a384270980980c35a6d7a3, type: 3}
-    - index: 17
-      sprite: {fileID: 21300000, guid: 023219384758443b780406a3df902205, type: 3}
-    - index: 18
-      sprite: {fileID: 21300000, guid: 52c7505e91a9a4d44b26c72140844d4e, type: 3}
-  - kind: 0
-    terrain: 2
-    sprites:
-    - index: 1
-      sprite: {fileID: 21300000, guid: 0c7e096070f684f998c50155474960fa, type: 3}
-    - index: 2
-      sprite: {fileID: 21300000, guid: 19aac5af6b28e42a19b3bd3f33178de5, type: 3}
-    - index: 3
-      sprite: {fileID: 21300000, guid: 4fb942c44dc85449eb8788b8e7f1d084, type: 3}
-    - index: 4
-      sprite: {fileID: 21300000, guid: 7751d6b0743134af5b1d6b2e7d34f33c, type: 3}
-    - index: 5
-      sprite: {fileID: 21300000, guid: 04315ab56a66743e48aecc6435d71e91, type: 3}
-    - index: 6
-      sprite: {fileID: 21300000, guid: 9e35938d06fa84a71ae713b618b0ca5a, type: 3}
-    - index: 7
-      sprite: {fileID: 21300000, guid: 3d0d011f8f5bf4617a8521b0e1d85443, type: 3}
-    - index: 8
-      sprite: {fileID: 21300000, guid: fab71c251aefc43f5b8303df64521413, type: 3}
-    - index: 9
-      sprite: {fileID: 21300000, guid: 18eb68cc3d50642e7812a15e96e7e345, type: 3}
-    - index: 10
-      sprite: {fileID: 21300000, guid: 94f992d9df6cd4e518798501b96c22f9, type: 3}
-    - index: 11
-      sprite: {fileID: 21300000, guid: f66e7503fbdfc4222bda8ee6c3c4cd4f, type: 3}
-    - index: 12
-      sprite: {fileID: 21300000, guid: 7a469726fc58146bf9e41966f95a09e2, type: 3}
-    - index: 13
-      sprite: {fileID: 21300000, guid: 8c3db37e991a146e6a599d606fe6186c, type: 3}
-    - index: 14
-      sprite: {fileID: 21300000, guid: fff693881bd664e6d8a99385ce97f2fc, type: 3}
-    - index: 15
-      sprite: {fileID: 21300000, guid: 751b1d2b8f8814758b8199e35d0c8010, type: 3}
-    - index: 16
-      sprite: {fileID: 21300000, guid: da20ebeed9e4c4a30967f12e2990a41a, type: 3}
-    - index: 17
-      sprite: {fileID: 21300000, guid: 4dc79a1ea8d9249b0b8c65dbccf5bc01, type: 3}
-    - index: 18
-      sprite: {fileID: 21300000, guid: 60a1a949776bd4aba8382353669a5c57, type: 3}
-    - index: 19
-      sprite: {fileID: 21300000, guid: ace19e185e3844ed4ab6f6715a8ad06e, type: 3}
-  - kind: 0
-    terrain: 3
-    sprites:
-    - index: 1
-      sprite: {fileID: 21300000, guid: 80b8ea01e1601446889254120c959aa0, type: 3}
-    - index: 2
-      sprite: {fileID: 21300000, guid: a6f9cdc9e044c4ad0a682e5bd1d95a3e, type: 3}
-    - index: 3
-      sprite: {fileID: 21300000, guid: 7a51bb987df53488496e3e767658a5e1, type: 3}
-    - index: 4
-      sprite: {fileID: 21300000, guid: d8d1a40295b2e4c0a8fc652daf135a69, type: 3}
-    - index: 5
-      sprite: {fileID: 21300000, guid: c2ace490bcd824cc0b7e6d8bce434ebd, type: 3}
-    - index: 6
-      sprite: {fileID: 21300000, guid: d85c62f69ae164ff68e164ec72552415, type: 3}
-    - index: 7
-      sprite: {fileID: 21300000, guid: 62d9011b93d994c59923482e464a99d7, type: 3}
-    - index: 8
-      sprite: {fileID: 21300000, guid: b8c68a46025194e72b9221343ee2d611, type: 3}
-    - index: 9
-      sprite: {fileID: 21300000, guid: 7c96ae378eed04674b38d3b996a900a8, type: 3}
-    - index: 10
-      sprite: {fileID: 21300000, guid: 02b7e46aa304648e794b31cf05b5e614, type: 3}
-    - index: 11
-      sprite: {fileID: 21300000, guid: ed9a57a71b5784f24904637bcae6d4ae, type: 3}
-    - index: 12
-      sprite: {fileID: 21300000, guid: 4760c46b1b7234755b1fa88eb1b95c3b, type: 3}
-    - index: 13
-      sprite: {fileID: 21300000, guid: abc186dd35059402ca2aee34d12cb895, type: 3}
-    - index: 14
-      sprite: {fileID: 21300000, guid: 906788ca6dd82441cb3e0eea98b51f71, type: 3}
-    - index: 15
-      sprite: {fileID: 21300000, guid: b627fc9e52ee041a199535eb49b500de, type: 3}
-    - index: 16
-      sprite: {fileID: 21300000, guid: cbeb0bf97d6184eefa197666f2877563, type: 3}
-    - index: 17
-      sprite: {fileID: 21300000, guid: 2e0d0dd600349492b80ee1a663585e72, type: 3}
-    - index: 18
-      sprite: {fileID: 21300000, guid: 012aa13123aa24da98eefd63514cab2b, type: 3}
-  - kind: 1
-    terrain: 0
-    sprites:
-    - index: 1
-      sprite: {fileID: 21300000, guid: 01aa6bda847834e7fa06f3549441aaf1, type: 3}
-    - index: 2
-      sprite: {fileID: 21300000, guid: 69aa39208589b47f181ce71d82179c62, type: 3}
-    - index: 3
-      sprite: {fileID: 21300000, guid: 89662bc370e05444b9a00ea5d4997aaf, type: 3}
-    - index: 4
-      sprite: {fileID: 21300000, guid: 84b7cc31f5173470f8c3f3b5cb528ccb, type: 3}
-    - index: 5
-      sprite: {fileID: 21300000, guid: ba9952ba0cb4040a99eb62c68ae91b53, type: 3}
-    - index: 6
-      sprite: {fileID: 21300000, guid: 7bf264f261b7b4a0a9f5d3f2c487e88e, type: 3}
-    - index: 7
-      sprite: {fileID: 21300000, guid: 926827a712ca04aef90604105483c7d3, type: 3}
-    - index: 8
-      sprite: {fileID: 21300000, guid: 718e3f7d902df4a1bad5d5bf9d57d203, type: 3}
-    - index: 9
-      sprite: {fileID: 21300000, guid: 9c6d3c32b167c4b298c723a1d79e5707, type: 3}
-    - index: 10
-      sprite: {fileID: 21300000, guid: bbc108788aa424a7494e5f752cc37d36, type: 3}
-    - index: 11
-      sprite: {fileID: 21300000, guid: 4e13e81149f0a44bcb6509223c8eb9b0, type: 3}
-    - index: 12
-      sprite: {fileID: 21300000, guid: 1b05c82948f724ffcae12a42947eb25d, type: 3}
-    - index: 13
-      sprite: {fileID: 21300000, guid: 1e932988909af4368894179d48f5b68d, type: 3}
-    - index: 14
-      sprite: {fileID: 21300000, guid: 1511bec01bb34414db95b0a168c9398e, type: 3}
-    - index: 15
-      sprite: {fileID: 21300000, guid: 4631d950a7ed9498980042f404dfb870, type: 3}
-  rewardSprites:
-  - type: 2
-    id: 
-    sprite: {fileID: 21300000, guid: 49525bdf703c04c12b71a863387c396f, type: 3}
-  - type: 3
-    id: 
-    sprite: {fileID: 21300000, guid: 50b84028e5c7340b3b64712fcc80f028, type: 3}
-  - type: 1
-    id: ore_copper
-    sprite: {fileID: 21300000, guid: 296cb8612702143a1abbd76970862680, type: 3}
-  - type: 1
-    id: ore_gem
-    sprite: {fileID: 21300000, guid: bf4cfd411f5f449538d91ded63a067e2, type: 3}
-  - type: 1
-    id: ore_gold
-    sprite: {fileID: 21300000, guid: d08f1d464ceb74a8b8b88a4c1854b0b2, type: 3}
-  - type: 1
-    id: ore_silver
-    sprite: {fileID: 21300000, guid: 4d359b576813a4bbd912a5ace07e2fee, type: 3}
-  - type: 5
-    id: pickaxe
-    sprite: {fileID: 21300000, guid: 7bd6e2d7f343f4c109b3a8729eb46adf, type: 3}
-  - type: 5
-    id: dynamite
-    sprite: {fileID: 21300000, guid: 0b5fd0ee1c2b44ed795489bc7a2a2cd5, type: 3}
-  - type: 5
-    id: tnt
-    sprite: {fileID: 21300000, guid: a1af28319062e4a13b07977c6f77b73f, type: 3}
-  - type: 5
-    id: radar
-    sprite: {fileID: 21300000, guid: 028ab9a21a02e4170be5dd91d9d9b293, type: 3}
-  - type: 5
-    id: 
-    sprite: {fileID: 21300000, guid: 7bd6e2d7f343f4c109b3a8729eb46adf, type: 3}
-  - type: 6
-    id: 
-    sprite: {fileID: 21300000, guid: 931ce7a82d3c74f348af08e7a83c11ef, type: 3}
-  - type: 4
-    id: 
-    sprite: {fileID: 21300000, guid: c7e21d090b62140809e12aa14838e736, type: 3}
-  toolSprites:
-  - type: 0
-    sprite: {fileID: 21300000, guid: 7bd6e2d7f343f4c109b3a8729eb46adf, type: 3}
-  - type: 1
-    sprite: {fileID: 21300000, guid: 0b5fd0ee1c2b44ed795489bc7a2a2cd5, type: 3}
-  - type: 2
-    sprite: {fileID: 21300000, guid: a1af28319062e4a13b07977c6f77b73f, type: 3}
-  - type: 3
-    sprite: {fileID: 21300000, guid: 028ab9a21a02e4170be5dd91d9d9b293, type: 3}
-  decorations:
-  - id: grass_large
-    sprite: {fileID: 21300000, guid: 37adb527b48a14d65acbbbddd77e9fbc, type: 3}
-  - id: grass_small
-    sprite: {fileID: 21300000, guid: a97987af0835649b2b2199a2bec59aec, type: 3}
-  - id: mushroom
-    sprite: {fileID: 21300000, guid: 7c1fdd14689da4a51a2cf37c2b9b75a5, type: 3}
-  backgrounds:
-  - id: mine_default
-    sprite: {fileID: 21300000, guid: e74a20fd051c24684b6f63c609c36ee8, type: 3}
-  - id: mine_map_1
-    sprite: {fileID: 21300000, guid: b8ab1198f73574b6c96d4ebd52898371, type: 3}
-  - id: mine_bottom_2
-    sprite: {fileID: 21300000, guid: e74a20fd051c24684b6f63c609c36ee8, type: 3}
-  - id: mine_bottom_3
-    sprite: {fileID: 21300000, guid: d0cd8ce61d62743bfa86ad35c499ba55, type: 3}
-  - id: treasure_room_3x2
-    sprite: {fileID: 21300000, guid: 69883c0dcc9ff4397b25605ede1d00fb, type: 3}
-  - id: treasure_room_5x2
-    sprite: {fileID: 21300000, guid: 009aee104dc474252b91ed4a5ea4cd82, type: 3}
-  - id: treasure_room_7x2
-    sprite: {fileID: 21300000, guid: 07cbe665139264b18896f17bafa7d8c2, type: 3}
+  layer0Background:
+    backgrounds:
+    - id: mine_default
+      sprite: {fileID: 21300000, guid: e74a20fd051c24684b6f63c609c36ee8, type: 3}
+    - id: mine_map
+      sprite: {fileID: 21300000, guid: b8ab1198f73574b6c96d4ebd52898371, type: 3}
+    - id: mine_variant
+      sprite: {fileID: 21300000, guid: d0cd8ce61d62743bfa86ad35c499ba55, type: 3}
+  layer1RewardBackground:
+    backgrounds:
+    - id: treasure_room_3x2
+      sprite: {fileID: 21300000, guid: 69883c0dcc9ff4397b25605ede1d00fb, type: 3}
+    - id: treasure_room_5x2
+      sprite: {fileID: 21300000, guid: 009aee104dc474252b91ed4a5ea4cd82, type: 3}
+    - id: treasure_room_7x2
+      sprite: {fileID: 21300000, guid: 07cbe665139264b18896f17bafa7d8c2, type: 3}
+  layer2Terrain:
+    autoTileSets:
+    - kind: 0
+      terrain: 1
+      sprites:
+      - index: 1
+        sprite: {fileID: 21300000, guid: 90ea6f2cc3f204330bf4bf408fa2e4b0, type: 3}
+      - index: 2
+        sprite: {fileID: 21300000, guid: 058ecf8c28bf04c9aa0dcad31cb9b198, type: 3}
+      - index: 3
+        sprite: {fileID: 21300000, guid: effbdf78238484707b9ab8003f296a15, type: 3}
+      - index: 4
+        sprite: {fileID: 21300000, guid: 101228dad34c04f73960c5b7f0bd99a7, type: 3}
+      - index: 5
+        sprite: {fileID: 21300000, guid: bc55b7ed83dca470083193fab057e8a9, type: 3}
+      - index: 6
+        sprite: {fileID: 21300000, guid: dc547ae3cf9c740938f6c0460c51ab88, type: 3}
+      - index: 7
+        sprite: {fileID: 21300000, guid: d4cd91fb9e0fe4ca4adc3264e95140e0, type: 3}
+      - index: 8
+        sprite: {fileID: 21300000, guid: 7635d9fc7794c4d528d5d97a0cc044b4, type: 3}
+      - index: 9
+        sprite: {fileID: 21300000, guid: 7de038e0917fe4cc492b9231a579a9eb, type: 3}
+      - index: 10
+        sprite: {fileID: 21300000, guid: 0da862ad91d10408a9bab082710b83c9, type: 3}
+      - index: 11
+        sprite: {fileID: 21300000, guid: c00d581e664c947eda58c819c382c6af, type: 3}
+      - index: 12
+        sprite: {fileID: 21300000, guid: 517f7f5c17fcc439eb6f00ce799cdd13, type: 3}
+      - index: 13
+        sprite: {fileID: 21300000, guid: ee901fb0a5e3a4f26b1e44e4fa735549, type: 3}
+      - index: 14
+        sprite: {fileID: 21300000, guid: 799cb7eb46d334eebb5e907bb338714d, type: 3}
+      - index: 15
+        sprite: {fileID: 21300000, guid: c232cddde45ac4022806bb5202ac7de6, type: 3}
+      - index: 16
+        sprite: {fileID: 21300000, guid: 404f92f200a384270980980c35a6d7a3, type: 3}
+      - index: 17
+        sprite: {fileID: 21300000, guid: 023219384758443b780406a3df902205, type: 3}
+      - index: 18
+        sprite: {fileID: 21300000, guid: 52c7505e91a9a4d44b26c72140844d4e, type: 3}
+    - kind: 0
+      terrain: 2
+      sprites:
+      - index: 1
+        sprite: {fileID: 21300000, guid: 0c7e096070f684f998c50155474960fa, type: 3}
+      - index: 2
+        sprite: {fileID: 21300000, guid: 19aac5af6b28e42a19b3bd3f33178de5, type: 3}
+      - index: 3
+        sprite: {fileID: 21300000, guid: 4fb942c44dc85449eb8788b8e7f1d084, type: 3}
+      - index: 4
+        sprite: {fileID: 21300000, guid: 7751d6b0743134af5b1d6b2e7d34f33c, type: 3}
+      - index: 5
+        sprite: {fileID: 21300000, guid: 04315ab56a66743e48aecc6435d71e91, type: 3}
+      - index: 6
+        sprite: {fileID: 21300000, guid: 9e35938d06fa84a71ae713b618b0ca5a, type: 3}
+      - index: 7
+        sprite: {fileID: 21300000, guid: 3d0d011f8f5bf4617a8521b0e1d85443, type: 3}
+      - index: 8
+        sprite: {fileID: 21300000, guid: fab71c251aefc43f5b8303df64521413, type: 3}
+      - index: 9
+        sprite: {fileID: 21300000, guid: 18eb68cc3d50642e7812a15e96e7e345, type: 3}
+      - index: 10
+        sprite: {fileID: 21300000, guid: 94f992d9df6cd4e518798501b96c22f9, type: 3}
+      - index: 11
+        sprite: {fileID: 21300000, guid: f66e7503fbdfc4222bda8ee6c3c4cd4f, type: 3}
+      - index: 12
+        sprite: {fileID: 21300000, guid: 7a469726fc58146bf9e41966f95a09e2, type: 3}
+      - index: 13
+        sprite: {fileID: 21300000, guid: 8c3db37e991a146e6a599d606fe6186c, type: 3}
+      - index: 14
+        sprite: {fileID: 21300000, guid: fff693881bd664e6d8a99385ce97f2fc, type: 3}
+      - index: 15
+        sprite: {fileID: 21300000, guid: 751b1d2b8f8814758b8199e35d0c8010, type: 3}
+      - index: 16
+        sprite: {fileID: 21300000, guid: da20ebeed9e4c4a30967f12e2990a41a, type: 3}
+      - index: 17
+        sprite: {fileID: 21300000, guid: 4dc79a1ea8d9249b0b8c65dbccf5bc01, type: 3}
+      - index: 18
+        sprite: {fileID: 21300000, guid: 60a1a949776bd4aba8382353669a5c57, type: 3}
+      - index: 19
+        sprite: {fileID: 21300000, guid: ace19e185e3844ed4ab6f6715a8ad06e, type: 3}
+    - kind: 0
+      terrain: 3
+      sprites:
+      - index: 1
+        sprite: {fileID: 21300000, guid: 80b8ea01e1601446889254120c959aa0, type: 3}
+      - index: 2
+        sprite: {fileID: 21300000, guid: a6f9cdc9e044c4ad0a682e5bd1d95a3e, type: 3}
+      - index: 3
+        sprite: {fileID: 21300000, guid: 7a51bb987df53488496e3e767658a5e1, type: 3}
+      - index: 4
+        sprite: {fileID: 21300000, guid: d8d1a40295b2e4c0a8fc652daf135a69, type: 3}
+      - index: 5
+        sprite: {fileID: 21300000, guid: c2ace490bcd824cc0b7e6d8bce434ebd, type: 3}
+      - index: 6
+        sprite: {fileID: 21300000, guid: d85c62f69ae164ff68e164ec72552415, type: 3}
+      - index: 7
+        sprite: {fileID: 21300000, guid: 62d9011b93d994c59923482e464a99d7, type: 3}
+      - index: 8
+        sprite: {fileID: 21300000, guid: b8c68a46025194e72b9221343ee2d611, type: 3}
+      - index: 9
+        sprite: {fileID: 21300000, guid: 7c96ae378eed04674b38d3b996a900a8, type: 3}
+      - index: 10
+        sprite: {fileID: 21300000, guid: 02b7e46aa304648e794b31cf05b5e614, type: 3}
+      - index: 11
+        sprite: {fileID: 21300000, guid: ed9a57a71b5784f24904637bcae6d4ae, type: 3}
+      - index: 12
+        sprite: {fileID: 21300000, guid: 4760c46b1b7234755b1fa88eb1b95c3b, type: 3}
+      - index: 13
+        sprite: {fileID: 21300000, guid: abc186dd35059402ca2aee34d12cb895, type: 3}
+      - index: 14
+        sprite: {fileID: 21300000, guid: 906788ca6dd82441cb3e0eea98b51f71, type: 3}
+      - index: 15
+        sprite: {fileID: 21300000, guid: b627fc9e52ee041a199535eb49b500de, type: 3}
+      - index: 16
+        sprite: {fileID: 21300000, guid: cbeb0bf97d6184eefa197666f2877563, type: 3}
+      - index: 17
+        sprite: {fileID: 21300000, guid: 2e0d0dd600349492b80ee1a663585e72, type: 3}
+      - index: 18
+        sprite: {fileID: 21300000, guid: 012aa13123aa24da98eefd63514cab2b, type: 3}
+  layer3TerrainAttachment:
+    attachments:
+    - type: 1
+      id: ore_copper
+      terrain: 0
+      sprite: {fileID: 21300000, guid: e095fb2042c2545eba90841564c2cda0, type: 3}
+    - type: 1
+      id: ore_gem
+      terrain: 0
+      sprite: {fileID: 21300000, guid: 9c8a6eaf3bc5d4a04bd056bdc39a1998, type: 3}
+    - type: 1
+      id: ore_gold
+      terrain: 0
+      sprite: {fileID: 21300000, guid: 7fa00a129e9974fab81f6738749d80c1, type: 3}
+    - type: 1
+      id: ore_silver
+      terrain: 0
+      sprite: {fileID: 21300000, guid: fe8cc3dea1e054e25b4ce281814838da, type: 3}
+    - type: 5
+      id: pickaxe
+      terrain: 1
+      sprite: {fileID: 21300000, guid: 8bb8867da5596436ba2aa04f48312681, type: 3}
+    - type: 5
+      id: pickaxe
+      terrain: 2
+      sprite: {fileID: 21300000, guid: fd7742aaf1df2435891a9b2bb9be11c0, type: 3}
+    - type: 5
+      id: dynamite
+      terrain: 1
+      sprite: {fileID: 21300000, guid: 965709a1f91c541ea9111cf9270ca078, type: 3}
+    - type: 5
+      id: dynamite
+      terrain: 2
+      sprite: {fileID: 21300000, guid: 581e75e92e0094da1907de09fef0349c, type: 3}
+    - type: 5
+      id: tnt
+      terrain: 1
+      sprite: {fileID: 21300000, guid: 99d81faab32e648c89370c4000708a55, type: 3}
+    - type: 5
+      id: tnt
+      terrain: 2
+      sprite: {fileID: 21300000, guid: 5b0212ca3d9284c1e81a9ad843a84c24, type: 3}
+    - type: 5
+      id: radar
+      terrain: 1
+      sprite: {fileID: 21300000, guid: 96eef6a40015c43deb857c2fd510cc10, type: 3}
+    - type: 5
+      id: radar
+      terrain: 2
+      sprite: {fileID: 21300000, guid: d6ece9fd6ccb24391bcde432cd158631, type: 3}
+    - type: 6
+      id: treasure_chest
+      terrain: 1
+      sprite: {fileID: 21300000, guid: 793ce072220594b34849bc41730b7c35, type: 3}
+  layer4Reward:
+    rewards:
+    - type: 2
+      id: coin_pile
+      sprite: {fileID: 21300000, guid: 49525bdf703c04c12b71a863387c396f, type: 3}
+    - type: 1
+      id: ore_copper
+      sprite: {fileID: 21300000, guid: 296cb8612702143a1abbd76970862680, type: 3}
+    - type: 1
+      id: ore_gem
+      sprite: {fileID: 21300000, guid: bf4cfd411f5f449538d91ded63a067e2, type: 3}
+    - type: 1
+      id: ore_gold
+      sprite: {fileID: 21300000, guid: d08f1d464ceb74a8b8b88a4c1854b0b2, type: 3}
+    - type: 1
+      id: ore_silver
+      sprite: {fileID: 21300000, guid: 4d359b576813a4bbd912a5ace07e2fee, type: 3}
+    - type: 5
+      id: pickaxe
+      sprite: {fileID: 21300000, guid: 7bd6e2d7f343f4c109b3a8729eb46adf, type: 3}
+    - type: 5
+      id: dynamite
+      sprite: {fileID: 21300000, guid: 0b5fd0ee1c2b44ed795489bc7a2a2cd5, type: 3}
+    - type: 5
+      id: tnt
+      sprite: {fileID: 21300000, guid: a1af28319062e4a13b07977c6f77b73f, type: 3}
+    - type: 5
+      id: radar
+      sprite: {fileID: 21300000, guid: 028ab9a21a02e4170be5dd91d9d9b293, type: 3}
+    - type: 6
+      id: treasure_chest
+      sprite: {fileID: 21300000, guid: 931ce7a82d3c74f348af08e7a83c11ef, type: 3}
+    - type: 4
+      id: collection_piece
+      sprite: {fileID: 21300000, guid: c7e21d090b62140809e12aa14838e736, type: 3}
+  layer5Decoration:
+    decorations:
+    - id: grass_large
+      sprite: {fileID: 21300000, guid: 37adb527b48a14d65acbbbddd77e9fbc, type: 3}
+    - id: grass_small
+      sprite: {fileID: 21300000, guid: a97987af0835649b2b2199a2bec59aec, type: 3}
+    - id: mushroom
+      sprite: {fileID: 21300000, guid: 7c1fdd14689da4a51a2cf37c2b9b75a5, type: 3}
+  layer6Fog:
+    autoTileSet:
+      kind: 1
+      terrain: 0
+      sprites:
+      - index: 1
+        sprite: {fileID: 21300000, guid: 01aa6bda847834e7fa06f3549441aaf1, type: 3}
+      - index: 2
+        sprite: {fileID: 21300000, guid: 69aa39208589b47f181ce71d82179c62, type: 3}
+      - index: 3
+        sprite: {fileID: 21300000, guid: 89662bc370e05444b9a00ea5d4997aaf, type: 3}
+      - index: 4
+        sprite: {fileID: 21300000, guid: 84b7cc31f5173470f8c3f3b5cb528ccb, type: 3}
+      - index: 5
+        sprite: {fileID: 21300000, guid: ba9952ba0cb4040a99eb62c68ae91b53, type: 3}
+      - index: 6
+        sprite: {fileID: 21300000, guid: 7bf264f261b7b4a0a9f5d3f2c487e88e, type: 3}
+      - index: 7
+        sprite: {fileID: 21300000, guid: 926827a712ca04aef90604105483c7d3, type: 3}
+      - index: 8
+        sprite: {fileID: 21300000, guid: 718e3f7d902df4a1bad5d5bf9d57d203, type: 3}
+      - index: 9
+        sprite: {fileID: 21300000, guid: 9c6d3c32b167c4b298c723a1d79e5707, type: 3}
+      - index: 10
+        sprite: {fileID: 21300000, guid: bbc108788aa424a7494e5f752cc37d36, type: 3}
+      - index: 11
+        sprite: {fileID: 21300000, guid: 4e13e81149f0a44bcb6509223c8eb9b0, type: 3}
+      - index: 12
+        sprite: {fileID: 21300000, guid: 1b05c82948f724ffcae12a42947eb25d, type: 3}
+      - index: 13
+        sprite: {fileID: 21300000, guid: 1e932988909af4368894179d48f5b68d, type: 3}
+      - index: 14
+        sprite: {fileID: 21300000, guid: 1511bec01bb34414db95b0a168c9398e, type: 3}
+      - index: 15
+        sprite: {fileID: 21300000, guid: 4631d950a7ed9498980042f404dfb870, type: 3}
+  autoTileSets: []
+  rewardSprites: []
+  terrainAttachmentSprites: []
+  toolSprites: []
+  decorations: []
+  backgrounds: []

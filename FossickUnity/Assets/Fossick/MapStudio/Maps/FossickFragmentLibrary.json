@@ -18,7 +18,7 @@
                     "y": 0,
                     "backgroundId": "mine_default",
                     "rewardBackgroundId": "",
-                    "terrain": 0,
+                    "terrain": 3,
                     "hp": 0,
                     "reward": {
                         "type": 0,
@@ -33,7 +33,7 @@
                         "amount": 0
                     },
                     "decor": [],
-                    "mask": false
+                    "mask": true
                 },
                 {
                     "x": 1,
