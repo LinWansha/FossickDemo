@@ -25,7 +25,6 @@ namespace Fossick.Core.Gameplay
                 case FossickElementType.Coin:
                     coins += amount;
                     break;
-                case FossickElementType.Score:
                 case FossickElementType.Ore:
                     score += amount;
                     break;

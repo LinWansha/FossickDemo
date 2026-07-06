@@ -116,7 +116,26 @@ namespace Fossick.Runtime.Views
                 case FossickTerrainType.Unbreakable:
                     return "X";
                 default:
-                    return cell.HasCollectableReward ? "$" : string.Empty;
+                    return cell.HasCollectableReward ? GetRewardLabel(cell.reward.type) : string.Empty;
+            }
+        }
+
+        private static string GetRewardLabel(FossickElementType type)
+        {
+            switch (type)
+            {
+                case FossickElementType.Coin:
+                    return "G";
+                case FossickElementType.Ore:
+                    return "O";
+                case FossickElementType.Item:
+                    return "T";
+                case FossickElementType.Chest:
+                    return "C";
+                case FossickElementType.Collection:
+                    return "P";
+                default:
+                    return string.Empty;
             }
         }
 

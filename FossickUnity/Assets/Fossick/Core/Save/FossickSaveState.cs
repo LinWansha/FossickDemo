@@ -21,7 +21,6 @@ namespace Fossick.Core.Save
         public List<string> destroyedCells = new List<string>();
         public List<string> collectedCells = new List<string>();
         public List<string> visibleCells = new List<string>();
-        public List<string> pendingRewards = new List<string>();
         public int oreFound;
         public int collectionFound;
         public int toolUsed;

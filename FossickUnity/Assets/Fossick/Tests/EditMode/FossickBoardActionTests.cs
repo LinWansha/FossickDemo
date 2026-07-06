@@ -2,6 +2,7 @@ using Fossick.Core.Actions;
 using Fossick.Core.Board;
 using Fossick.Core.Config;
 using Fossick.Core.Generation;
+using Fossick.Core.Presentation;
 using Fossick.Core.Rewards;
 using Fossick.Core.Save;
 using NUnit.Framework;
@@ -60,6 +61,8 @@ namespace Fossick.Core.Tests
             Assert.That(breakResult.steps[1].type, Is.EqualTo(FossickActionStepType.ObstacleHit));
             Assert.That(breakResult.steps[2].type, Is.EqualTo(FossickActionStepType.ObstacleBroken));
             Assert.That(breakResult.steps[3].type, Is.EqualTo(FossickActionStepType.RewardRevealed));
+            var presentation = FossickPresentationPlanBuilder.Build(breakResult);
+            Assert.That(presentation.events.Exists(step => step.type == FossickPresentationEventType.RewardSpawned && step.elementType == FossickElementType.Ore && step.id == "test_ore" && step.amount == 3), Is.True);
             Assert.That(board.GetCell(0, 0).terrain, Is.EqualTo(FossickTerrainType.Empty));
             Assert.That(board.GetCell(0, 0).HasSpawnedReward, Is.True);
             Assert.That(board.GetCell(0, 0).collected, Is.False);
@@ -75,10 +78,72 @@ namespace Fossick.Core.Tests
             Assert.That(collectResult.rewards[0].elementType, Is.EqualTo(FossickElementType.Ore));
             Assert.That(collectResult.rewards[0].amount, Is.EqualTo(3));
             Assert.That(collectResult.steps[0].type, Is.EqualTo(FossickActionStepType.RewardCollected));
+            var collectPresentation = FossickPresentationPlanBuilder.Build(collectResult);
+            Assert.That(collectPresentation.events.Exists(step => step.type == FossickPresentationEventType.RewardCollected && step.elementType == FossickElementType.Ore && step.amount == 3), Is.True);
             Assert.That(board.GetCell(0, 0).HasSpawnedReward, Is.False);
             Assert.That(board.GetCell(0, 0).collected, Is.True);
             Assert.That(progress.oreFound, Is.EqualTo(3));
             Assert.That(progress.toolUsed, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Pickaxe_WhenPlainObstacleBreaks_CanSpawnConfiguredSmallCoinEntity()
+        {
+            var board = CreateBoardWithSingleCell(FossickTerrainType.Dirt, 1, null);
+            SetFog(board, 0, 0, FossickFogType.None);
+            var coinDrop = new FossickSmallCoinDropConfig
+            {
+                enabled = true,
+                chancePerMille = 1000,
+                amounts = new System.Collections.Generic.List<FossickWeightedAmountConfig>
+                {
+                    new FossickWeightedAmountConfig { amount = 7, weight = 1 }
+                }
+            };
+            var resolver = new FossickActionResolver(null, coinDrop, 12345);
+
+            var breakResult = resolver.ResolvePickaxe(board, 0, 0);
+
+            Assert.That(breakResult.isApplied, Is.True);
+            Assert.That(breakResult.rewards, Is.Empty);
+            Assert.That(breakResult.steps.Exists(step => step.type == FossickActionStepType.RewardRevealed), Is.True);
+            Assert.That(board.GetCell(0, 0).HasSpawnedReward, Is.True);
+            Assert.That(board.GetCell(0, 0).reward.type, Is.EqualTo(FossickElementType.Coin));
+            Assert.That(board.GetCell(0, 0).reward.amount, Is.EqualTo(7));
+
+            var collectResult = resolver.ResolvePickaxe(board, 0, 0);
+
+            Assert.That(collectResult.rewards.Count, Is.EqualTo(1));
+            Assert.That(collectResult.rewards[0].elementType, Is.EqualTo(FossickElementType.Coin));
+            Assert.That(collectResult.rewards[0].amount, Is.EqualTo(7));
+        }
+
+        [Test]
+        public void Pickaxe_WhenObstacleAlreadyHasBuriedReward_DoesNotAlsoSpawnSmallCoin()
+        {
+            var board = CreateBoardWithSingleCell(FossickTerrainType.Dirt, 1, new FossickElementConfig
+            {
+                type = FossickElementType.Ore,
+                id = "ore_copper",
+                amount = 10
+            });
+            SetFog(board, 0, 0, FossickFogType.None);
+            var coinDrop = new FossickSmallCoinDropConfig
+            {
+                enabled = true,
+                chancePerMille = 1000,
+                amounts = new System.Collections.Generic.List<FossickWeightedAmountConfig>
+                {
+                    new FossickWeightedAmountConfig { amount = 7, weight = 1 }
+                }
+            };
+            var resolver = new FossickActionResolver(null, coinDrop, 12345);
+
+            resolver.ResolvePickaxe(board, 0, 0);
+
+            Assert.That(board.GetCell(0, 0).HasSpawnedReward, Is.True);
+            Assert.That(board.GetCell(0, 0).reward.type, Is.EqualTo(FossickElementType.Ore));
+            Assert.That(board.GetCell(0, 0).reward.amount, Is.EqualTo(10));
         }
 
         [Test]
@@ -267,6 +332,9 @@ namespace Fossick.Core.Tests
             Assert.That(result.scrolled, Is.True);
             Assert.That(result.depthAfterAction, Is.EqualTo(1));
             Assert.That(result.steps[result.steps.Count - 1].type, Is.EqualTo(FossickActionStepType.BoardScrolled));
+            var presentation = FossickPresentationPlanBuilder.Build(result);
+            Assert.That(presentation.totalScrollRows, Is.EqualTo(1));
+            Assert.That(presentation.events.Exists(step => step.type == FossickPresentationEventType.BoardScrolled && step.scrollRows == 1), Is.True);
         }
 
         [Test]

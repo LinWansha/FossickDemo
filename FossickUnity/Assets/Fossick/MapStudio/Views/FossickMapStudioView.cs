@@ -61,8 +61,9 @@ namespace Fossick.MapStudio.Views
         private int pendingPaintY = -1;
         private bool isDragPainting;
         private FossickBrushMode selectedBrushMode = FossickBrushMode.Terrain;
-        private FossickElementType selectedRewardType = FossickElementType.Coin;
-        private string selectedRewardId = "coin_pile";
+        private FossickElementType selectedRewardType = FossickElementType.Ore;
+        private string selectedRewardId = "ore_copper";
+        private int selectedRewardAmountOverride;
         private string selectedRewardBackgroundId = string.Empty;
         private int selectedRewardBackgroundWidth;
         private int selectedRewardBackgroundHeight;
@@ -811,11 +812,11 @@ namespace Fossick.MapStudio.Views
             var editorWidth = Mathf.Min(660f, panelWidth - 424f);
             var summaryWidth = 340f;
             var editor = CreateRect("Generation Rules Editor Card", panel);
-            SetTopLeft(editor, 16f, contentTop, editorWidth, 552f);
+            SetTopLeft(editor, 16f, contentTop, editorWidth, 650f);
             AddImage(editor.gameObject, new Color(0.1f, 0.13f, 0.15f));
 
             var summary = CreateRect("Generation Rules Summary Card", panel);
-            SetTopLeft(summary, 16f + editorWidth + 20f, contentTop, summaryWidth, 552f);
+            SetTopLeft(summary, 16f + editorWidth + 20f, contentTop, summaryWidth, 650f);
             AddImage(summary.gameObject, new Color(0.1f, 0.13f, 0.15f));
 
             DrawGenerationRulesEditorCard(editor, generation, editorWidth);
@@ -858,8 +859,23 @@ namespace Fossick.MapStudio.Views
             });
             AddTextAt(parent, GetRewardPoolSummary(), 12, FontStyle.Normal, 270f, 398f, width - 286f, 22f);
 
+            var smallCoinDrop = EnsureSmallCoinDropConfig(generation);
+            AddTextAt(parent, "普通障碍小金币", 13, FontStyle.Bold, 16f, 480f, width - 32f, 22f);
+            var enabledButton = AddActionButton(parent, smallCoinDrop.enabled ? "小金币掉落 开" : "小金币掉落 关", new Vector2(136f, 30f), () =>
+            {
+                smallCoinDrop.enabled = !smallCoinDrop.enabled;
+                MarkGenerationRulesChanged();
+            }, smallCoinDrop.enabled ? ButtonTone.Primary : ButtonTone.Default);
+            SetTopLeft(enabledButton, 16f, 508f, 136f, 30f);
+            DrawStepper(parent, 168f, 508f, "概率‰", smallCoinDrop.chancePerMille, 0, value =>
+            {
+                smallCoinDrop.chancePerMille = Mathf.Clamp(value, 0, 1000);
+                MarkGenerationRulesChanged();
+            });
+            AddTextAt(parent, $"数量池：{FormatWeightedAmounts(smallCoinDrop.amounts)}", 12, FontStyle.Normal, 16f, 548f, width - 32f, 24f);
+
             var actionRow = CreateRow(parent, "Generation Rules Action Row", width - 32f, 34f);
-            SetTopLeft(actionRow, 16f, 500f, width - 32f, 34f);
+            SetTopLeft(actionRow, 16f, 596f, width - 32f, 34f);
             AddActionButton(actionRow, "放弃修改", new Vector2(104f, 30f), generationRulesEditDirty ? DiscardGenerationRulesChanges : null, generationRulesEditDirty ? ButtonTone.Danger : ButtonTone.Muted);
             AddActionButton(actionRow, "保存规则", new Vector2(104f, 30f), SaveGenerationRules, ButtonTone.Primary);
             AddActionButton(actionRow, "应用并更新预览", new Vector2(142f, 30f), ApplyGenerationRulesAndUpdatePreview, ButtonTone.Primary);
@@ -877,17 +893,18 @@ namespace Fossick.MapStudio.Views
             AddTextAt(parent, $"每轮普通矿井：抽取 {generation.regularGroupSize} 段", 13, FontStyle.Normal, 16f, 126f, width - 32f, 22f);
             AddTextAt(parent, $"难度配比：难度1 {GetDifficultyCount(generation, 1)}段 / 难度2 {GetDifficultyCount(generation, 2)}段 / 难度3 {GetDifficultyCount(generation, 3)}段", 13, FontStyle.Normal, 16f, 154f, width - 32f, 36f);
             AddTextAt(parent, $"藏宝阁插入：每 {generation.rewardInsertMin}-{generation.rewardInsertMax} 段普通矿井插入 1 个", 13, FontStyle.Normal, 16f, 196f, width - 32f, 36f);
-            AddTextAt(parent, generationRulesEditDirty ? "规则保存：有未保存修改" : "规则保存：已保存", 13, generationRulesEditDirty ? FontStyle.Bold : FontStyle.Normal, 16f, 248f, width - 32f, 22f);
-            AddTextAt(parent, generationRulesDirty ? "地图预览：规则已变化，需要更新预览" : "地图预览：当前预览已同步", 13, generationRulesDirty ? FontStyle.Bold : FontStyle.Normal, 16f, 276f, width - 32f, 22f);
+            AddTextAt(parent, FormatSmallCoinDropSummary(generation.smallCoinDrop), 13, FontStyle.Normal, 16f, 238f, width - 32f, 42f);
+            AddTextAt(parent, generationRulesEditDirty ? "规则保存：有未保存修改" : "规则保存：已保存", 13, generationRulesEditDirty ? FontStyle.Bold : FontStyle.Normal, 16f, 296f, width - 32f, 22f);
+            AddTextAt(parent, generationRulesDirty ? "地图预览：规则已变化，需要更新预览" : "地图预览：当前预览已同步", 13, generationRulesDirty ? FontStyle.Bold : FontStyle.Normal, 16f, 324f, width - 32f, 22f);
 
-            AddTextAt(parent, "可抽取模板池", 15, FontStyle.Bold, 16f, 326f, width - 32f, 24f);
-            AddTextAt(parent, $"难度 1：{GetRegularPoolCount(1)} 个", 13, FontStyle.Normal, 16f, 348f, width - 32f, 22f);
-            AddTextAt(parent, $"难度 2：{GetRegularPoolCount(2)} 个", 13, FontStyle.Normal, 16f, 376f, width - 32f, 22f);
-            AddTextAt(parent, $"难度 3：{GetRegularPoolCount(3)} 个", 13, FontStyle.Normal, 16f, 404f, width - 32f, 22f);
-            AddTextAt(parent, GetRewardPoolSummary(), 13, FontStyle.Normal, 16f, 432f, width - 32f, 22f);
+            AddTextAt(parent, "可抽取模板池", 15, FontStyle.Bold, 16f, 374f, width - 32f, 24f);
+            AddTextAt(parent, $"难度 1：{GetRegularPoolCount(1)} 个", 13, FontStyle.Normal, 16f, 396f, width - 32f, 22f);
+            AddTextAt(parent, $"难度 2：{GetRegularPoolCount(2)} 个", 13, FontStyle.Normal, 16f, 424f, width - 32f, 22f);
+            AddTextAt(parent, $"难度 3：{GetRegularPoolCount(3)} 个", 13, FontStyle.Normal, 16f, 452f, width - 32f, 22f);
+            AddTextAt(parent, GetRewardPoolSummary(), 13, FontStyle.Normal, 16f, 480f, width - 32f, 22f);
 
             var issueText = GetFirstGenerationRuleIssueText();
-            AddTextAt(parent, string.IsNullOrEmpty(issueText) ? "规则可用于生成矿井。" : issueText, 12, string.IsNullOrEmpty(issueText) ? FontStyle.Normal : FontStyle.Bold, 16f, 490f, width - 32f, 44f);
+            AddTextAt(parent, string.IsNullOrEmpty(issueText) ? "规则可用于生成矿井。" : issueText, 12, string.IsNullOrEmpty(issueText) ? FontStyle.Normal : FontStyle.Bold, 16f, 548f, width - 32f, 44f);
         }
 
         private void DrawGenerationRulesSummaryCard(RectTransform parent, FossickGenerationConfig generation)
@@ -1331,6 +1348,10 @@ namespace Fossick.MapStudio.Views
                 regularGroupSize = source.regularGroupSize,
                 rewardInsertMin = source.rewardInsertMin,
                 rewardInsertMax = source.rewardInsertMax,
+                prefetchVisibleScreens = source.prefetchVisibleScreens,
+                minimumRowsAhead = source.minimumRowsAhead,
+                retainRowsBehind = source.retainRowsBehind,
+                smallCoinDrop = CloneSmallCoinDrop(source.smallCoinDrop),
                 difficultyCounts = source.difficultyCounts == null
                     ? new List<FossickDifficultyCount>()
                     : source.difficultyCounts.ConvertAll(count => count == null
@@ -1341,6 +1362,89 @@ namespace Fossick.MapStudio.Views
                             count = count.count
                         })
             };
+        }
+
+        private static FossickSmallCoinDropConfig CloneSmallCoinDrop(FossickSmallCoinDropConfig source)
+        {
+            if (source == null)
+            {
+                return new FossickSmallCoinDropConfig();
+            }
+
+            return new FossickSmallCoinDropConfig
+            {
+                enabled = source.enabled,
+                coinId = string.IsNullOrEmpty(source.coinId) ? "coin_pile" : source.coinId,
+                chancePerMille = source.chancePerMille,
+                amounts = source.amounts == null
+                    ? new List<FossickWeightedAmountConfig>()
+                    : source.amounts.ConvertAll(amount => amount == null
+                        ? null
+                        : new FossickWeightedAmountConfig
+                        {
+                            amount = amount.amount,
+                            weight = amount.weight
+                        })
+            };
+        }
+
+        private static FossickSmallCoinDropConfig EnsureSmallCoinDropConfig(FossickGenerationConfig generation)
+        {
+            if (generation.smallCoinDrop == null)
+            {
+                generation.smallCoinDrop = new FossickSmallCoinDropConfig();
+            }
+
+            if (generation.smallCoinDrop.amounts == null)
+            {
+                generation.smallCoinDrop.amounts = new List<FossickWeightedAmountConfig>();
+            }
+
+            if (generation.smallCoinDrop.amounts.Count == 0)
+            {
+                generation.smallCoinDrop.amounts.Add(new FossickWeightedAmountConfig { amount = 5, weight = 5 });
+                generation.smallCoinDrop.amounts.Add(new FossickWeightedAmountConfig { amount = 10, weight = 3 });
+                generation.smallCoinDrop.amounts.Add(new FossickWeightedAmountConfig { amount = 20, weight = 1 });
+            }
+
+            if (string.IsNullOrEmpty(generation.smallCoinDrop.coinId))
+            {
+                generation.smallCoinDrop.coinId = "coin_pile";
+            }
+
+            return generation.smallCoinDrop;
+        }
+
+        private static string FormatSmallCoinDropSummary(FossickSmallCoinDropConfig smallCoinDrop)
+        {
+            if (smallCoinDrop == null || !smallCoinDrop.enabled)
+            {
+                return "普通障碍小金币：关闭。";
+            }
+
+            return $"普通障碍小金币：破坏无内容物土/石时 {smallCoinDrop.chancePerMille}‰ 掉落；数量池 {FormatWeightedAmounts(smallCoinDrop.amounts)}。";
+        }
+
+        private static string FormatWeightedAmounts(List<FossickWeightedAmountConfig> amounts)
+        {
+            if (amounts == null || amounts.Count == 0)
+            {
+                return "未配置";
+            }
+
+            var parts = new List<string>();
+            for (var i = 0; i < amounts.Count; i++)
+            {
+                var entry = amounts[i];
+                if (entry == null || entry.amount <= 0 || entry.weight <= 0)
+                {
+                    continue;
+                }
+
+                parts.Add($"{entry.amount}x{entry.weight}");
+            }
+
+            return parts.Count == 0 ? "未配置" : string.Join(" / ", parts);
         }
 
         private int GetDifficultyCount(FossickGenerationConfig generation, int difficulty)
@@ -2347,6 +2451,7 @@ namespace Fossick.MapStudio.Views
                 selectedTerrain = selectedTerrain,
                 selectedRewardType = selectedRewardType,
                 selectedRewardId = selectedRewardId,
+                selectedRewardAmount = selectedRewardAmountOverride,
                 selectedRewardBackgroundId = selectedRewardBackgroundId,
                 selectedRewardBackgroundWidth = selectedRewardBackgroundWidth,
                 selectedRewardBackgroundHeight = selectedRewardBackgroundHeight,
@@ -2386,10 +2491,11 @@ namespace Fossick.MapStudio.Views
             Build();
         }
 
-        private void SelectRewardBrush(FossickElementType type, string id, string label)
+        private void SelectRewardBrush(FossickElementType type, string id, string label, int amountOverride)
         {
             selectedRewardType = type;
             selectedRewardId = id;
+            selectedRewardAmountOverride = amountOverride;
             ClearPendingPaint();
             editNotice = $"{FormatBrushMode(selectedBrushMode)}画笔已切换为 {label}。";
             Build();
@@ -2438,13 +2544,15 @@ namespace Fossick.MapStudio.Views
         {
             if (mode == FossickBrushMode.Reward && selectedRewardType == FossickElementType.Item)
             {
-                selectedRewardType = FossickElementType.Coin;
-                selectedRewardId = "coin_pile";
+                selectedRewardType = FossickElementType.Ore;
+                selectedRewardId = "ore_copper";
+                selectedRewardAmountOverride = 0;
             }
             else if (mode == FossickBrushMode.Tool && selectedRewardType != FossickElementType.Item && selectedRewardType != FossickElementType.None)
             {
                 selectedRewardType = FossickElementType.Item;
                 selectedRewardId = "pickaxe";
+                selectedRewardAmountOverride = 0;
             }
             else if (mode == FossickBrushMode.RewardBackground && selectedRewardBackgroundWidth <= 0 && !string.IsNullOrEmpty(selectedRewardBackgroundId))
             {
@@ -3490,7 +3598,9 @@ namespace Fossick.MapStudio.Views
             {
                 type = selectedRewardType,
                 id = string.IsNullOrEmpty(selectedRewardId) ? GetDefaultRewardId(selectedRewardType) : selectedRewardId,
-                amount = GetDefaultRewardAmount(selectedRewardType, selectedRewardId)
+                amount = selectedRewardAmountOverride > 0
+                    ? selectedRewardAmountOverride
+                    : GetDefaultRewardAmount(selectedRewardType, selectedRewardId)
             };
         }
 
@@ -4086,8 +4196,6 @@ namespace Fossick.MapStudio.Views
             {
                 case FossickElementType.Coin:
                     return new Color(1f, 0.72f, 0.12f, 0.9f);
-                case FossickElementType.Score:
-                    return new Color(0.35f, 0.78f, 1f, 0.9f);
                 case FossickElementType.Ore:
                     return new Color(0.95f, 0.55f, 0.18f, 0.9f);
                 case FossickElementType.Item:
@@ -4204,8 +4312,6 @@ namespace Fossick.MapStudio.Views
                     return "矿石";
                 case FossickElementType.Coin:
                     return "金币";
-                case FossickElementType.Score:
-                    return "积分";
                 case FossickElementType.Collection:
                     return "收藏品";
                 case FossickElementType.Item:
@@ -4234,25 +4340,22 @@ namespace Fossick.MapStudio.Views
                 }
             }
 
+            if (type == FossickElementType.Coin)
+            {
+                return "藏宝阁金币";
+            }
+
             if (type == FossickElementType.Ore)
             {
                 switch (id)
                 {
                     case "ore_copper":
-                    case "copper":
                         return "铜矿";
                     case "ore_silver":
-                    case "silver":
-                    case "ore_blue":
                         return "银矿";
                     case "ore_gold":
-                    case "gold":
-                    case "ore_yellow":
                         return "金矿";
                     case "ore_gem":
-                    case "gem":
-                    case "ore_crystal":
-                    case "crystal":
                         return "宝石矿";
                 }
             }
@@ -4268,8 +4371,6 @@ namespace Fossick.MapStudio.Views
                     return "ore_copper";
                 case FossickElementType.Coin:
                     return "coin_pile";
-                case FossickElementType.Score:
-                    return "score_gem";
                 case FossickElementType.Collection:
                     return "collection_piece";
                 case FossickElementType.Item:
@@ -4292,8 +4393,6 @@ namespace Fossick.MapStudio.Views
             {
                 case FossickElementType.Coin:
                     return 100;
-                case FossickElementType.Score:
-                    return 10;
                 case FossickElementType.Ore:
                     return GetOreScoreValue(id);
                 default:
@@ -4306,21 +4405,12 @@ namespace Fossick.MapStudio.Views
             switch (id)
             {
                 case "ore_copper":
-                case "copper":
-                case "ore_orange":
                     return 10;
                 case "ore_silver":
-                case "silver":
-                case "ore_blue":
                     return 20;
                 case "ore_gem":
-                case "gem":
-                case "ore_crystal":
-                case "crystal":
                     return 30;
                 case "ore_gold":
-                case "gold":
-                case "ore_yellow":
                     return 50;
                 default:
                     return 10;
@@ -4386,15 +4476,10 @@ namespace Fossick.MapStudio.Views
                 case "tnt":
                 case "radar":
                 case "coin_pile":
-                case "score_gem":
                 case "ore_copper":
-                case "ore_orange":
                 case "ore_silver":
-                case "ore_blue":
                 case "ore_gold":
-                case "ore_yellow":
                 case "ore_gem":
-                case "ore_crystal":
                 case "treasure_chest":
                 case "collection_piece":
                     return true;
@@ -4462,8 +4547,6 @@ namespace Fossick.MapStudio.Views
             {
                 case FossickElementType.Coin:
                     return "G";
-                case FossickElementType.Score:
-                    return "$";
                 case FossickElementType.Ore:
                     return "O";
                 case FossickElementType.Item:

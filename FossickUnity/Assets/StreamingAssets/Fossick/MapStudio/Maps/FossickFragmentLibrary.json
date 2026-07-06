@@ -550,7 +550,7 @@
                     "hp": 1,
                     "reward": {
                         "type": 1,
-                        "id": "copper",
+                        "id": "ore_copper",
                         "amount": 10
                     },
                     "decorations": [],
@@ -1485,7 +1485,7 @@
                     "hp": 1,
                     "reward": {
                         "type": 1,
-                        "id": "copper",
+                        "id": "ore_copper",
                         "amount": 10
                     },
                     "decorations": [],
@@ -2420,7 +2420,7 @@
                     "hp": 1,
                     "reward": {
                         "type": 1,
-                        "id": "copper",
+                        "id": "ore_copper",
                         "amount": 10
                     },
                     "decorations": [],
@@ -3355,7 +3355,7 @@
                     "hp": 1,
                     "reward": {
                         "type": 1,
-                        "id": "copper",
+                        "id": "ore_copper",
                         "amount": 10
                     },
                     "decorations": [],

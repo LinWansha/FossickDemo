@@ -24,6 +24,7 @@ namespace Fossick.MapStudio.Views
             public FossickTerrainType selectedTerrain;
             public FossickElementType selectedRewardType;
             public string selectedRewardId;
+            public int selectedRewardAmount;
             public string selectedRewardBackgroundId;
             public int selectedRewardBackgroundWidth;
             public int selectedRewardBackgroundHeight;
@@ -35,7 +36,7 @@ namespace Fossick.MapStudio.Views
         {
             public Action<FossickBrushMode> selectBrushMode;
             public Action<FossickTerrainType> selectTerrain;
-            public Action<FossickElementType, string, string> selectReward;
+            public Action<FossickElementType, string, string, int> selectReward;
             public Action<string, string, int, int> selectRewardBackground;
             public Action<string, string> selectDecoration;
             public Action<FossickFogType, string> selectFog;
@@ -74,7 +75,9 @@ namespace Fossick.MapStudio.Views
             if (state.selectedBrushMode == FossickBrushMode.Reward)
             {
                 AddRewardBrushTile(parent, state, callbacks, FossickElementType.None, "清空", null);
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Coin, "金币", "coin_pile");
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Coin, "金币 100", "coin_pile", 100);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Coin, "金币 300", "coin_pile", 300);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Coin, "金币 600", "coin_pile", 600);
                 AddRewardBrushTile(parent, state, callbacks, FossickElementType.Ore, "铜矿", "ore_copper");
                 AddRewardBrushTile(parent, state, callbacks, FossickElementType.Ore, "银矿", "ore_silver");
                 AddRewardBrushTile(parent, state, callbacks, FossickElementType.Ore, "金矿", "ore_gold");
@@ -128,22 +131,26 @@ namespace Fossick.MapStudio.Views
             });
         }
 
-        private void AddRewardBrushTile(RectTransform parent, State state, Callbacks callbacks, FossickElementType type, string label, string rewardId)
+        private void AddRewardBrushTile(RectTransform parent, State state, Callbacks callbacks, FossickElementType type, string label, string rewardId, int amountOverride = 0)
         {
             var id = rewardId ?? GetDefaultRewardId(type);
-            var selected = state.selectedRewardType == type && state.selectedRewardId == id && (state.selectedBrushMode == FossickBrushMode.Reward || state.selectedBrushMode == FossickBrushMode.Tool);
+            var amount = amountOverride > 0 ? amountOverride : GetDefaultRewardAmount(type, id);
+            var selected = state.selectedRewardType == type
+                && state.selectedRewardId == id
+                && (type != FossickElementType.Coin || state.selectedRewardAmount == amount)
+                && (state.selectedBrushMode == FossickBrushMode.Reward || state.selectedBrushMode == FossickBrushMode.Tool);
             var sprite = type == FossickElementType.None
                 ? null
                 : FossickArtLibrary.GetRewardSprite(new FossickElementConfig
                 {
                     type = type,
                     id = id,
-                    amount = GetDefaultRewardAmount(type, id)
+                    amount = amount
                 });
 
             AddBrushTile(parent, label, selected, type == FossickElementType.None ? null : sprite, type == FossickElementType.None ? "×" : null, type == FossickElementType.None ? new Color(0.11f, 0.13f, 0.15f) : GetRewardColor(type), () =>
             {
-                callbacks.selectReward?.Invoke(type, id, label);
+                callbacks.selectReward?.Invoke(type, id, label, amountOverride);
             });
         }
 

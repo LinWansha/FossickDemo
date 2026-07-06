@@ -90,6 +90,55 @@ namespace Fossick.Core.Validation
             {
                 result.Add(FossickValidationSeverity.Error, $"Difficulty counts total {total}, but regular group size is {generation.regularGroupSize}.", category: FossickValidationCategory.GenerationRules);
             }
+
+            ValidateSmallCoinDrop(generation.smallCoinDrop, result);
+        }
+
+        private static void ValidateSmallCoinDrop(FossickSmallCoinDropConfig smallCoinDrop, FossickValidationResult result)
+        {
+            if (smallCoinDrop == null || !smallCoinDrop.enabled)
+            {
+                return;
+            }
+
+            if (smallCoinDrop.chancePerMille <= 0 || smallCoinDrop.chancePerMille > 1000)
+            {
+                result.Add(FossickValidationSeverity.Error, "Small coin drop chance must be between 1 and 1000 per mille.", category: FossickValidationCategory.GenerationRules);
+            }
+
+            if (smallCoinDrop.amounts == null || smallCoinDrop.amounts.Count == 0)
+            {
+                result.Add(FossickValidationSeverity.Error, "Small coin drop needs at least one amount entry.", category: FossickValidationCategory.GenerationRules);
+                return;
+            }
+
+            var hasValidAmount = false;
+            for (var i = 0; i < smallCoinDrop.amounts.Count; i++)
+            {
+                var entry = smallCoinDrop.amounts[i];
+                if (entry == null)
+                {
+                    result.Add(FossickValidationSeverity.Error, "Small coin drop amount entry is null.", category: FossickValidationCategory.GenerationRules);
+                    continue;
+                }
+
+                if (entry.amount <= 0)
+                {
+                    result.Add(FossickValidationSeverity.Error, "Small coin drop amount must be greater than zero.", category: FossickValidationCategory.GenerationRules);
+                }
+
+                if (entry.weight <= 0)
+                {
+                    result.Add(FossickValidationSeverity.Error, "Small coin drop amount weight must be greater than zero.", category: FossickValidationCategory.GenerationRules);
+                }
+
+                hasValidAmount |= entry.amount > 0 && entry.weight > 0;
+            }
+
+            if (!hasValidAmount)
+            {
+                result.Add(FossickValidationSeverity.Error, "Small coin drop must contain at least one valid weighted amount.", category: FossickValidationCategory.GenerationRules);
+            }
         }
 
         private static void ValidateFragments(FossickMapConfig config, FossickValidationResult result)

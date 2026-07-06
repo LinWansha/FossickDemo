@@ -151,6 +151,7 @@ namespace Fossick.Core.Config
                 prefetchVisibleScreens = source.prefetchVisibleScreens,
                 minimumRowsAhead = source.minimumRowsAhead,
                 retainRowsBehind = source.retainRowsBehind,
+                smallCoinDrop = CloneSmallCoinDrop(source.smallCoinDrop),
                 difficultyCounts = source.difficultyCounts == null
                     ? new List<FossickDifficultyCount>()
                     : source.difficultyCounts
@@ -162,31 +163,44 @@ namespace Fossick.Core.Config
 
             return clone;
         }
+
+        private static FossickSmallCoinDropConfig CloneSmallCoinDrop(FossickSmallCoinDropConfig source)
+        {
+            if (source == null)
+            {
+                return new FossickSmallCoinDropConfig();
+            }
+
+            return new FossickSmallCoinDropConfig
+            {
+                enabled = source.enabled,
+                coinId = string.IsNullOrEmpty(source.coinId) ? "coin_pile" : source.coinId,
+                chancePerMille = source.chancePerMille,
+                amounts = source.amounts == null
+                    ? new List<FossickWeightedAmountConfig>()
+                    : source.amounts
+                        .Select(amount => amount == null
+                            ? null
+                            : new FossickWeightedAmountConfig
+                            {
+                                amount = amount.amount,
+                                weight = amount.weight
+                            })
+                        .ToList()
+            };
+        }
     }
 
     [Serializable]
     public sealed class FossickToolRulesConfig
     {
-        public FossickToolShapeConfig dynamite = FossickToolShapeConfig.CreateCross();
         public FossickToolShapeConfig tnt = FossickToolShapeConfig.CreateSquare(1);
-        public FossickToolShapeConfig radar = FossickToolShapeConfig.CreateDiamond(2);
     }
 
     [Serializable]
     public sealed class FossickToolShapeConfig
     {
         public List<FossickToolOffset> offsets = new List<FossickToolOffset>();
-
-        public static FossickToolShapeConfig CreateCross()
-        {
-            var shape = new FossickToolShapeConfig();
-            shape.offsets.Add(new FossickToolOffset { x = 0, y = 0 });
-            shape.offsets.Add(new FossickToolOffset { x = 1, y = 0 });
-            shape.offsets.Add(new FossickToolOffset { x = -1, y = 0 });
-            shape.offsets.Add(new FossickToolOffset { x = 0, y = 1 });
-            shape.offsets.Add(new FossickToolOffset { x = 0, y = -1 });
-            return shape;
-        }
 
         public static FossickToolShapeConfig CreateSquare(int radius)
         {
@@ -196,23 +210,6 @@ namespace Fossick.Core.Config
                 for (var x = -radius; x <= radius; x++)
                 {
                     shape.offsets.Add(new FossickToolOffset { x = x, y = y });
-                }
-            }
-
-            return shape;
-        }
-
-        public static FossickToolShapeConfig CreateDiamond(int radius)
-        {
-            var shape = new FossickToolShapeConfig();
-            for (var y = -radius; y <= radius; y++)
-            {
-                for (var x = -radius; x <= radius; x++)
-                {
-                    if (Math.Abs(x) + Math.Abs(y) <= radius)
-                    {
-                        shape.offsets.Add(new FossickToolOffset { x = x, y = y });
-                    }
                 }
             }
 
@@ -242,10 +239,32 @@ namespace Fossick.Core.Config
         public int prefetchVisibleScreens = 4;
         public int minimumRowsAhead = 24;
         public int retainRowsBehind = 12;
+        public FossickSmallCoinDropConfig smallCoinDrop = new FossickSmallCoinDropConfig();
         [NonSerialized]
         public List<FossickSequenceOverrideConfig> sequenceOverrides = new List<FossickSequenceOverrideConfig>();
         [NonSerialized]
         public List<FossickRowOverrideConfig> rowOverrides = new List<FossickRowOverrideConfig>();
+    }
+
+    [Serializable]
+    public sealed class FossickSmallCoinDropConfig
+    {
+        public bool enabled;
+        public string coinId = "coin_pile";
+        public int chancePerMille;
+        public List<FossickWeightedAmountConfig> amounts = new List<FossickWeightedAmountConfig>
+        {
+            new FossickWeightedAmountConfig { amount = 5, weight = 5 },
+            new FossickWeightedAmountConfig { amount = 10, weight = 3 },
+            new FossickWeightedAmountConfig { amount = 20, weight = 1 }
+        };
+    }
+
+    [Serializable]
+    public sealed class FossickWeightedAmountConfig
+    {
+        public int amount;
+        public int weight = 1;
     }
 
     [Serializable]

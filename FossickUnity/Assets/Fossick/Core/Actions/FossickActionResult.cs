@@ -9,6 +9,7 @@ namespace Fossick.Core.Actions
         public int targetX;
         public int targetY;
         public bool isApplied;
+        public bool isCollectOnly;
         public bool toolConsumed;
         public string invalidReason;
         public readonly List<FossickActionStep> steps = new List<FossickActionStep>();

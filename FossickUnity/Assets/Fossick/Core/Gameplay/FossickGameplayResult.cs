@@ -1,5 +1,6 @@
 using Fossick.Core.Actions;
 using Fossick.Core.Config;
+using Fossick.Core.Presentation;
 
 namespace Fossick.Core.Gameplay
 {
@@ -9,6 +10,7 @@ namespace Fossick.Core.Gameplay
         public bool notEnoughTool;
         public bool actionWasApplied;
         public FossickActionResult action;
+        public FossickPresentationPlan presentation;
         public int scoreBefore;
         public int scoreAfter;
     }

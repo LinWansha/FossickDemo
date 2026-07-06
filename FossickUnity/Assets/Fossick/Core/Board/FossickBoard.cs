@@ -757,15 +757,10 @@ namespace Fossick.Core.Board
                 case "tnt":
                 case "radar":
                 case "coin_pile":
-                case "score_gem":
                 case "ore_copper":
-                case "ore_orange":
                 case "ore_silver":
-                case "ore_blue":
                 case "ore_gold":
-                case "ore_yellow":
                 case "ore_gem":
-                case "ore_crystal":
                 case "treasure_chest":
                 case "collection_piece":
                     return true;

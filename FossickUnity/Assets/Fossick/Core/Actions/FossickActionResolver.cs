@@ -1,12 +1,15 @@
 using System.Collections.Generic;
 using Fossick.Core.Board;
 using Fossick.Core.Config;
+using Fossick.Core.Generation;
 
 namespace Fossick.Core.Actions
 {
     public sealed class FossickActionResolver
     {
         private readonly FossickToolRulesConfig toolRules;
+        private readonly FossickSmallCoinDropConfig smallCoinDrop;
+        private readonly int seed;
 
         public FossickActionResolver()
             : this(null)
@@ -14,13 +17,51 @@ namespace Fossick.Core.Actions
         }
 
         public FossickActionResolver(FossickToolRulesConfig toolRules)
+            : this(toolRules, null, 0)
+        {
+        }
+
+        public FossickActionResolver(FossickToolRulesConfig toolRules, FossickSmallCoinDropConfig smallCoinDrop, int seed)
         {
             this.toolRules = toolRules ?? new FossickToolRulesConfig();
+            this.smallCoinDrop = smallCoinDrop ?? new FossickSmallCoinDropConfig();
+            this.seed = seed;
         }
 
         public FossickActionResult ResolvePickaxe(FossickBoard board, int x, int y)
         {
             return ResolveTool(board, FossickToolType.Pickaxe, x, y);
+        }
+
+        public FossickActionResult ResolveCollectReward(FossickBoard board, FossickToolType sourceToolType, int x, int y)
+        {
+            var result = new FossickActionResult
+            {
+                toolType = sourceToolType,
+                targetX = x,
+                targetY = y,
+                isCollectOnly = true,
+                depthBeforeAction = board == null ? 0 : board.Depth,
+                depthAfterAction = board == null ? 0 : board.Depth
+            };
+
+            if (board == null)
+            {
+                MarkInvalid(result, x, y, "Board is null.");
+                return result;
+            }
+
+            var cell = board.GetCell(x, y);
+            if (cell == null || cell.fog != FossickFogType.None || !cell.HasSpawnedReward)
+            {
+                MarkInvalid(result, x, y, "Target cell has no collectable reward entity.");
+                result.depthAfterAction = board.Depth;
+                return result;
+            }
+
+            result.isApplied = CollectReward(cell, result);
+            FinishToolOperation(board, result, sourceToolType, x, y);
+            return result;
         }
 
         public IReadOnlyList<FossickToolTarget> GetToolPreview(FossickBoard board, FossickToolType toolType, int x, int y)
@@ -120,7 +161,7 @@ namespace Fossick.Core.Actions
             return toolType == FossickToolType.Tnt ? 2 : 1;
         }
 
-        private static bool ApplyCellEffect(FossickCellState cell, FossickActionResult result, bool consumeTool, bool invalidWhenNoEffect, bool collectSpawnedReward, int damage)
+        private bool ApplyCellEffect(FossickCellState cell, FossickActionResult result, bool consumeTool, bool invalidWhenNoEffect, bool collectSpawnedReward, int damage)
         {
             if (cell == null)
             {
@@ -160,6 +201,8 @@ namespace Fossick.Core.Actions
                 changed = true;
                 if (cell.hp <= 0)
                 {
+                    var canDropSmallCoin = cell.reward == null || cell.reward.type == FossickElementType.None;
+                    var brokenTerrain = cell.terrain;
                     cell.terrain = FossickTerrainType.Empty;
                     cell.hp = 0;
                     AddStep(result, FossickActionStepType.ObstacleBroken, cell.x, cell.y);
@@ -175,8 +218,17 @@ namespace Fossick.Core.Actions
                         delta.elementRevealed = delta.rewardRevealed;
                         if (delta.rewardRevealed)
                         {
-                            AddStep(result, FossickActionStepType.RewardRevealed, cell.x, cell.y);
+                            AddRewardRevealedStep(result, cell);
                         }
+                    }
+
+                    if (canDropSmallCoin && TryCreateSmallCoinDrop(cell, brokenTerrain, out var smallCoin))
+                    {
+                        cell.reward = smallCoin;
+                        cell.collected = false;
+                        delta.rewardRevealed = true;
+                        delta.elementRevealed = true;
+                        AddRewardRevealedStep(result, cell);
                     }
                 }
             }
@@ -211,6 +263,91 @@ namespace Fossick.Core.Actions
             }
 
             return result.isApplied;
+        }
+
+        private bool TryCreateSmallCoinDrop(FossickCellState cell, FossickTerrainType brokenTerrain, out FossickElementConfig reward)
+        {
+            reward = null;
+            if (cell == null || smallCoinDrop == null || !smallCoinDrop.enabled || smallCoinDrop.chancePerMille <= 0)
+            {
+                return false;
+            }
+
+            if (brokenTerrain != FossickTerrainType.Dirt && brokenTerrain != FossickTerrainType.Stone)
+            {
+                return false;
+            }
+
+            var random = CreateCellRandom(cell, 0x41C64E6D);
+            var chance = smallCoinDrop.chancePerMille > 1000 ? 1000 : smallCoinDrop.chancePerMille;
+            if (random.RangeInclusive(1, 1000) > chance)
+            {
+                return false;
+            }
+
+            reward = new FossickElementConfig
+            {
+                type = FossickElementType.Coin,
+                id = string.IsNullOrEmpty(smallCoinDrop.coinId) ? "coin_pile" : smallCoinDrop.coinId,
+                amount = PickSmallCoinAmount(cell)
+            };
+            return true;
+        }
+
+        private int PickSmallCoinAmount(FossickCellState cell)
+        {
+            var amounts = smallCoinDrop == null ? null : smallCoinDrop.amounts;
+            if (amounts == null || amounts.Count == 0)
+            {
+                return 1;
+            }
+
+            var totalWeight = 0;
+            for (var i = 0; i < amounts.Count; i++)
+            {
+                var entry = amounts[i];
+                if (entry != null && entry.amount > 0 && entry.weight > 0)
+                {
+                    totalWeight += entry.weight;
+                }
+            }
+
+            if (totalWeight <= 0)
+            {
+                return 1;
+            }
+
+            var random = CreateCellRandom(cell, unchecked((int)0x9E3779B9));
+            var roll = random.RangeInclusive(1, totalWeight);
+            var cursor = 0;
+            for (var i = 0; i < amounts.Count; i++)
+            {
+                var entry = amounts[i];
+                if (entry == null || entry.amount <= 0 || entry.weight <= 0)
+                {
+                    continue;
+                }
+
+                cursor += entry.weight;
+                if (roll <= cursor)
+                {
+                    return entry.amount;
+                }
+            }
+
+            return 1;
+        }
+
+        private FossickSeededRandom CreateCellRandom(FossickCellState cell, int salt)
+        {
+            unchecked
+            {
+                var mixed = seed;
+                mixed = mixed * 397 ^ (cell == null ? 0 : cell.x);
+                mixed = mixed * 397 ^ (cell == null ? 0 : cell.y);
+                mixed = mixed * 397 ^ salt;
+                return new FossickSeededRandom(seed, mixed);
+            }
         }
 
         private static void ApplyRadarReveal(FossickCellState cell, FossickActionResult result)
@@ -250,7 +387,7 @@ namespace Fossick.Core.Actions
                 AddFogRevealDeltas(board.RefreshFogFromOpenSpace(), result);
                 result.scrolled = true;
                 result.scrollCount++;
-                AddStep(result, FossickActionStepType.BoardScrolled, x, y);
+                AddBoardScrolledStep(result, x, y);
             }
         }
 
@@ -281,7 +418,7 @@ namespace Fossick.Core.Actions
             }
         }
 
-        private static void AddFogRevealDeltas(List<FossickFogReveal> reveals, FossickActionResult result)
+        public static void AddFogRevealDeltas(List<FossickFogReveal> reveals, FossickActionResult result)
         {
             if (reveals == null || result == null)
             {
@@ -305,6 +442,11 @@ namespace Fossick.Core.Actions
                 });
                 AddStep(result, FossickActionStepType.FogRevealed, reveal.x, reveal.y);
             }
+        }
+
+        public static void AddBoardScrolledStep(FossickActionResult result, int x, int y)
+        {
+            AddStep(result, FossickActionStepType.BoardScrolled, x, y);
         }
 
         private void AddToolTargets(FossickBoard board, FossickToolType toolType, int x, int y, List<FossickToolTarget> targets)
@@ -469,6 +611,24 @@ namespace Fossick.Core.Actions
             result.steps.Add(new FossickActionStep
             {
                 type = FossickActionStepType.RewardMissed,
+                x = cell.x,
+                y = cell.y,
+                elementType = cell.reward.type,
+                id = cell.reward.id,
+                amount = cell.reward.amount
+            });
+        }
+
+        private static void AddRewardRevealedStep(FossickActionResult result, FossickCellState cell)
+        {
+            if (result == null || cell == null || cell.reward == null)
+            {
+                return;
+            }
+
+            result.steps.Add(new FossickActionStep
+            {
+                type = FossickActionStepType.RewardRevealed,
                 x = cell.x,
                 y = cell.y,
                 elementType = cell.reward.type,

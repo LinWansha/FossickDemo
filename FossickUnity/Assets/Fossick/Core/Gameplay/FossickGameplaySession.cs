@@ -2,6 +2,7 @@ using Fossick.Core.Actions;
 using Fossick.Core.Board;
 using Fossick.Core.Config;
 using Fossick.Core.Generation;
+using Fossick.Core.Presentation;
 using Fossick.Core.Rewards;
 using Fossick.Core.Save;
 
@@ -31,7 +32,7 @@ namespace Fossick.Core.Gameplay
             this.seed = seed;
             this.unlimitedTools = unlimitedTools;
             generationState = new FossickGenerationState(seed);
-            actionResolver = new FossickActionResolver(this.config.tools);
+            actionResolver = new FossickActionResolver(this.config.tools, this.config.generation == null ? null : this.config.generation.smallCoinDrop, seed);
             Inventory = FossickInventoryState.FromConfig(this.config.gameplay);
             Rewards = new FossickRewardState();
             Progress = new FossickProgressState();
@@ -48,7 +49,7 @@ namespace Fossick.Core.Gameplay
             seed = save == null ? 0 : save.seed;
             this.unlimitedTools = unlimitedTools;
             generationState = save != null && save.generationState != null ? save.generationState.Clone() : new FossickGenerationState(seed);
-            actionResolver = new FossickActionResolver(this.config.tools);
+            actionResolver = new FossickActionResolver(this.config.tools, this.config.generation == null ? null : this.config.generation.smallCoinDrop, seed);
             Inventory = FossickInventoryState.FromConfig(this.config.gameplay);
             Rewards = new FossickRewardState();
             Progress = new FossickProgressState();
@@ -109,18 +110,22 @@ namespace Fossick.Core.Gameplay
             };
 
             EnsureGeneratedRowsAhead();
-            var canCollectSpawnedRewardWithoutTool = CanCollectSpawnedRewardWithoutTool(toolType, x, y);
-            if (!unlimitedTools && !canCollectSpawnedRewardWithoutTool && !Inventory.HasTool(toolType))
+            var shouldCollectSpawnedReward = CanCollectSpawnedRewardWithoutTool(x, y);
+            if (!unlimitedTools && !shouldCollectSpawnedReward && !Inventory.HasTool(toolType))
             {
                 result.notEnoughTool = true;
+                result.presentation = FossickPresentationPlanBuilder.BuildRejected(toolType, x, y, "Not enough tool.");
                 return result;
             }
 
-            var action = actionResolver.ResolveTool(Board, toolType, x, y);
+            var action = shouldCollectSpawnedReward
+                ? actionResolver.ResolveCollectReward(Board, toolType, x, y)
+                : actionResolver.ResolveTool(Board, toolType, x, y);
             result.action = action;
             result.actionWasApplied = action != null && action.isApplied;
             if (!result.actionWasApplied)
             {
+                result.presentation = FossickPresentationPlanBuilder.Build(action);
                 return result;
             }
 
@@ -136,12 +141,13 @@ namespace Fossick.Core.Gameplay
             result.scoreAfter = Rewards.score;
             EnsureGeneratedRowsAhead();
             PruneRowsBehind();
+            result.presentation = FossickPresentationPlanBuilder.Build(action);
             return result;
         }
 
-        private bool CanCollectSpawnedRewardWithoutTool(FossickToolType toolType, int x, int y)
+        private bool CanCollectSpawnedRewardWithoutTool(int x, int y)
         {
-            if (toolType != FossickToolType.Pickaxe || Board == null)
+            if (Board == null)
             {
                 return false;
             }
@@ -247,11 +253,12 @@ namespace Fossick.Core.Gameplay
                     break;
                 }
 
-                Board.RefreshFogFromOpenSpace();
+                FossickActionResolver.AddFogRevealDeltas(Board.RefreshFogFromOpenSpace(), action);
                 EnsureGeneratedRowsAhead();
                 action.scrolled = true;
                 action.scrollCount++;
                 action.depthAfterAction = Board.Depth;
+                FossickActionResolver.AddBoardScrolledStep(action, action.targetX, action.targetY);
             }
         }
 

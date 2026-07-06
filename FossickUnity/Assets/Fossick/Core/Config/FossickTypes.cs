@@ -20,7 +20,6 @@ namespace Fossick.Core.Config
         None = 0,
         Ore = 1,
         Coin = 2,
-        Score = 3,
         Collection = 4,
         Item = 5,
         Chest = 6

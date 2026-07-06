@@ -156,7 +156,7 @@ namespace Fossick.Preview.Controllers
                 return;
             }
 
-            var prefix = FormatToolName(result.toolType) + $" ({result.targetX},{result.targetY})";
+            var prefix = result.isCollectOnly ? "拾取" : FormatToolName(result.toolType) + $" ({result.targetX},{result.targetY})";
             if (result.steps.Count == 0 || result.steps[0].type == FossickActionStepType.InvalidTarget)
             {
                 AddLog(prefix + " 无效目标。");
@@ -222,8 +222,6 @@ namespace Fossick.Preview.Controllers
             {
                 case Fossick.Core.Config.FossickElementType.Coin:
                     return "金币";
-                case Fossick.Core.Config.FossickElementType.Score:
-                    return "积分";
                 case Fossick.Core.Config.FossickElementType.Collection:
                     return "收藏品";
                 case Fossick.Core.Config.FossickElementType.Item:

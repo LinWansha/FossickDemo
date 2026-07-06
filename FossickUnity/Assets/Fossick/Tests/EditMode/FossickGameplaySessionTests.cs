@@ -1,5 +1,6 @@
 using Fossick.Core.Config;
 using Fossick.Core.Gameplay;
+using Fossick.Core.Presentation;
 using NUnit.Framework;
 
 namespace Fossick.Core.Tests
@@ -18,6 +19,8 @@ namespace Fossick.Core.Tests
             Assert.That(breakResult.notEnoughTool, Is.False);
             Assert.That(breakResult.action.rewards, Is.Empty);
             Assert.That(breakResult.action.steps.Exists(step => step.type == Fossick.Core.Actions.FossickActionStepType.RewardRevealed), Is.True);
+            Assert.That(breakResult.presentation, Is.Not.Null);
+            Assert.That(breakResult.presentation.events.Exists(step => step.type == FossickPresentationEventType.RewardSpawned && step.elementType == FossickElementType.Ore && step.amount == 15), Is.True);
             Assert.That(session.Inventory.pickaxes, Is.EqualTo(2));
             Assert.That(session.Rewards.score, Is.EqualTo(0));
             Assert.That(session.Board.GetCell(0, 0).terrain, Is.EqualTo(FossickTerrainType.Empty));
@@ -28,6 +31,7 @@ namespace Fossick.Core.Tests
 
             Assert.That(collectResult.action.rewards.Count, Is.EqualTo(1));
             Assert.That(collectResult.action.rewards[0].elementType, Is.EqualTo(FossickElementType.Ore));
+            Assert.That(collectResult.presentation.events.Exists(step => step.type == FossickPresentationEventType.RewardCollected && step.elementType == FossickElementType.Ore && step.amount == 15), Is.True);
             Assert.That(session.Inventory.pickaxes, Is.EqualTo(2));
             Assert.That(session.Rewards.score, Is.EqualTo(15));
             Assert.That(session.Board.GetCell(0, 0).HasSpawnedReward, Is.False);
@@ -64,6 +68,42 @@ namespace Fossick.Core.Tests
             Assert.That(collectResult.actionWasApplied, Is.True);
             Assert.That(session.Inventory.pickaxes, Is.EqualTo(0));
             Assert.That(session.Rewards.score, Is.EqualTo(15));
+        }
+
+        [Test]
+        public void UseTool_WhenInventoryIsEmpty_ReturnsRejectedPresentationPlan()
+        {
+            var config = CreateConfigWithSingleReward(FossickElementType.Ore, "copper", 15);
+            config.gameplay.startingPickaxes = 0;
+            var session = new FossickGameplaySession(config, 12345, 8);
+
+            var result = session.UseTool(FossickToolType.Pickaxe, 0, 0);
+
+            Assert.That(result.notEnoughTool, Is.True);
+            Assert.That(result.presentation, Is.Not.Null);
+            Assert.That(result.presentation.isApplied, Is.False);
+            Assert.That(result.presentation.events.Count, Is.EqualTo(1));
+            Assert.That(result.presentation.events[0].type, Is.EqualTo(FossickPresentationEventType.InvalidTarget));
+        }
+
+        [Test]
+        public void UseTool_WhenSpawnedRewardIsClickedWithAnySelectedTool_CollectsWithoutConsumingTool()
+        {
+            var config = CreateConfigWithSingleReward(FossickElementType.Ore, "copper", 15);
+            config.gameplay.startingPickaxes = 1;
+            config.gameplay.startingTnt = 2;
+            var session = new FossickGameplaySession(config, 12345, 8);
+
+            var breakResult = session.UseTool(FossickToolType.Pickaxe, 0, 0);
+            var collectResult = session.UseTool(FossickToolType.Tnt, 0, 0);
+
+            Assert.That(breakResult.actionWasApplied, Is.True);
+            Assert.That(collectResult.actionWasApplied, Is.True);
+            Assert.That(collectResult.action.isCollectOnly, Is.True);
+            Assert.That(collectResult.action.toolConsumed, Is.False);
+            Assert.That(session.Inventory.tnt, Is.EqualTo(2));
+            Assert.That(session.Rewards.score, Is.EqualTo(15));
+            Assert.That(session.Board.GetCell(0, 0).HasSpawnedReward, Is.False);
         }
 
         [Test]
