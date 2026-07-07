@@ -1,5 +1,5 @@
 using System.IO;
-using Fossick.Core.Serialization;
+using Fossick.Core.Definition.Serialization;
 using UnityEditor;
 using UnityEngine;
 

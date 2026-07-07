@@ -28,7 +28,7 @@
         "smallCoinDrop": {
             "enabled": true,
             "coinId": "coin_pile",
-            "chancePerMille": 80,
+            "chancePerMille": 60,
             "amounts": [
                 {
                     "amount": 5,

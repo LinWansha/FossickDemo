@@ -1,4 +1,4 @@
-using Fossick.Core.Config;
+using Fossick.Core.Definition.Config;
 
 namespace Fossick.Core.Generation
 {

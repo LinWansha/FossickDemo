@@ -1,6 +1,6 @@
-using Fossick.Core.Config;
-using Fossick.Core.Serialization;
-using Fossick.Core.Validation;
+using Fossick.Core.Definition.Config;
+using Fossick.Core.Definition.Serialization;
+using Fossick.Core.Definition.Validation;
 using System;
 using UnityEngine;
 

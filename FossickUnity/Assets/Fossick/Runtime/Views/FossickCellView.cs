@@ -1,7 +1,5 @@
 using System;
-using Fossick.Core.Board;
-using Fossick.Core.Config;
-using Fossick.Core.Visual;
+using Fossick.Core.Definition.Config;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -23,7 +21,7 @@ namespace Fossick.Runtime.Views
         public RectTransform RectTransform => (RectTransform)transform;
 
         public void Bind(
-            FossickCellState cell,
+            FossickCellRenderData cell,
             int viewX,
             int viewY,
             Font font,
@@ -81,7 +79,7 @@ namespace Fossick.Runtime.Views
             }
         }
 
-        private void BindLabel(FossickCellState cell, Font font, bool showDebugLabel)
+        private void BindLabel(FossickCellRenderData cell, Font font, bool showDebugLabel)
         {
             label.gameObject.SetActive(showDebugLabel);
             if (!showDebugLabel)
@@ -100,9 +98,9 @@ namespace Fossick.Runtime.Views
             label.color = new Color(0.92f, 0.94f, 0.95f);
         }
 
-        private static string GetCellLabel(FossickCellState cell)
+        private static string GetCellLabel(FossickCellRenderData cell)
         {
-            if (cell == null || !cell.IsContentVisible)
+            if (cell == null || !cell.isContentVisible)
             {
                 return "?";
             }
@@ -116,7 +114,7 @@ namespace Fossick.Runtime.Views
                 case FossickTerrainType.Unbreakable:
                     return "X";
                 default:
-                    return cell.HasCollectableReward ? GetRewardLabel(cell.reward.type) : string.Empty;
+                    return cell.HasCollectableReward ? GetRewardLabel(cell.pickupPayload.ElementType) : string.Empty;
             }
         }
 

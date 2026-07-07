@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fossick.Core.Config;
+using Fossick.Core.Definition.Config;
 using Fossick.Core.Generation;
-using Fossick.Core.Serialization;
-using Fossick.Core.Validation;
+using Fossick.Core.State;
+using Fossick.Core.Definition.Serialization;
+using Fossick.Core.Definition.Validation;
 using Fossick.Core.Visual;
+using Fossick.Core.Visual.Tiling;
 using Fossick.MapStudio.Controllers;
 using Fossick.MapStudio.ImportExport;
 using UnityEngine;
@@ -3102,9 +3104,7 @@ namespace Fossick.MapStudio.Views
                         hp = cell.hp,
                         reward = cell.reward,
                         decorations = cell.decorations == null ? new List<string>() : new List<string>(cell.decorations),
-                        fog = cell.fog,
-                        element = cell.element,
-                        mask = cell.mask
+                        fog = cell.fog
                     });
             }
 
@@ -3289,7 +3289,6 @@ namespace Fossick.MapStudio.Views
                 if (cell.y == fragment.height / 2 && cell.x > 0 && cell.x < fragment.width - 1)
                 {
                     cell.reward = CreateReward(FossickElementType.Coin);
-                    cell.element = cell.reward;
                 }
             }
 
@@ -3310,7 +3309,6 @@ namespace Fossick.MapStudio.Views
                     var cell = FindOrCreateCell(fragment, x, y);
                     cell.terrain = terrain;
                     cell.hp = terrain == FossickTerrainType.Stone ? 2 : terrain == FossickTerrainType.Dirt ? 1 : 0;
-                    cell.mask = terrain != FossickTerrainType.Empty;
                     cell.fog = terrain == FossickTerrainType.Empty ? FossickFogType.None : FossickFogType.Covered;
                 }
             }
@@ -3425,11 +3423,9 @@ namespace Fossick.MapStudio.Views
             cell.terrain = FossickTerrainType.Empty;
             cell.hp = 0;
             cell.fog = FossickFogType.None;
-            cell.mask = false;
             if (IsOreReward(GetReward(cell)))
             {
                 cell.reward = null;
-                cell.element = null;
             }
         }
 
@@ -3529,11 +3525,9 @@ namespace Fossick.MapStudio.Views
             {
                 cell.terrain = selectedTerrain;
                 cell.hp = selectedTerrain == FossickTerrainType.Stone ? 2 : selectedTerrain == FossickTerrainType.Dirt ? 1 : 0;
-                cell.mask = selectedTerrain != FossickTerrainType.Empty;
                 if (!CanAttachOre(cell) && IsOreReward(GetReward(cell)))
                 {
                     cell.reward = null;
-                    cell.element = null;
                     editNotice = "当前格不再是可挖掘地形，已移除矿石。";
                 }
             }
@@ -3547,19 +3541,16 @@ namespace Fossick.MapStudio.Views
                 }
 
                 cell.reward = reward;
-                cell.element = cell.reward;
             }
             else if (selectedBrushMode == FossickBrushMode.Decoration)
             {
                 cell.decorations = string.IsNullOrEmpty(selectedDecorationId)
                     ? new List<string>()
                     : new List<string> { selectedDecorationId };
-                cell.decor = new List<string>(cell.decorations);
             }
             else if (selectedBrushMode == FossickBrushMode.Fog)
             {
                 cell.fog = selectedFog;
-                cell.mask = selectedFog == FossickFogType.Covered || cell.terrain != FossickTerrainType.Empty;
             }
             else if (selectedBrushMode == FossickBrushMode.RewardBackground)
             {
@@ -3837,10 +3828,7 @@ namespace Fossick.MapStudio.Views
                         hp = cell.hp,
                         reward = cell.reward,
                         decorations = cell.decorations == null ? new List<string>() : new List<string>(cell.decorations),
-                        fog = cell.fog,
-                        element = cell.element,
-                        decor = cell.decor == null ? new List<string>() : new List<string>(cell.decor),
-                        mask = cell.mask
+                        fog = cell.fog
                     });
                 }
             }
@@ -4419,7 +4407,7 @@ namespace Fossick.MapStudio.Views
 
         private static FossickElementConfig GetReward(FossickCellConfig cell)
         {
-            return cell == null ? null : cell.reward ?? cell.element;
+            return cell == null ? null : cell.reward;
         }
 
         private static bool IsOreReward(FossickElementConfig reward)
@@ -4439,7 +4427,7 @@ namespace Fossick.MapStudio.Views
                 return false;
             }
 
-            return HasValidDecoration(cell.decorations) || HasValidDecoration(cell.decor);
+            return HasValidDecoration(cell.decorations);
         }
 
         private static bool HasValidDecoration(List<string> ids)
@@ -4632,8 +4620,6 @@ namespace Fossick.MapStudio.Views
                     return "矿石只能埋在可挖掘地形上。";
                 case "Buried reward must be attached to diggable terrain.":
                     return "埋藏奖励或道具只能放在可挖掘地形上。";
-                case "Cell uses both legacy decor and layered decorations.":
-                    return "格子同时使用了旧装饰字段和新装饰层。";
                 case "Reward background is usually reserved for reward fragments.":
                     return "奖励层背景通常只应放在奖励碎片中。";
                 case "Reward background region shape is invalid.":

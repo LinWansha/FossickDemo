@@ -1,5 +1,6 @@
-using Fossick.Core.Config;
+using Fossick.Core.Definition.Config;
 using Fossick.Core.Generation;
+using Fossick.Core.State;
 using NUnit.Framework;
 
 namespace Fossick.Core.Tests
@@ -189,8 +190,7 @@ namespace Fossick.Core.Tests
                         y = y,
                         terrain = terrain,
                         hp = terrain == FossickTerrainType.Stone ? 2 : terrain == FossickTerrainType.Dirt ? 1 : 0,
-                        fog = terrain == FossickTerrainType.Empty ? FossickFogType.None : FossickFogType.Covered,
-                        mask = terrain != FossickTerrainType.Empty
+                        fog = terrain == FossickTerrainType.Empty ? FossickFogType.None : FossickFogType.Covered
                     });
                 }
             }

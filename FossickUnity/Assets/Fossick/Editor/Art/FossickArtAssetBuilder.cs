@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
-using Fossick.Core.Config;
+using Fossick.Core.Definition.Config;
 using Fossick.Core.Visual;
 using Fossick.Runtime.Views;
 using UnityEditor;
@@ -156,13 +156,13 @@ namespace Fossick.Editor.Art
 
         private static void ClearCatalog(FossickArtCatalog catalog)
         {
-            catalog.layer0Background ??= new FossickLayer0BackgroundCatalog();
-            catalog.layer1RewardBackground ??= new FossickLayer1RewardBackgroundCatalog();
-            catalog.layer2Terrain ??= new FossickLayer2TerrainCatalog();
-            catalog.layer3TerrainAttachment ??= new FossickLayer3TerrainAttachmentCatalog();
-            catalog.layer4Reward ??= new FossickLayer4RewardCatalog();
-            catalog.layer5Decoration ??= new FossickLayer5DecorationCatalog();
-            catalog.layer6Fog ??= new FossickLayer6FogCatalog();
+            catalog.layer0Background ??= new FossickVisualLayer0BackgroundCatalog();
+            catalog.layer1RewardBackground ??= new FossickVisualLayer1RewardBackgroundCatalog();
+            catalog.layer2Terrain ??= new FossickVisualLayer2TerrainCatalog();
+            catalog.layer3TerrainAttachment ??= new FossickVisualLayer3TerrainAttachmentCatalog();
+            catalog.layer4Reward ??= new FossickVisualLayer4RewardCatalog();
+            catalog.layer5Decoration ??= new FossickVisualLayer5DecorationCatalog();
+            catalog.layer6Fog ??= new FossickVisualLayer6FogCatalog();
 
             catalog.layer0Background.backgrounds.Clear();
             catalog.layer1RewardBackground.backgrounds.Clear();
@@ -171,13 +171,6 @@ namespace Fossick.Editor.Art
             catalog.layer4Reward.rewards.Clear();
             catalog.layer5Decoration.decorations.Clear();
             catalog.layer6Fog.autoTileSet = new FossickAutoTileSet { kind = FossickAutoTileSetKind.Fog };
-
-            catalog.autoTileSets.Clear();
-            catalog.rewardSprites.Clear();
-            catalog.terrainAttachmentSprites.Clear();
-            catalog.toolSprites.Clear();
-            catalog.decorations.Clear();
-            catalog.backgrounds.Clear();
         }
 
         private static void BuildBoardViewPrefab(FossickArtCatalog catalog, FossickCellView cellPrefab)

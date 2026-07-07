@@ -1,8 +1,9 @@
-using Fossick.Core.Actions;
-using Fossick.Core.Board;
-using Fossick.Core.Config;
-using Fossick.Core.Gameplay;
+using Fossick.Core.Application;
+using Fossick.Core.Application.Results;
+using Fossick.Core.Definition.Config;
+using Fossick.Core.Mine;
 using Fossick.Core.Visual;
+using Fossick.Core.Visual.Tiling;
 using Fossick.Preview.Controllers;
 using Fossick.Runtime.Views;
 using System;
@@ -86,7 +87,7 @@ namespace Fossick.Preview.Views
             Stretch(root);
             AddImage(root.gameObject, Background).raycastTarget = false;
 
-            if (controller == null || controller.Board == null)
+            if (controller == null || controller.Mine == null)
             {
                 DrawNotReady();
                 return;
@@ -124,7 +125,7 @@ namespace Fossick.Preview.Views
             SetTopLeft(title.GetComponent<RectTransform>(), 18f, 0f, 250f, HeaderHeight);
 
             var progress = controller.Progress;
-            AddHeaderStat(header, 292f, $"深度 {controller.Board.Depth}");
+            AddHeaderStat(header, 292f, $"深度 {controller.Mine.Depth}");
             AddHeaderStat(header, 430f, progress == null ? "矿石 0" : $"矿石 {progress.oreFound}");
             AddHeaderStat(header, 560f, progress == null ? "收藏 0" : $"收藏 {progress.collectionFound}");
             AddHeaderStat(header, 698f, progress == null ? "道具 0" : $"道具 {progress.toolUsed}");
@@ -135,24 +136,11 @@ namespace Fossick.Preview.Views
             {
                 SceneManager.LoadScene(MapStudioSceneName);
             }, false, new Color(0.24f, 0.47f, 0.72f), new Vector2(1148f, 15f));
-            AddButton(header, "保存", new Vector2(104f, 38f), () =>
-            {
-                controller.Save();
-                Build();
-            }, false, SelectedColor, new Vector2(1288f, 15f));
-            AddButton(header, controller.HasSave ? "重载" : "未保存", new Vector2(104f, 38f), () =>
-            {
-                if (controller.HasSave)
-                {
-                    controller.ReloadSaved();
-                    Build();
-                }
-            }, !controller.HasSave, controller.HasSave ? SelectedColor : new Color(0.24f, 0.26f, 0.3f), new Vector2(1404f, 15f));
             AddButton(header, "重置", new Vector2(104f, 38f), () =>
             {
                 controller.ResetPreview();
                 Build();
-            }, false, new Color(0.34f, 0.25f, 0.24f), new Vector2(1520f, 15f));
+            }, false, new Color(0.34f, 0.25f, 0.24f), new Vector2(1288f, 15f));
         }
 
         private void AddHeaderStat(RectTransform parent, float x, string label)
@@ -207,7 +195,7 @@ namespace Fossick.Preview.Views
 
             var title = AddText(panel, "矿井", 20, FontStyle.Bold, TextAnchor.MiddleLeft);
             SetTopLeft(title.GetComponent<RectTransform>(), 22f, 16f, 240f, 28f);
-            var sub = AddText(panel, $"可视窗口 {controller.Board.Spec.width} x {controller.Board.Spec.visibleHeight}，点击或触摸格子执行当前工具", 14, FontStyle.Normal, TextAnchor.MiddleLeft);
+            var sub = AddText(panel, $"可视窗口 {controller.Mine.Spec.width} x {controller.Mine.Spec.visibleHeight}，点击或触摸格子执行当前工具", 14, FontStyle.Normal, TextAnchor.MiddleLeft);
             sub.color = MutedTextColor;
             SetTopLeft(sub.GetComponent<RectTransform>(), 22f, 48f, 620f, 24f);
 
@@ -216,15 +204,14 @@ namespace Fossick.Preview.Views
 
         private void DrawBoardGrid(RectTransform parent, float panelWidth, float panelHeight)
         {
-            var board = controller.Board;
-            var rows = board.GetVisibleRows();
+            var mine = controller.Mine;
             var labelWidth = 56f;
             var gridMaxWidth = panelWidth - 120f;
             var gridMaxHeight = panelHeight - 126f;
-            var cellSize = Mathf.Floor(Mathf.Min((gridMaxWidth - labelWidth) / board.Spec.width, gridMaxHeight / board.Spec.visibleHeight));
+            var cellSize = Mathf.Floor(Mathf.Min((gridMaxWidth - labelWidth) / mine.Spec.width, gridMaxHeight / mine.Spec.visibleHeight));
             cellSize = Mathf.Clamp(cellSize, 48f, 144f);
-            var gridWidth = labelWidth + cellSize * board.Spec.width;
-            var gridHeight = cellSize * board.Spec.visibleHeight;
+            var gridWidth = labelWidth + cellSize * mine.Spec.width;
+            var gridHeight = cellSize * mine.Spec.visibleHeight;
             var startX = Mathf.Max(24f, (panelWidth - gridWidth) * 0.5f);
             var startY = 94f + Mathf.Max(0f, (gridMaxHeight - gridHeight) * 0.5f);
 
@@ -251,102 +238,7 @@ namespace Fossick.Preview.Views
                 var result = controller.UseTool(x, y);
                 PlayResultOrRebuild(result);
             };
-            boardView.Render(board, previewTargetKeys);
-        }
-
-        private void DrawRuntimeSmoothGrid(RectTransform parent, IReadOnlyList<FossickCellState[]> rows, int width, int height, float cellSize)
-        {
-            if (rows == null || rows.Count == 0 || width <= 0 || height <= 0)
-            {
-                return;
-            }
-
-            DrawRuntimeSmoothGridLayer(parent, rows, width, height, cellSize, FossickTerrainType.Dirt);
-            DrawRuntimeSmoothGridLayer(parent, rows, width, height, cellSize, FossickTerrainType.Stone);
-            DrawRuntimeSmoothGridLayer(parent, rows, width, height, cellSize, FossickTerrainType.Unbreakable);
-        }
-
-        private void DrawRuntimeSmoothGridLayer(RectTransform parent, IReadOnlyList<FossickCellState[]> rows, int width, int height, float cellSize, FossickTerrainType terrain)
-        {
-            if (!FossickArtLibrary.HasAutoTileSprites(terrain))
-            {
-                return;
-            }
-
-            for (var cornerY = 0; cornerY <= height; cornerY++)
-            {
-                for (var cornerX = 0; cornerX <= width; cornerX++)
-                {
-                    var assetIndex = FossickArtLibrary.ResolveRuntimeCornerAssetIndex(rows, cornerX, cornerY, terrain);
-                    var sprite = FossickArtLibrary.GetAutoTileSprite(terrain, assetIndex);
-                    if (sprite == null)
-                    {
-                        continue;
-                    }
-
-                    var rect = CreateRect($"{terrain} Smooth Corner {cornerX},{cornerY}-{assetIndex}", parent);
-                    SetTopLeft(
-                        rect,
-                        (cornerX - 0.5f) * cellSize - SmoothTileOverlap * 0.5f,
-                        (cornerY - 0.5f) * cellSize - SmoothTileOverlap * 0.5f,
-                        cellSize + SmoothTileOverlap,
-                        cellSize + SmoothTileOverlap);
-                    var image = AddImage(rect.gameObject, Color.white);
-                    image.raycastTarget = false;
-                    image.sprite = sprite;
-                    image.type = Image.Type.Simple;
-                    image.preserveAspect = false;
-                }
-            }
-        }
-
-        private void DrawCell(RectTransform parent, FossickCellState cell, int x, int y, float left, float top, float size)
-        {
-            var rect = CreateRect($"Cell {x},{y}", parent);
-            SetTopLeft(rect, left, top, size - 2f, size - 2f);
-            var image = AddImage(rect.gameObject, GetCellOverlayColor(cell));
-            image.raycastTarget = true;
-            cellImages[GetCellKey(x, y)] = image;
-
-            DrawRewardLayer(rect, cell, size);
-
-            var label = AddText(rect, GetCellLabel(cell), Mathf.RoundToInt(Mathf.Clamp(size * 0.18f, 12f, 22f)), FontStyle.Bold, TextAnchor.MiddleCenter);
-            Stretch(label.GetComponent<RectTransform>());
-
-            var trigger = rect.gameObject.AddComponent<EventTrigger>();
-            AddEvent(trigger, EventTriggerType.PointerEnter, _ => ShowPreview(x, y));
-            AddEvent(trigger, EventTriggerType.PointerExit, _ => ClearPreview());
-            AddEvent(trigger, EventTriggerType.PointerDown, _ => ShowPreview(x, y));
-            AddEvent(trigger, EventTriggerType.PointerClick, _ =>
-            {
-                controller.UseTool(x, y);
-                Build();
-            });
-            AddEvent(trigger, EventTriggerType.PointerUp, _ => ClearPreview());
-        }
-
-        private void DrawRewardLayer(RectTransform parent, FossickCellState cell, float size)
-        {
-            if (cell == null || !cell.IsContentVisible || !cell.HasRewardOverlay)
-            {
-                return;
-            }
-
-            var sprite = cell.HasTerrainAttachedReward
-                ? FossickArtLibrary.GetTerrainAttachmentSprite(cell.reward, cell.terrain)
-                : FossickArtLibrary.GetRewardSprite(cell.reward);
-            if (sprite == null)
-            {
-                return;
-            }
-
-            var inset = size * 0.15f;
-            var rect = CreateRect("Reward Sprite", parent);
-            SetTopLeft(rect, inset, inset, size - inset * 2f, size - inset * 2f);
-            var image = AddImage(rect.gameObject, Color.white);
-            image.raycastTarget = false;
-            image.sprite = sprite;
-            image.preserveAspect = true;
+            boardView.Render(mine, previewTargetKeys);
         }
 
         private void DrawLogPanel()
@@ -403,10 +295,10 @@ namespace Fossick.Preview.Views
             RefreshCellColors();
         }
 
-        private void PlayResultOrRebuild(FossickGameplayActionResult result)
+        private void PlayResultOrRebuild(FossickActionResult result)
         {
             previewTargetKeys.Clear();
-            if (result == null || result.action == null || !result.action.scrolled || result.action.scrollCount <= 0 || boardView == null)
+            if (result == null || !result.scrolled || result.scrollCount <= 0 || boardView == null)
             {
                 Build();
                 return;
@@ -417,7 +309,7 @@ namespace Fossick.Preview.Views
                 StopCoroutine(boardScrollRoutine);
             }
 
-            boardScrollRoutine = StartCoroutine(PlayBoardScroll(result.action.scrollCount));
+            boardScrollRoutine = StartCoroutine(PlayBoardScroll(result.scrollCount));
         }
 
         private IEnumerator PlayBoardScroll(int scrollRows)
@@ -434,22 +326,22 @@ namespace Fossick.Preview.Views
             var duration = Mathf.Max(0.01f, boardScrollAnimationDuration);
             var elapsed = 0f;
 
-            while (elapsed < duration && boardView != null && controller != null && controller.Board != null)
+            while (elapsed < duration && boardView != null && controller != null && controller.Mine != null)
             {
                 elapsed += Time.unscaledDeltaTime;
                 var t = Mathf.Clamp01(elapsed / duration);
                 var eased = 1f - Mathf.Pow(1f - t, 3f);
                 boardView.SetVisualRowOffset(Mathf.Lerp(scrollRows, 0f, eased));
-                boardView.Render(controller.Board, previewTargetKeys);
+                boardView.Render(controller.Mine, previewTargetKeys);
                 yield return null;
             }
 
-            if (boardView != null && controller != null && controller.Board != null)
+            if (boardView != null && controller != null && controller.Mine != null)
             {
                 boardView.RenderRowsAbove = previousRowsAbove;
                 boardView.RenderRowsBelow = previousRowsBelow;
                 boardView.SetVisualRowOffset(0f);
-                boardView.Render(controller.Board, previewTargetKeys);
+                boardView.Render(controller.Mine, previewTargetKeys);
             }
 
             isBoardAnimating = false;
@@ -466,91 +358,11 @@ namespace Fossick.Preview.Views
                 return;
             }
 
-            var rows = controller.Board.GetVisibleRows();
-            for (var y = 0; y < rows.Count; y++)
-            {
-                var row = rows[y];
-                for (var x = 0; x < row.Length; x++)
-                {
-                    var key = GetCellKey(x, y);
-                    if (!cellImages.TryGetValue(key, out var image) || image == null)
-                    {
-                        continue;
-                    }
-
-                    image.color = previewTargetKeys.Contains(key) ? PreviewColor : GetCellOverlayColor(row[x]);
-                }
-            }
         }
 
         private static string GetCellKey(int x, int y)
         {
             return x + ":" + y;
-        }
-
-        private static Color GetCellOverlayColor(FossickCellState cell)
-        {
-            if (cell == null)
-            {
-                return new Color(0.12f, 0.13f, 0.14f);
-            }
-
-            if (!cell.IsContentVisible)
-            {
-                return new Color(0.16f, 0.17f, 0.19f);
-            }
-
-            if (cell.terrain != FossickTerrainType.Empty && FossickArtLibrary.HasAutoTileSprites(cell.terrain))
-            {
-                return new Color(1f, 1f, 1f, 0f);
-            }
-
-            if (cell.terrain == FossickTerrainType.Empty)
-            {
-                return new Color(1f, 1f, 1f, 0f);
-            }
-
-            switch (cell.terrain)
-            {
-                case FossickTerrainType.Dirt:
-                    return new Color(0.56f, 0.38f, 0.25f);
-                case FossickTerrainType.Stone:
-                    return new Color(0.48f, 0.53f, 0.58f);
-                case FossickTerrainType.Unbreakable:
-                    return new Color(0.07f, 0.07f, 0.09f);
-                default:
-                    return cell.HasCollectableElement ? new Color(0.42f, 0.34f, 0.14f) : new Color(0.1f, 0.18f, 0.18f);
-            }
-        }
-
-        private static string GetCellLabel(FossickCellState cell)
-        {
-            if (cell == null)
-            {
-                return "?";
-            }
-
-            if (!cell.IsContentVisible)
-            {
-                return "?";
-            }
-
-            if (cell.terrain == FossickTerrainType.Dirt)
-            {
-                return "土";
-            }
-
-            if (cell.terrain == FossickTerrainType.Stone)
-            {
-                return "石" + cell.hp;
-            }
-
-            if (cell.terrain == FossickTerrainType.Unbreakable)
-            {
-                return "X";
-            }
-
-            return cell.HasCollectableElement ? "$" : string.Empty;
         }
 
         private RectTransform AddButton(Transform parent, string label, Vector2 size, Action onClick, bool disabled, Color color, Vector2 topLeft)

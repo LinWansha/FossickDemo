@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using Fossick.Core.Board;
-using Fossick.Core.Config;
+using Fossick.Core.Definition.Config;
+using Fossick.Core.Visual.Tiling;
 using UnityEngine;
 
 namespace Fossick.Core.Visual
@@ -54,97 +54,9 @@ namespace Fossick.Core.Visual
             return ActiveCatalog.GetFogAutoTileSprite(assetIndex);
         }
 
-        public static int ResolveRuntimeCornerAssetIndex(IReadOnlyList<FossickCellState[]> rows, int cornerX, int cornerY, FossickTerrainType terrain)
-        {
-            if (rows == null || terrain == FossickTerrainType.Empty)
-            {
-                return 0;
-            }
-
-            var mask = 0;
-            if (RuntimeCellMatches(rows, cornerX - 1, cornerY - 1, terrain))
-            {
-                mask |= 1;
-            }
-
-            if (RuntimeCellMatches(rows, cornerX, cornerY - 1, terrain))
-            {
-                mask |= 2;
-            }
-
-            if (RuntimeCellMatches(rows, cornerX - 1, cornerY, terrain))
-            {
-                mask |= 4;
-            }
-
-            if (RuntimeCellMatches(rows, cornerX, cornerY, terrain))
-            {
-                mask |= 8;
-            }
-
-            return MapCornerMaskToSpriteIndex(mask);
-        }
-
         public static int ResolveConfigCornerAssetIndex(IReadOnlyList<FossickCellConfig[]> rows, int cornerX, int cornerY, FossickTerrainType terrain)
         {
-            if (rows == null || terrain == FossickTerrainType.Empty)
-            {
-                return 0;
-            }
-
-            var mask = 0;
-            if (ConfigCellMatches(rows, cornerX - 1, cornerY - 1, terrain))
-            {
-                mask |= 1;
-            }
-
-            if (ConfigCellMatches(rows, cornerX, cornerY - 1, terrain))
-            {
-                mask |= 2;
-            }
-
-            if (ConfigCellMatches(rows, cornerX - 1, cornerY, terrain))
-            {
-                mask |= 4;
-            }
-
-            if (ConfigCellMatches(rows, cornerX, cornerY, terrain))
-            {
-                mask |= 8;
-            }
-
-            return MapCornerMaskToSpriteIndex(mask);
-        }
-
-        public static int ResolveRuntimeFogCornerAssetIndex(IReadOnlyList<FossickCellState[]> rows, int cornerX, int cornerY)
-        {
-            if (rows == null)
-            {
-                return 0;
-            }
-
-            var mask = 0;
-            if (RuntimeCellIsFogged(rows, cornerX - 1, cornerY - 1))
-            {
-                mask |= 1;
-            }
-
-            if (RuntimeCellIsFogged(rows, cornerX, cornerY - 1))
-            {
-                mask |= 2;
-            }
-
-            if (RuntimeCellIsFogged(rows, cornerX - 1, cornerY))
-            {
-                mask |= 4;
-            }
-
-            if (RuntimeCellIsFogged(rows, cornerX, cornerY))
-            {
-                mask |= 8;
-            }
-
-            return MapCornerMaskToSpriteIndex(mask);
+            return FossickAutoTileResolver.ResolveConfigCornerAssetIndex(rows, cornerX, cornerY, terrain);
         }
 
         public static Sprite GetRewardSprite(FossickElementConfig reward)
@@ -300,69 +212,5 @@ namespace Fossick.Core.Visual
             }
         }
 
-        private static bool RuntimeCellMatches(IReadOnlyList<FossickCellState[]> rows, int x, int y, FossickTerrainType terrain)
-        {
-            if (y < 0 || y >= rows.Count)
-            {
-                return false;
-            }
-
-            var row = rows[y];
-            if (row == null || x < 0 || x >= row.Length)
-            {
-                return false;
-            }
-
-            var cell = row[x];
-            return cell != null && cell.terrain == terrain;
-        }
-
-        private static bool RuntimeCellIsFogged(IReadOnlyList<FossickCellState[]> rows, int x, int y)
-        {
-            if (y < 0 || y >= rows.Count)
-            {
-                return false;
-            }
-
-            var row = rows[y];
-            if (row == null || x < 0 || x >= row.Length)
-            {
-                return false;
-            }
-
-            var cell = row[x];
-            return cell == null || !cell.IsContentVisible;
-        }
-
-        private static bool ConfigCellMatches(IReadOnlyList<FossickCellConfig[]> rows, int x, int y, FossickTerrainType terrain)
-        {
-            if (y < 0 || y >= rows.Count)
-            {
-                return false;
-            }
-
-            var row = rows[y];
-            if (row == null || x < 0 || x >= row.Length)
-            {
-                return false;
-            }
-
-            var cell = row[x];
-            return cell != null && cell.terrain == terrain;
-        }
-
-        private static int MapCornerMaskToSpriteIndex(int mask)
-        {
-            // Fossick imported diagonal assets follow art-direction naming, not raw HOP mask order.
-            switch (mask)
-            {
-                case 6:
-                    return 9;
-                case 9:
-                    return 6;
-                default:
-                    return mask;
-            }
-        }
     }
 }

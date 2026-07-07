@@ -1,5 +1,6 @@
-using Fossick.Core.Actions;
-using Fossick.Core.Config;
+using Fossick.Core.Application;
+using Fossick.Core.Application.Results;
+using Fossick.Core.Definition.Config;
 
 namespace Fossick.Core.Presentation
 {
@@ -70,7 +71,7 @@ namespace Fossick.Core.Presentation
                 };
 
                 ApplyMatchingDelta(action, presentationEvent);
-                if (step.type == FossickActionStepType.BoardScrolled)
+                if (step.type == FossickActionStepType.MineScrolled)
                 {
                     presentationEvent.scrollRows = 1;
                     presentationEvent.depthBefore = action.depthBeforeAction + scrollIndex;
@@ -118,8 +119,8 @@ namespace Fossick.Core.Presentation
                 case FossickActionStepType.RadarScanned:
                     eventType = FossickPresentationEventType.RadarScanned;
                     return true;
-                case FossickActionStepType.BoardScrolled:
-                    eventType = FossickPresentationEventType.BoardScrolled;
+                case FossickActionStepType.MineScrolled:
+                    eventType = FossickPresentationEventType.MineScrolled;
                     return true;
                 default:
                     eventType = FossickPresentationEventType.InvalidTarget;

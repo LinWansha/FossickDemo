@@ -283,9 +283,3 @@ MonoBehaviour:
         sprite: {fileID: 21300000, guid: 1511bec01bb34414db95b0a168c9398e, type: 3}
       - index: 15
         sprite: {fileID: 21300000, guid: 4631d950a7ed9498980042f404dfb870, type: 3}
-  autoTileSets: []
-  rewardSprites: []
-  terrainAttachmentSprites: []
-  toolSprites: []
-  decorations: []
-  backgrounds: []

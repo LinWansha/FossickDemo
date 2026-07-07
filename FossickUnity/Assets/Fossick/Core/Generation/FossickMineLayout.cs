@@ -1,5 +1,6 @@
 using System.Collections.Generic;
-using Fossick.Core.Config;
+using Fossick.Core.Definition.Config;
+using Fossick.Core.State;
 
 namespace Fossick.Core.Generation
 {
@@ -235,10 +236,7 @@ namespace Fossick.Core.Generation
                 hp = source.hp,
                 reward = source.reward,
                 decorations = source.decorations == null ? new List<string>() : new List<string>(source.decorations),
-                fog = source.fog,
-                element = source.element,
-                decor = source.decor == null ? new List<string>() : new List<string>(source.decor),
-                mask = source.mask
+                fog = source.fog
             };
         }
     }

@@ -1,6 +1,7 @@
 using System;
-using Fossick.Core.Config;
+using Fossick.Core.Definition.Config;
 using Fossick.Core.Visual;
+using Fossick.Core.Visual.Tiling;
 using UnityEngine;
 using UnityEngine.UI;
 

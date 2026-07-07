@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System;
-using Fossick.Core.Config;
+using Fossick.Core.Definition.Config;
+using Fossick.Core.State;
 
 namespace Fossick.Core.Generation
 {
@@ -282,8 +283,7 @@ namespace Fossick.Core.Generation
                         y = y,
                         terrain = FossickTerrainType.Empty,
                         hp = 0,
-                        fog = FossickFogType.None,
-                        mask = false
+                        fog = FossickFogType.None
                     });
                 }
             }

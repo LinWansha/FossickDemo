@@ -1,6 +1,7 @@
 using System.Collections.Generic;
-using Fossick.Core.Actions;
-using Fossick.Core.Config;
+using Fossick.Core.Application;
+using Fossick.Core.Application.Results;
+using Fossick.Core.Definition.Config;
 
 namespace Fossick.Core.Presentation
 {
@@ -52,6 +53,6 @@ namespace Fossick.Core.Presentation
         RewardMissed = 7,
         FogRevealed = 8,
         RadarScanned = 9,
-        BoardScrolled = 10
+        MineScrolled = 10
     }
 }

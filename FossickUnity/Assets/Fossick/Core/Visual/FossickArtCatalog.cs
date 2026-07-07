@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Fossick.Core.Config;
+using Fossick.Core.Definition.Config;
 using UnityEngine;
 
 namespace Fossick.Core.Visual
@@ -11,26 +11,13 @@ namespace Fossick.Core.Visual
         public Color emptyCellColor = new Color(0.08f, 0.18f, 0.22f);
         public Color previewColor = new Color(0.32f, 0.9f, 0.48f, 0.95f);
 
-        public FossickLayer0BackgroundCatalog layer0Background = new FossickLayer0BackgroundCatalog();
-        public FossickLayer1RewardBackgroundCatalog layer1RewardBackground = new FossickLayer1RewardBackgroundCatalog();
-        public FossickLayer2TerrainCatalog layer2Terrain = new FossickLayer2TerrainCatalog();
-        public FossickLayer3TerrainAttachmentCatalog layer3TerrainAttachment = new FossickLayer3TerrainAttachmentCatalog();
-        public FossickLayer4RewardCatalog layer4Reward = new FossickLayer4RewardCatalog();
-        public FossickLayer5DecorationCatalog layer5Decoration = new FossickLayer5DecorationCatalog();
-        public FossickLayer6FogCatalog layer6Fog = new FossickLayer6FogCatalog();
-
-        [HideInInspector]
-        public List<FossickAutoTileSet> autoTileSets = new List<FossickAutoTileSet>();
-        [HideInInspector]
-        public List<FossickElementSpriteEntry> rewardSprites = new List<FossickElementSpriteEntry>();
-        [HideInInspector]
-        public List<FossickTerrainAttachmentSpriteEntry> terrainAttachmentSprites = new List<FossickTerrainAttachmentSpriteEntry>();
-        [HideInInspector]
-        public List<FossickToolSpriteEntry> toolSprites = new List<FossickToolSpriteEntry>();
-        [HideInInspector]
-        public List<FossickNamedSpriteEntry> decorations = new List<FossickNamedSpriteEntry>();
-        [HideInInspector]
-        public List<FossickNamedSpriteEntry> backgrounds = new List<FossickNamedSpriteEntry>();
+        public FossickVisualLayer0BackgroundCatalog layer0Background = new FossickVisualLayer0BackgroundCatalog();
+        public FossickVisualLayer1RewardBackgroundCatalog layer1RewardBackground = new FossickVisualLayer1RewardBackgroundCatalog();
+        public FossickVisualLayer2TerrainCatalog layer2Terrain = new FossickVisualLayer2TerrainCatalog();
+        public FossickVisualLayer3TerrainAttachmentCatalog layer3TerrainAttachment = new FossickVisualLayer3TerrainAttachmentCatalog();
+        public FossickVisualLayer4RewardCatalog layer4Reward = new FossickVisualLayer4RewardCatalog();
+        public FossickVisualLayer5DecorationCatalog layer5Decoration = new FossickVisualLayer5DecorationCatalog();
+        public FossickVisualLayer6FogCatalog layer6Fog = new FossickVisualLayer6FogCatalog();
 
         public Sprite GetAutoTileSprite(FossickTerrainType terrain, int assetIndex)
         {
@@ -57,8 +44,7 @@ namespace Fossick.Core.Visual
                 return null;
             }
 
-            var sprite = FindElementSprite(layer4Reward == null ? null : layer4Reward.rewards, reward);
-            return sprite != null ? sprite : FindElementSprite(rewardSprites, reward);
+            return FindElementSprite(layer4Reward == null ? null : layer4Reward.rewards, reward);
         }
 
         public Sprite GetTerrainAttachmentSprite(FossickElementConfig reward, FossickTerrainType terrain)
@@ -70,9 +56,7 @@ namespace Fossick.Core.Visual
 
             var entries = layer3TerrainAttachment == null ? null : layer3TerrainAttachment.attachments;
             var sprite = FindTerrainAttachmentSprite(entries, reward, terrain);
-            sprite ??= FindTerrainAttachmentSprite(entries, reward, FossickTerrainType.Empty);
-            sprite ??= FindTerrainAttachmentSprite(terrainAttachmentSprites, reward, terrain);
-            return sprite != null ? sprite : FindTerrainAttachmentSprite(terrainAttachmentSprites, reward, FossickTerrainType.Empty);
+            return sprite != null ? sprite : FindTerrainAttachmentSprite(entries, reward, FossickTerrainType.Empty);
         }
 
         public Sprite GetToolSprite(FossickToolType toolType)
@@ -82,8 +66,7 @@ namespace Fossick.Core.Visual
                 type = FossickElementType.Item,
                 id = GetToolRewardId(toolType)
             };
-            var sprite = FindElementSprite(layer4Reward == null ? null : layer4Reward.rewards, reward);
-            return sprite != null ? sprite : FindToolSprite(toolSprites, toolType);
+            return FindElementSprite(layer4Reward == null ? null : layer4Reward.rewards, reward);
         }
 
         public Sprite GetBackgroundSprite(string id)
@@ -104,20 +87,17 @@ namespace Fossick.Core.Visual
                 return sprite;
             }
 
-            sprite = FindNamedSprite(layer1RewardBackground == null ? null : layer1RewardBackground.backgrounds, id);
-            return sprite != null ? sprite : FindNamedSprite(backgrounds, id);
+            return FindNamedSprite(layer1RewardBackground == null ? null : layer1RewardBackground.backgrounds, id);
         }
 
         public Sprite GetDecorationSprite(string id)
         {
-            var sprite = FindNamedSprite(layer5Decoration == null ? null : layer5Decoration.decorations, id);
-            return sprite != null ? sprite : FindNamedSprite(decorations, id);
+            return FindNamedSprite(layer5Decoration == null ? null : layer5Decoration.decorations, id);
         }
 
         private FossickAutoTileSet FindAutoTileSet(FossickTerrainType terrain)
         {
-            var set = FindAutoTileSet(layer2Terrain == null ? null : layer2Terrain.autoTileSets, terrain);
-            return set ?? FindAutoTileSet(autoTileSets, terrain);
+            return FindAutoTileSet(layer2Terrain == null ? null : layer2Terrain.autoTileSets, terrain);
         }
 
         private FossickAutoTileSet FindFogAutoTileSet()
@@ -127,79 +107,13 @@ namespace Fossick.Core.Visual
                 return layer6Fog.autoTileSet;
             }
 
-            for (var i = 0; i < autoTileSets.Count; i++)
-            {
-                var set = autoTileSets[i];
-                if (set != null && set.kind == FossickAutoTileSetKind.Fog)
-                {
-                    return set;
-                }
-            }
-
             return null;
         }
 
         private void OnValidate()
         {
-            MigrateLegacyFieldsIfNeeded();
-        }
-
-        private void MigrateLegacyFieldsIfNeeded()
-        {
             EnsureLayerObjects();
             NormalizeLayerData();
-
-            if (layer2Terrain.autoTileSets.Count == 0 && autoTileSets != null)
-            {
-                for (var i = 0; i < autoTileSets.Count; i++)
-                {
-                    var set = autoTileSets[i];
-                    if (set == null)
-                    {
-                        continue;
-                    }
-
-                    if (set.kind == FossickAutoTileSetKind.Terrain)
-                    {
-                        layer2Terrain.autoTileSets.Add(set);
-                    }
-                    else if (set.kind == FossickAutoTileSetKind.Fog && (layer6Fog.autoTileSet == null || layer6Fog.autoTileSet.sprites.Count == 0))
-                    {
-                        layer6Fog.autoTileSet = set;
-                    }
-                }
-            }
-
-            CopyIfEmpty(layer4Reward.rewards, rewardSprites);
-            CopyIfEmpty(layer3TerrainAttachment.attachments, terrainAttachmentSprites);
-            CopyIfEmpty(layer5Decoration.decorations, decorations);
-
-            if (backgrounds != null && backgrounds.Count > 0)
-            {
-                if (layer0Background.backgrounds.Count == 0)
-                {
-                    for (var i = 0; i < backgrounds.Count; i++)
-                    {
-                        var entry = backgrounds[i];
-                        if (entry != null && !IsRewardBackgroundId(entry.id))
-                        {
-                            layer0Background.backgrounds.Add(entry);
-                        }
-                    }
-                }
-
-                if (layer1RewardBackground.backgrounds.Count == 0)
-                {
-                    for (var i = 0; i < backgrounds.Count; i++)
-                    {
-                        var entry = backgrounds[i];
-                        if (entry != null && IsRewardBackgroundId(entry.id))
-                        {
-                            layer1RewardBackground.backgrounds.Add(entry);
-                        }
-                    }
-                }
-            }
         }
 
         private void NormalizeLayerData()
@@ -234,13 +148,13 @@ namespace Fossick.Core.Visual
 
         private void EnsureLayerObjects()
         {
-            layer0Background ??= new FossickLayer0BackgroundCatalog();
-            layer1RewardBackground ??= new FossickLayer1RewardBackgroundCatalog();
-            layer2Terrain ??= new FossickLayer2TerrainCatalog();
-            layer3TerrainAttachment ??= new FossickLayer3TerrainAttachmentCatalog();
-            layer4Reward ??= new FossickLayer4RewardCatalog();
-            layer5Decoration ??= new FossickLayer5DecorationCatalog();
-            layer6Fog ??= new FossickLayer6FogCatalog();
+            layer0Background ??= new FossickVisualLayer0BackgroundCatalog();
+            layer1RewardBackground ??= new FossickVisualLayer1RewardBackgroundCatalog();
+            layer2Terrain ??= new FossickVisualLayer2TerrainCatalog();
+            layer3TerrainAttachment ??= new FossickVisualLayer3TerrainAttachmentCatalog();
+            layer4Reward ??= new FossickVisualLayer4RewardCatalog();
+            layer5Decoration ??= new FossickVisualLayer5DecorationCatalog();
+            layer6Fog ??= new FossickVisualLayer6FogCatalog();
         }
 
         private static FossickAutoTileSet FindAutoTileSet(List<FossickAutoTileSet> sets, FossickTerrainType terrain)
@@ -256,25 +170,6 @@ namespace Fossick.Core.Visual
                 if (set != null && set.kind == FossickAutoTileSetKind.Terrain && set.terrain == terrain)
                 {
                     return set;
-                }
-            }
-
-            return null;
-        }
-
-        private static Sprite FindToolSprite(List<FossickToolSpriteEntry> entries, FossickToolType toolType)
-        {
-            if (entries == null)
-            {
-                return null;
-            }
-
-            for (var i = 0; i < entries.Count; i++)
-            {
-                var entry = entries[i];
-                if (entry != null && entry.type == toolType)
-                {
-                    return entry.sprite;
                 }
             }
 
@@ -358,64 +253,46 @@ namespace Fossick.Core.Visual
                     return string.Empty;
             }
         }
-
-        private static void CopyIfEmpty<T>(List<T> target, List<T> source)
-        {
-            if (target == null || target.Count > 0 || source == null || source.Count == 0)
-            {
-                return;
-            }
-
-            for (var i = 0; i < source.Count; i++)
-            {
-                target.Add(source[i]);
-            }
-        }
-
-        private static bool IsRewardBackgroundId(string id)
-        {
-            return !string.IsNullOrEmpty(id) && id.StartsWith("treasure_room", StringComparison.Ordinal);
-        }
     }
 
     [Serializable]
-    public sealed class FossickLayer0BackgroundCatalog
+    public sealed class FossickVisualLayer0BackgroundCatalog
     {
         public List<FossickNamedSpriteEntry> backgrounds = new List<FossickNamedSpriteEntry>();
     }
 
     [Serializable]
-    public sealed class FossickLayer1RewardBackgroundCatalog
+    public sealed class FossickVisualLayer1RewardBackgroundCatalog
     {
         public List<FossickNamedSpriteEntry> backgrounds = new List<FossickNamedSpriteEntry>();
     }
 
     [Serializable]
-    public sealed class FossickLayer2TerrainCatalog
+    public sealed class FossickVisualLayer2TerrainCatalog
     {
         public List<FossickAutoTileSet> autoTileSets = new List<FossickAutoTileSet>();
     }
 
     [Serializable]
-    public sealed class FossickLayer3TerrainAttachmentCatalog
+    public sealed class FossickVisualLayer3TerrainAttachmentCatalog
     {
         public List<FossickTerrainAttachmentSpriteEntry> attachments = new List<FossickTerrainAttachmentSpriteEntry>();
     }
 
     [Serializable]
-    public sealed class FossickLayer4RewardCatalog
+    public sealed class FossickVisualLayer4RewardCatalog
     {
         public List<FossickElementSpriteEntry> rewards = new List<FossickElementSpriteEntry>();
     }
 
     [Serializable]
-    public sealed class FossickLayer5DecorationCatalog
+    public sealed class FossickVisualLayer5DecorationCatalog
     {
         public List<FossickNamedSpriteEntry> decorations = new List<FossickNamedSpriteEntry>();
     }
 
     [Serializable]
-    public sealed class FossickLayer6FogCatalog
+    public sealed class FossickVisualLayer6FogCatalog
     {
         public FossickAutoTileSet autoTileSet = new FossickAutoTileSet { kind = FossickAutoTileSetKind.Fog };
     }
@@ -469,13 +346,6 @@ namespace Fossick.Core.Visual
         public FossickElementType type;
         public string id;
         public FossickTerrainType terrain;
-        public Sprite sprite;
-    }
-
-    [Serializable]
-    public sealed class FossickToolSpriteEntry
-    {
-        public FossickToolType type;
         public Sprite sprite;
     }
 

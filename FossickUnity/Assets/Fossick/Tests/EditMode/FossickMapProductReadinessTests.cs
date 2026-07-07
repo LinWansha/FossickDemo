@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
-using Fossick.Core.Config;
-using Fossick.Core.Serialization;
-using Fossick.Core.Validation;
+using Fossick.Core.Definition.Config;
+using Fossick.Core.Definition.Serialization;
+using Fossick.Core.Definition.Validation;
 using NUnit.Framework;
 
 namespace Fossick.Tests.EditMode
@@ -67,7 +67,7 @@ namespace Fossick.Tests.EditMode
         [Test]
         public void SplitJsonWithoutVersionIsNormalizedToCurrentVersion()
         {
-            const string json = "{\"activity\":\"Fossick\",\"libraryId\":\"legacy\",\"boardWidth\":7,\"fragments\":[]}";
+            const string json = "{\"activity\":\"Fossick\",\"libraryId\":\"normalized\",\"boardWidth\":7,\"fragments\":[]}";
 
             var library = FossickMapJsonUtility.FragmentLibraryFromJson(json);
 

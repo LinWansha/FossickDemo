@@ -1,6 +1,6 @@
 using System.IO;
-using Fossick.Core.Config;
-using Fossick.Core.Serialization;
+using Fossick.Core.Definition.Config;
+using Fossick.Core.Definition.Serialization;
 
 namespace Fossick.MapStudio.ImportExport
 {

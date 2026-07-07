@@ -1,5 +1,5 @@
-using Fossick.Core.Config;
-using Fossick.Core.Serialization;
+using Fossick.Core.Definition.Config;
+using Fossick.Core.Definition.Serialization;
 using NUnit.Framework;
 
 namespace Fossick.Tests.EditMode

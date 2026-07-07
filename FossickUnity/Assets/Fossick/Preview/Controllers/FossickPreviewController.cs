@@ -1,11 +1,12 @@
-using Fossick.Core.Actions;
-using Fossick.Core.Board;
-using Fossick.Core.Config;
+using Fossick.Core.Application;
+using Fossick.Core.Application.Results;
+using Fossick.Core.Application.Commands;
+using Fossick.Core.Definition.Config;
 using Fossick.Core.Generation;
-using Fossick.Core.Gameplay;
-using Fossick.Core.Rewards;
-using Fossick.Core.Save;
-using Fossick.Core.Serialization;
+using Fossick.Core.State;
+using Fossick.Core.Mine;
+using Fossick.Core.Definition.Serialization;
+using Fossick.Core.Systems;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -19,33 +20,30 @@ namespace Fossick.Preview.Controllers
         [SerializeField] private TextAsset mapDefinitionJson;
         [SerializeField] private int seed = 12345;
 
-        private FossickActionResolver actionResolver = new FossickActionResolver();
+        private FossickToolSystem toolSystem;
         private FossickMapConfig config;
         private FossickGameplaySession session;
-        private FossickSaveState savedState;
         private readonly List<string> actionLog = new List<string>();
 
-        public FossickBoard Board => session == null ? null : session.Board;
+        public FossickMine Mine => session == null ? null : session.State.Mine;
         public FossickToolType SelectedTool { get; private set; } = FossickToolType.Pickaxe;
-        public FossickProgressState Progress => session == null ? null : session.Progress;
-        public FossickInventoryState Inventory => session == null ? null : session.Inventory;
-        public FossickRewardState Rewards => session == null ? null : session.Rewards;
-        public bool HasSave => savedState != null;
+        public FossickProgressState Progress => session == null ? null : session.State.Progress;
+        public FossickInventoryState Inventory => session == null ? null : session.State.Inventory;
+        public FossickRewardState Rewards => session == null ? null : session.State.Rewards;
         public bool UnlimitedTools { get; private set; } = true;
         public IReadOnlyList<string> ActionLog => actionLog;
 
         private void Awake()
         {
             config = LoadConfig();
-            actionResolver = new FossickActionResolver(config.tools);
+            toolSystem = new FossickToolSystem(config.tools);
 
-            BuildBoard();
+            BuildMine();
         }
 
         public FossickActionResult Dig(int x, int y)
         {
-            var result = UseTool(x, y);
-            return result == null ? null : result.action;
+            return UseTool(x, y);
         }
 
         public void SelectTool(FossickToolType toolType)
@@ -55,48 +53,57 @@ namespace Fossick.Preview.Controllers
 
         public IReadOnlyList<FossickToolTarget> GetPreviewTargets(int x, int y)
         {
-            return actionResolver.GetToolPreview(Board, SelectedTool, x, y);
+            var result = new List<FossickToolTarget>();
+            if (Mine == null || toolSystem == null)
+            {
+                return result;
+            }
+
+            var absoluteTarget = new FossickPosition(x, Mine.TopVisibleRow + y);
+            var targets = toolSystem.GetTargets(Mine, SelectedTool, absoluteTarget);
+            for (var i = 0; i < targets.Count; i++)
+            {
+                var target = targets[i];
+                result.Add(new FossickToolTarget
+                {
+                    x = target.x,
+                    y = target.y - Mine.TopVisibleRow
+                });
+            }
+
+            return result;
         }
 
-        public FossickGameplayActionResult UseTool(int x, int y)
+        public FossickActionResult UseTool(int x, int y)
         {
-            var result = session.UseTool(SelectedTool, x, y);
+            if (session == null || Mine == null)
+            {
+                return null;
+            }
+
+            var absoluteTarget = new FossickPosition(x, Mine.TopVisibleRow + y);
+            var result = session.Execute(new FossickUseToolCommand(SelectedTool, absoluteTarget));
             AppendActionLog(result);
             return result;
         }
 
-        public void Save()
-        {
-            savedState = session == null ? null : session.CreateSaveState();
-            AddLog("已保存当前进度。");
-        }
-
-        public void ReloadSaved()
-        {
-            if (savedState == null)
-            {
-                return;
-            }
-
-            seed = savedState.seed;
-            BuildBoard(savedState.topVisibleRow + config.visibleHeight, savedState);
-            AddLog("已重载保存进度。");
-        }
-
         public void ResetPreview()
         {
-            savedState = null;
             actionLog.Clear();
-            BuildBoard();
+            BuildMine();
             AddLog("已重置灰盒预览。");
         }
 
-        private void BuildBoard(int minimumRows = -1, FossickSaveState restore = null)
+        private void BuildMine()
         {
-            var rows = minimumRows < 0 ? config.visibleHeight : minimumRows;
-            session = restore == null
-                ? new FossickGameplaySession(config, seed, rows, UnlimitedTools)
-                : FossickGameplaySession.Restore(config, restore, rows, UnlimitedTools);
+            session = new FossickGameplaySession(config, seed);
+            if (UnlimitedTools && session.State.Inventory != null)
+            {
+                session.State.Inventory.pickaxes = 9999;
+                session.State.Inventory.dynamite = 9999;
+                session.State.Inventory.tnt = 9999;
+                session.State.Inventory.radar = 9999;
+            }
         }
 
         private FossickMapConfig LoadConfig()
@@ -137,20 +144,8 @@ namespace Fossick.Preview.Controllers
             return FossickSampleMapFactory.CreateDefaultConfig();
         }
 
-        private void AppendActionLog(FossickGameplayActionResult gameplayResult)
+        private void AppendActionLog(FossickActionResult result)
         {
-            if (gameplayResult == null)
-            {
-                return;
-            }
-
-            if (gameplayResult.notEnoughTool)
-            {
-                AddLog(FormatToolName(gameplayResult.toolType) + " 数量不足。");
-                return;
-            }
-
-            var result = gameplayResult.action;
             if (result == null)
             {
                 return;
@@ -179,12 +174,6 @@ namespace Fossick.Preview.Controllers
             {
                 AddLog($"矿井连续下移 {result.scrollCount} 行，当前深度 {result.depthAfterAction}");
             }
-
-            if (gameplayResult.scoreAfter != gameplayResult.scoreBefore)
-            {
-                AddLog($"积分 {gameplayResult.scoreBefore} -> {gameplayResult.scoreAfter}");
-            }
-
         }
 
         private void AddLog(string message)
@@ -216,17 +205,17 @@ namespace Fossick.Preview.Controllers
             }
         }
 
-        private static string FormatElementName(Fossick.Core.Config.FossickElementType elementType)
+        private static string FormatElementName(Fossick.Core.Definition.Config.FossickElementType elementType)
         {
             switch (elementType)
             {
-                case Fossick.Core.Config.FossickElementType.Coin:
+                case Fossick.Core.Definition.Config.FossickElementType.Coin:
                     return "金币";
-                case Fossick.Core.Config.FossickElementType.Collection:
+                case Fossick.Core.Definition.Config.FossickElementType.Collection:
                     return "收藏品";
-                case Fossick.Core.Config.FossickElementType.Item:
+                case Fossick.Core.Definition.Config.FossickElementType.Item:
                     return "道具";
-                case Fossick.Core.Config.FossickElementType.Chest:
+                case Fossick.Core.Definition.Config.FossickElementType.Chest:
                     return "宝箱";
                 default:
                     return "矿石";
