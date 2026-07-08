@@ -93,6 +93,7 @@ namespace Fossick.Editor.Art
             AddAutoTileSet(catalog, FossickTerrainType.Dirt, "Dirt", TerrainAutoTileFiles);
             AddAutoTileSet(catalog, FossickTerrainType.Stone, "Stone", StoneAutoTileFiles);
             AddAutoTileSet(catalog, FossickTerrainType.Unbreakable, "Bedrock", TerrainAutoTileFiles);
+            AddTerrainSprite(catalog, FossickTerrainType.Explosives, "explosive_crate", "Layer4_Reward/Signs/explosive_crate_sign.png");
             AddFogAutoTileSet(catalog, FogAutoTileFiles);
 
             var mineBackground = LoadSprite("Layer0_Background/mine_default.png")
@@ -163,10 +164,12 @@ namespace Fossick.Editor.Art
             catalog.layer4Reward ??= new FossickVisualLayer4RewardCatalog();
             catalog.layer5Decoration ??= new FossickVisualLayer5DecorationCatalog();
             catalog.layer6Fog ??= new FossickVisualLayer6FogCatalog();
+            catalog.layer2Terrain.terrainSprites ??= new List<FossickTerrainSpriteEntry>();
 
             catalog.layer0Background.backgrounds.Clear();
             catalog.layer1RewardBackground.backgrounds.Clear();
             catalog.layer2Terrain.autoTileSets.Clear();
+            catalog.layer2Terrain.terrainSprites.Clear();
             catalog.layer3TerrainAttachment.attachments.Clear();
             catalog.layer4Reward.rewards.Clear();
             catalog.layer5Decoration.decorations.Clear();
@@ -302,6 +305,20 @@ namespace Fossick.Editor.Art
                     type = type,
                     id = id,
                     terrain = terrain,
+                    sprite = sprite
+                });
+            }
+        }
+
+        private static void AddTerrainSprite(FossickArtCatalog catalog, FossickTerrainType terrain, string id, string path)
+        {
+            var sprite = LoadSprite(path);
+            if (sprite != null)
+            {
+                catalog.layer2Terrain.terrainSprites.Add(new FossickTerrainSpriteEntry
+                {
+                    terrain = terrain,
+                    id = id,
                     sprite = sprite
                 });
             }

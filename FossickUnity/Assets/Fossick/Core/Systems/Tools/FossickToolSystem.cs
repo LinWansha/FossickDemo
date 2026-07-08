@@ -69,7 +69,7 @@ namespace Fossick.Core.Systems
 
         private static bool IsVisiblePickaxeTarget(FossickCell cell)
         {
-            return cell != null && cell.IsVisible && cell.HasDiggableTerrain;
+            return cell != null && cell.IsVisible && (cell.HasDiggableTerrain || cell.HasTriggerableTerrain);
         }
 
         private static bool IsVisibleEmptyCell(FossickCell cell)
@@ -114,13 +114,13 @@ namespace Fossick.Core.Systems
                     return;
                 }
 
-                if (cell.HasObstacle && !cell.HasDiggableTerrain)
+                if (cell.HasObstacle && !cell.HasDiggableTerrain && !cell.HasTriggerableTerrain)
                 {
                     return;
                 }
 
                 AddTargetIfValid(mine, currentX, y, targets);
-                if (cell.HasDiggableTerrain && cell.Terrain.Hp > 1)
+                if (cell.HasTriggerableTerrain || (cell.HasDiggableTerrain && cell.Terrain.Hp > 1))
                 {
                     return;
                 }

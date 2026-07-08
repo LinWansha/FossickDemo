@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System;
 using Fossick.Core.Definition.Config;
-using Fossick.Core.State;
+using Fossick.Core.Data;
 
 namespace Fossick.Core.Generation
 {
@@ -9,7 +9,7 @@ namespace Fossick.Core.Generation
     {
         private readonly FossickMapConfig config;
         private readonly FossickSeededRandom random;
-        private readonly FossickGenerationState state;
+        private readonly FossickGenerationData data;
         private readonly List<FossickFragmentConfig> tutorialFragments = new List<FossickFragmentConfig>();
         private readonly List<FossickFragmentConfig> rewardFragments = new List<FossickFragmentConfig>();
         private readonly Dictionary<int, List<FossickFragmentConfig>> regularByDifficulty = new Dictionary<int, List<FossickFragmentConfig>>();
@@ -17,25 +17,25 @@ namespace Fossick.Core.Generation
         private readonly List<FossickFragmentConfig> emptyFallbackFragments = new List<FossickFragmentConfig>();
 
         public FossickFragmentGenerator(FossickMapConfig config, int seed)
-            : this(config, new FossickGenerationState(seed))
+            : this(config, new FossickGenerationData(seed))
         {
         }
 
-        public FossickFragmentGenerator(FossickMapConfig config, FossickGenerationState state)
+        public FossickFragmentGenerator(FossickMapConfig config, FossickGenerationData state)
         {
             this.config = config;
-            this.state = state ?? new FossickGenerationState(0);
-            random = new FossickSeededRandom(this.state.seed, this.state.randomState);
+            data = state ?? new FossickGenerationData(0);
+            random = new FossickSeededRandom(data.seed, data.randomState);
             BuildPools();
             EnsureRewardInterval();
         }
 
-        public FossickGenerationState State => state;
+        public FossickGenerationData Data => data;
 
         public List<FossickGeneratedFragment> GenerateInitialFragments()
         {
             var result = new List<FossickGeneratedFragment>();
-            if (state.tutorialGenerated)
+            if (data.tutorialGenerated)
             {
                 return result;
             }
@@ -46,17 +46,17 @@ namespace Fossick.Core.Generation
                 result.Add(CreateGenerated(tutorialFragments[i], false));
             }
 
-            state.tutorialGenerated = true;
+            data.tutorialGenerated = true;
             CaptureRandomState();
             return result;
         }
 
         public FossickGeneratedFragment Next()
         {
-            if (state.regularSinceLastReward >= state.nextRewardAfterRegularCount && rewardFragments.Count > 0)
+            if (data.regularSinceLastReward >= data.nextRewardAfterRegularCount && rewardFragments.Count > 0)
             {
-                state.regularSinceLastReward = 0;
-                state.rewardInsertedAfterRegularCounts.Add(state.regularGeneratedCount);
+                data.regularSinceLastReward = 0;
+                data.rewardInsertedAfterRegularCounts.Add(data.regularGeneratedCount);
                 var reward = CreateGenerated(Pick(rewardFragments), true);
                 ResetRewardInterval();
                 CaptureRandomState();
@@ -64,8 +64,8 @@ namespace Fossick.Core.Generation
             }
 
             var fragment = NextRegularFragment();
-            state.regularSinceLastReward++;
-            state.regularGeneratedCount++;
+            data.regularSinceLastReward++;
+            data.regularGeneratedCount++;
             var generated = CreateGenerated(fragment, false);
             CaptureRandomState();
             return generated;
@@ -113,18 +113,18 @@ namespace Fossick.Core.Generation
 
         private FossickFragmentConfig NextRegularFragment()
         {
-            if (state.pendingRegularFragmentIds == null)
+            if (data.pendingRegularFragmentIds == null)
             {
-                state.pendingRegularFragmentIds = new List<int>();
+                data.pendingRegularFragmentIds = new List<int>();
             }
 
-            if (state.pendingRegularFragmentIds.Count == 0)
+            if (data.pendingRegularFragmentIds.Count == 0)
             {
                 RebuildRegularGroup();
             }
 
-            var id = state.pendingRegularFragmentIds[0];
-            state.pendingRegularFragmentIds.RemoveAt(0);
+            var id = data.pendingRegularFragmentIds[0];
+            data.pendingRegularFragmentIds.RemoveAt(0);
             if (regularById.TryGetValue(id, out var fragment))
             {
                 return fragment;
@@ -165,10 +165,10 @@ namespace Fossick.Core.Generation
             for (var i = 0; i < groupSize; i++)
             {
                 var fragment = fragments[i % fragments.Count];
-                state.pendingRegularFragmentIds.Add(fragment == null ? 0 : fragment.id);
+                data.pendingRegularFragmentIds.Add(fragment == null ? 0 : fragment.id);
             }
 
-            state.groupIndex++;
+            data.groupIndex++;
         }
 
         private FossickFragmentConfig Pick(List<FossickFragmentConfig> fragments)
@@ -307,16 +307,16 @@ namespace Fossick.Core.Generation
             var generation = config == null ? null : config.generation;
             if (generation == null)
             {
-                state.nextRewardAfterRegularCount = 1;
+                data.nextRewardAfterRegularCount = 1;
                 return;
             }
 
-            state.nextRewardAfterRegularCount = random.RangeInclusive(generation.rewardInsertMin, generation.rewardInsertMax);
+            data.nextRewardAfterRegularCount = random.RangeInclusive(generation.rewardInsertMin, generation.rewardInsertMax);
         }
 
         private void EnsureRewardInterval()
         {
-            if (state.nextRewardAfterRegularCount > 0)
+            if (data.nextRewardAfterRegularCount > 0)
             {
                 return;
             }
@@ -329,15 +329,15 @@ namespace Fossick.Core.Generation
         {
             if (fragment != null)
             {
-                state.generatedFragmentIds.Add(fragment.id);
+                data.generatedFragmentIds.Add(fragment.id);
             }
 
-            return new FossickGeneratedFragment(fragment, state.sequenceIndex++, insertedAsReward);
+            return new FossickGeneratedFragment(fragment, data.sequenceIndex++, insertedAsReward);
         }
 
         private void CaptureRandomState()
         {
-            state.randomState = random.State;
+            data.randomState = random.State;
         }
     }
 }

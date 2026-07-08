@@ -17,6 +17,11 @@ namespace Fossick.Core.Mine
             }
         }
 
+        public void Clear()
+        {
+            regions.Clear();
+        }
+
         public FossickRegionObject FindAt(FossickPosition position)
         {
             for (var i = regions.Count - 1; i >= 0; i--)

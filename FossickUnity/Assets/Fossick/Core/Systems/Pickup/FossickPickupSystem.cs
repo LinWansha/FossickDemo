@@ -19,15 +19,15 @@ namespace Fossick.Core.Systems
                 return false;
             }
 
-            var pickup = cell.Pickup;
-            if (!pickup.Collect())
+            var rewardEntity = cell.Pickup;
+            if (!rewardEntity.Collect())
             {
                 return false;
             }
 
             if (result != null)
             {
-                var reward = pickup.Payload.ToRewardEvent(pickup.Position);
+                var reward = rewardEntity.Payload.ToRewardEvent(rewardEntity.Position);
                 result.isApplied = true;
                 result.isCollectOnly = true;
                 result.rewards.Add(reward);

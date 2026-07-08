@@ -10,7 +10,8 @@ namespace Fossick.Core.Application.Events
         EmbeddedContentRevealed = 3,
         PickupCollected = 4,
         FogRevealed = 5,
-        MineScrolled = 6
+        MineScrolled = 6,
+        ExplosiveCrateTriggered = 7
     }
 
     public sealed class FossickDomainEvent

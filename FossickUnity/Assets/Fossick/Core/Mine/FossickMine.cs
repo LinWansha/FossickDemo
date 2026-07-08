@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Generation;
-using Fossick.Core.State;
+using Fossick.Core.Data;
 using Fossick.Core.Mine.Objects;
 
 namespace Fossick.Core.Mine
@@ -84,6 +84,47 @@ namespace Fossick.Core.Mine
             for (var i = 0; i < mine.rows.Count; i++)
             {
                 AppendGeneratedRow(mine.rows[i]);
+            }
+        }
+
+        public void RestoreRows(int loadedStartRow, IReadOnlyList<IReadOnlyList<FossickCellConfig>> savedRows, int topVisibleRow)
+        {
+            rows.Clear();
+            RegionLayer.Clear();
+            firstLoadedRow = loadedStartRow < 0 ? 0 : loadedStartRow;
+            TopVisibleRow = firstLoadedRow;
+            Depth = firstLoadedRow;
+            Window.MoveTo(TopVisibleRow);
+
+            if (savedRows != null)
+            {
+                for (var rowOffset = 0; rowOffset < savedRows.Count; rowOffset++)
+                {
+                    var absoluteRow = firstLoadedRow + rowOffset;
+                    var savedRow = savedRows[rowOffset];
+                    var row = FossickRuntimeObjectFactory.CreateEmptyRow(Spec, absoluteRow);
+                    if (savedRow != null)
+                    {
+                        for (var i = 0; i < savedRow.Count; i++)
+                        {
+                            var cellConfig = savedRow[i];
+                            if (cellConfig == null || cellConfig.x < 0 || cellConfig.x >= Spec.width)
+                            {
+                                continue;
+                            }
+
+                            row[cellConfig.x] = FossickRuntimeObjectFactory.CreateCell(cellConfig, cellConfig.x, absoluteRow);
+                        }
+                    }
+
+                    rows.Add(new FossickMineRow(absoluteRow, row));
+                    AddRegionsFromCells(absoluteRow, savedRow);
+                }
+            }
+
+            if (!MoveWindowTo(topVisibleRow))
+            {
+                MoveWindowTo(firstLoadedRow);
             }
         }
 

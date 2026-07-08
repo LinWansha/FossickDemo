@@ -25,6 +25,16 @@ namespace Fossick.Core.Visual
             return set == null ? null : set.GetSprite(assetIndex);
         }
 
+        public Sprite GetTerrainSprite(FossickTerrainType terrain, string id = null)
+        {
+            if (terrain == FossickTerrainType.Empty)
+            {
+                return null;
+            }
+
+            return FindTerrainSprite(layer2Terrain == null ? null : layer2Terrain.terrainSprites, terrain, id);
+        }
+
         public bool HasAutoTileSprites(FossickTerrainType terrain)
         {
             var set = FindAutoTileSet(terrain);
@@ -123,6 +133,11 @@ namespace Fossick.Core.Visual
                 layer2Terrain.autoTileSets = new List<FossickAutoTileSet>();
             }
 
+            if (layer2Terrain.terrainSprites == null)
+            {
+                layer2Terrain.terrainSprites = new List<FossickTerrainSpriteEntry>();
+            }
+
             for (var i = layer2Terrain.autoTileSets.Count - 1; i >= 0; i--)
             {
                 var set = layer2Terrain.autoTileSets[i];
@@ -218,6 +233,30 @@ namespace Fossick.Core.Visual
             return null;
         }
 
+        private static Sprite FindTerrainSprite(List<FossickTerrainSpriteEntry> entries, FossickTerrainType terrain, string id)
+        {
+            if (entries == null)
+            {
+                return null;
+            }
+
+            for (var i = 0; i < entries.Count; i++)
+            {
+                var entry = entries[i];
+                if (entry == null || entry.sprite == null || entry.terrain != terrain)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(id) || entry.id == id)
+                {
+                    return entry.sprite;
+                }
+            }
+
+            return null;
+        }
+
         private static Sprite FindNamedSprite(List<FossickNamedSpriteEntry> entries, string id)
         {
             if (entries == null || string.IsNullOrEmpty(id))
@@ -271,6 +310,7 @@ namespace Fossick.Core.Visual
     public sealed class FossickVisualLayer2TerrainCatalog
     {
         public List<FossickAutoTileSet> autoTileSets = new List<FossickAutoTileSet>();
+        public List<FossickTerrainSpriteEntry> terrainSprites = new List<FossickTerrainSpriteEntry>();
     }
 
     [Serializable]
@@ -346,6 +386,14 @@ namespace Fossick.Core.Visual
         public FossickElementType type;
         public string id;
         public FossickTerrainType terrain;
+        public Sprite sprite;
+    }
+
+    [Serializable]
+    public sealed class FossickTerrainSpriteEntry
+    {
+        public FossickTerrainType terrain;
+        public string id;
         public Sprite sprite;
     }
 

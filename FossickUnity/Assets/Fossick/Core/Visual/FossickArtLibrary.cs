@@ -44,6 +44,11 @@ namespace Fossick.Core.Visual
             return ActiveCatalog.GetAutoTileSprite(terrain, assetIndex);
         }
 
+        public static Sprite GetTerrainSprite(FossickTerrainType terrain, string id = null)
+        {
+            return ActiveCatalog == null ? null : ActiveCatalog.GetTerrainSprite(terrain, id);
+        }
+
         public static Sprite GetFogAutoTileSprite(int assetIndex)
         {
             if (assetIndex <= 0 || ActiveCatalog == null)
@@ -105,6 +110,7 @@ namespace Fossick.Core.Visual
             ValidateAutoTileSet(issues, FossickTerrainType.Dirt, 18, "土块四方连续");
             ValidateAutoTileSet(issues, FossickTerrainType.Stone, 19, "石头四方连续");
             ValidateAutoTileSet(issues, FossickTerrainType.Unbreakable, 18, "基岩四方连续");
+            ValidateTerrainSprite(issues, FossickTerrainType.Explosives, "explosive_crate", "炸药箱");
             ValidateFogAutoTileSet(issues, 15);
             ValidateRewardSprite(issues, FossickElementType.Coin, "coin_pile", "金币实体");
             ValidateRewardSprite(issues, FossickElementType.Ore, "ore_copper", "铜矿实体");
@@ -169,6 +175,14 @@ namespace Fossick.Core.Visual
                 {
                     issues.Add($"阴影四方连续缺少索引 {i}。");
                 }
+            }
+        }
+
+        private static void ValidateTerrainSprite(List<string> issues, FossickTerrainType terrain, string id, string label)
+        {
+            if (GetTerrainSprite(terrain, id) == null)
+            {
+                issues.Add($"{label}缺少配置。");
             }
         }
 

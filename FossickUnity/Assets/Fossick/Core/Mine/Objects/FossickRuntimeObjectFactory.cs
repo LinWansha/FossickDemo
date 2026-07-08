@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Generation;
-using Fossick.Core.State;
+using Fossick.Core.Data;
 using Fossick.Core.Mine.Objects;
 
 namespace Fossick.Core.Mine
@@ -50,7 +50,7 @@ namespace Fossick.Core.Mine
 
             if (config.terrain != FossickTerrainType.Empty)
             {
-                cell.Terrain = new FossickTerrainInstance(config.terrain, config.hp, position);
+                cell.Terrain = FossickTerrainFactory.Create(config.terrain, config.hp, position);
             }
 
             var reward = FossickRewardPayload.FromConfig(config.reward);

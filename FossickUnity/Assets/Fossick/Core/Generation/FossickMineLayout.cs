@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using Fossick.Core.Definition.Config;
-using Fossick.Core.State;
+using Fossick.Core.Data;
 
 namespace Fossick.Core.Generation
 {
@@ -39,15 +39,15 @@ namespace Fossick.Core.Generation
 
         public static FossickGeneratedMine Build(FossickMapConfig config, int seed, int targetRows, IDictionary<int, FossickFragmentConfig> sequenceOverrides)
         {
-            return Build(config, new FossickGenerationState(seed), targetRows, sequenceOverrides);
+            return Build(config, new FossickGenerationData(seed), targetRows, sequenceOverrides);
         }
 
-        public static FossickGeneratedMine Build(FossickMapConfig config, FossickGenerationState state, int targetRows)
+        public static FossickGeneratedMine Build(FossickMapConfig config, FossickGenerationData state, int targetRows)
         {
             return Build(config, state, targetRows, null);
         }
 
-        public static FossickGeneratedMine Build(FossickMapConfig config, FossickGenerationState state, int targetRows, IDictionary<int, FossickFragmentConfig> sequenceOverrides)
+        public static FossickGeneratedMine Build(FossickMapConfig config, FossickGenerationData state, int targetRows, IDictionary<int, FossickFragmentConfig> sequenceOverrides)
         {
             var mine = new FossickGeneratedMine();
             if (config == null || targetRows <= 0)
@@ -71,12 +71,12 @@ namespace Fossick.Core.Generation
             return mine;
         }
 
-        public static FossickGeneratedMine BuildAdditional(FossickMapConfig config, FossickGenerationState state, int minimumAdditionalRows)
+        public static FossickGeneratedMine BuildAdditional(FossickMapConfig config, FossickGenerationData state, int minimumAdditionalRows)
         {
             return BuildAdditional(config, state, minimumAdditionalRows, 0, null);
         }
 
-        public static FossickGeneratedMine BuildAdditional(FossickMapConfig config, FossickGenerationState state, int minimumAdditionalRows, int absoluteStartRow, IDictionary<int, FossickFragmentConfig> sequenceOverrides)
+        public static FossickGeneratedMine BuildAdditional(FossickMapConfig config, FossickGenerationData state, int minimumAdditionalRows, int absoluteStartRow, IDictionary<int, FossickFragmentConfig> sequenceOverrides)
         {
             var mine = new FossickGeneratedMine();
             if (config == null || minimumAdditionalRows <= 0)

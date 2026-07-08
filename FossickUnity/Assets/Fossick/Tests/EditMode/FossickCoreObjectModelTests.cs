@@ -3,7 +3,7 @@ using Fossick.Core.Application.Results;
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Application.Events;
 using Fossick.Core.Generation;
-using Fossick.Core.State;
+using Fossick.Core.Data;
 using Fossick.Core.Mine;
 using Fossick.Core.Mine.Objects;
 using Fossick.Core.Systems;
@@ -15,9 +15,9 @@ namespace Fossick.Core.Tests
     public sealed class FossickCoreObjectModelTests
     {
         [Test]
-        public void TerrainInstance_WhenDamaged_TracksHpAndDestroyedState()
+        public void StoneTerrain_WhenDamaged_TracksHpAndDestroyedState()
         {
-            var terrain = new FossickTerrainInstance(FossickTerrainType.Stone, 2, new FossickPosition(1, 2));
+            var terrain = new FossickStoneTerrain(2, new FossickPosition(1, 2));
 
             Assert.That(terrain.Damage(1), Is.True);
             Assert.That(terrain.Hp, Is.EqualTo(1));

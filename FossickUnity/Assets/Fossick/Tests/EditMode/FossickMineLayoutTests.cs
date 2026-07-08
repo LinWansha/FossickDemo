@@ -1,6 +1,6 @@
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Generation;
-using Fossick.Core.State;
+using Fossick.Core.Data;
 using NUnit.Framework;
 
 namespace Fossick.Core.Tests
@@ -133,7 +133,7 @@ namespace Fossick.Core.Tests
             var config = FossickSampleMapFactory.CreateDefaultConfig();
             var full = FossickMineLayoutBuilder.Build(config, 2468, 36);
 
-            var state = new FossickGenerationState(2468);
+            var state = new FossickGenerationData(2468);
             var first = FossickMineLayoutBuilder.BuildAdditional(config, state, 12, 0, null);
             var second = FossickMineLayoutBuilder.BuildAdditional(config, state, 36 - first.rows.Count, first.rows.Count, null);
 
@@ -148,7 +148,7 @@ namespace Fossick.Core.Tests
         }
 
         [Test]
-        public void Generator_StateSnapshotContinuesWithTheSameFragmentSequence()
+        public void Generator_DataSnapshotContinuesWithTheSameFragmentSequence()
         {
             var config = FossickSampleMapFactory.CreateDefaultConfig();
             config.generation.rewardInsertMin = 99;
@@ -159,7 +159,7 @@ namespace Fossick.Core.Tests
             generator.Next();
             generator.Next();
 
-            var snapshot = generator.State.Clone();
+            var snapshot = generator.Data.Clone();
             var expected = generator.Next();
             var restoredGenerator = new FossickFragmentGenerator(config, snapshot);
             var actual = restoredGenerator.Next();

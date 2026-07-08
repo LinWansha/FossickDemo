@@ -1,6 +1,6 @@
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Generation;
-using Fossick.Core.State;
+using Fossick.Core.Data;
 using Fossick.Core.Mine;
 
 namespace Fossick.Core.Systems
@@ -15,7 +15,7 @@ namespace Fossick.Core.Systems
             this.config = config ?? FossickSampleMapFactory.CreateDefaultConfig();
         }
 
-        public void EnsureRows(FossickMine mine, FossickGenerationState generationState, int targetRows)
+        public void EnsureRows(FossickMine mine, FossickGenerationData generationState, int targetRows)
         {
             if (mine == null || generationState == null || targetRows <= mine.RowCount)
             {
@@ -27,7 +27,7 @@ namespace Fossick.Core.Systems
             mine.AppendGeneratedMine(generatedMine);
         }
 
-        public void EnsureGeneratedRowsAhead(FossickMine mine, FossickGenerationState generationState)
+        public void EnsureGeneratedRowsAhead(FossickMine mine, FossickGenerationData generationState)
         {
             if (mine == null)
             {

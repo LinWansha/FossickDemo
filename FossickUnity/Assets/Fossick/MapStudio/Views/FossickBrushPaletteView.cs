@@ -2,6 +2,7 @@ using System;
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Visual;
 using Fossick.Core.Visual.Tiling;
+using Fossick.MapStudio.Definition;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -70,6 +71,7 @@ namespace Fossick.MapStudio.Views
                 AddTerrainBrushTile(parent, state, callbacks, FossickTerrainType.Dirt, "土");
                 AddTerrainBrushTile(parent, state, callbacks, FossickTerrainType.Stone, "石头");
                 AddTerrainBrushTile(parent, state, callbacks, FossickTerrainType.Unbreakable, "基岩");
+                AddTerrainBrushTile(parent, state, callbacks, FossickTerrainType.Explosives, "炸药箱");
                 return;
             }
 
@@ -157,7 +159,9 @@ namespace Fossick.MapStudio.Views
 
         private void AddTerrainBrushTile(RectTransform parent, State state, Callbacks callbacks, FossickTerrainType terrain, string label)
         {
-            var sprite = terrain == FossickTerrainType.Empty ? null : FossickArtLibrary.GetAutoTileSprite(terrain, 15);
+            var sprite = terrain == FossickTerrainType.Empty
+                ? null
+                : FossickArtLibrary.GetTerrainSprite(terrain) ?? FossickArtLibrary.GetAutoTileSprite(terrain, 15);
             AddBrushTile(parent, label, state.selectedTerrain == terrain, sprite, terrain == FossickTerrainType.Empty ? "." : null, GetTerrainColor(terrain), () =>
             {
                 callbacks.selectTerrain?.Invoke(terrain);

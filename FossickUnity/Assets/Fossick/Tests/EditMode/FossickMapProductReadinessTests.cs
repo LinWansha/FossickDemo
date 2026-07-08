@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Definition.Serialization;
-using Fossick.Core.Definition.Validation;
+using Fossick.MapStudio.Validation;
 using NUnit.Framework;
 
 namespace Fossick.Tests.EditMode

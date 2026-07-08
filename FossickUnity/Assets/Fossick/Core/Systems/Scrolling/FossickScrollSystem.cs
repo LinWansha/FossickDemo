@@ -85,9 +85,9 @@ namespace Fossick.Core.Systems
                 return false;
             }
 
-            var pickup = cell.Pickup;
-            var reward = pickup.Payload.ToRewardEvent(pickup.Position);
-            pickup.Collect();
+            var rewardEntity = cell.Pickup;
+            var reward = rewardEntity.Payload.ToRewardEvent(rewardEntity.Position);
+            rewardEntity.Collect();
             cell.ClearPickup();
             result.rewards.Add(reward);
             result.steps.Add(new FossickActionStep
@@ -120,17 +120,17 @@ namespace Fossick.Core.Systems
                 return;
             }
 
-            var pickup = cell.Pickup;
+            var rewardEntity = cell.Pickup;
             result.steps.Add(new FossickActionStep
             {
                 type = FossickActionStepType.RewardMissed,
-                x = pickup.Position.x,
-                y = pickup.Position.y,
-                elementType = pickup.Payload.ElementType,
-                id = pickup.Payload.Id,
-                amount = pickup.Payload.Amount
+                x = rewardEntity.Position.x,
+                y = rewardEntity.Position.y,
+                elementType = rewardEntity.Payload.ElementType,
+                id = rewardEntity.Payload.Id,
+                amount = rewardEntity.Payload.Amount
             });
-            pickup.Collect();
+            rewardEntity.Collect();
             cell.ClearPickup();
         }
 

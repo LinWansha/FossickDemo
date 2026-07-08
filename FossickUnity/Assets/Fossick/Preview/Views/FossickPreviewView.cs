@@ -37,7 +37,7 @@ namespace Fossick.Preview.Views
 
         private readonly Dictionary<string, Image> cellImages = new Dictionary<string, Image>();
         private readonly HashSet<string> previewTargetKeys = new HashSet<string>();
-        private FossickPreviewController controller;
+        private FossickPreviewController preview;
         private GameObject canvasObject;
         private RectTransform root;
         private Font font;
@@ -49,7 +49,12 @@ namespace Fossick.Preview.Views
 
         private void Awake()
         {
-            controller = GetComponent<FossickPreviewController>();
+            preview = GetComponent<FossickPreviewController>();
+            if (preview == null)
+            {
+                preview = gameObject.AddComponent<FossickPreviewController>();
+            }
+
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         }
 
@@ -87,7 +92,7 @@ namespace Fossick.Preview.Views
             Stretch(root);
             AddImage(root.gameObject, Background).raycastTarget = false;
 
-            if (controller == null || controller.Mine == null)
+            if (preview == null || preview.Mine == null)
             {
                 DrawNotReady();
                 return;
@@ -124,13 +129,13 @@ namespace Fossick.Preview.Views
             var title = AddText(header, "Fossick 灰盒预览", 24, FontStyle.Bold, TextAnchor.MiddleLeft);
             SetTopLeft(title.GetComponent<RectTransform>(), 18f, 0f, 250f, HeaderHeight);
 
-            var progress = controller.Progress;
-            AddHeaderStat(header, 292f, $"深度 {controller.Mine.Depth}");
+            var progress = preview.Progress;
+            AddHeaderStat(header, 292f, $"深度 {preview.Mine.Depth}");
             AddHeaderStat(header, 430f, progress == null ? "矿石 0" : $"矿石 {progress.oreFound}");
             AddHeaderStat(header, 560f, progress == null ? "收藏 0" : $"收藏 {progress.collectionFound}");
             AddHeaderStat(header, 698f, progress == null ? "道具 0" : $"道具 {progress.toolUsed}");
-            AddHeaderStat(header, 836f, controller.Rewards == null ? "积分 0" : $"积分 {controller.Rewards.score}");
-            AddHeaderStat(header, 974f, controller.Rewards == null ? "金币 0" : $"金币 {controller.Rewards.coins}");
+            AddHeaderStat(header, 836f, preview.Rewards == null ? "积分 0" : $"积分 {preview.Rewards.score}");
+            AddHeaderStat(header, 974f, preview.Rewards == null ? "金币 0" : $"金币 {preview.Rewards.coins}");
 
             AddButton(header, "返回编辑器", new Vector2(128f, 38f), () =>
             {
@@ -138,7 +143,7 @@ namespace Fossick.Preview.Views
             }, false, new Color(0.24f, 0.47f, 0.72f), new Vector2(1148f, 15f));
             AddButton(header, "重置", new Vector2(104f, 38f), () =>
             {
-                controller.ResetPreview();
+                preview.ResetPreview();
                 Build();
             }, false, new Color(0.34f, 0.25f, 0.24f), new Vector2(1288f, 15f));
         }
@@ -165,17 +170,17 @@ namespace Fossick.Preview.Views
 
         private void DrawToolButton(RectTransform parent, FossickToolType toolType, string label, float y)
         {
-            var selected = controller.SelectedTool == toolType;
-            var count = controller.Inventory == null ? 0 : controller.Inventory.GetToolCount(toolType);
-            var countLabel = controller.UnlimitedTools ? "∞" : count.ToString();
+            var selected = preview.SelectedTool == toolType;
+            var count = preview.Inventory == null ? 0 : preview.Inventory.GetToolCount(toolType);
+            var countLabel = preview.UnlimitedTools ? "∞" : count.ToString();
             AddButton(parent, label + "\n" + countLabel, new Vector2(80f, 60f), () =>
             {
-                var previousTool = controller.SelectedTool;
-                controller.SelectTool(toolType);
+                var previousTool = preview.SelectedTool;
+                preview.SelectTool(toolType);
                 if (toolType == FossickToolType.Radar)
                 {
-                    controller.UseTool(0, 0);
-                    controller.SelectTool(previousTool);
+                    preview.UseTool(0, 0);
+                    preview.SelectTool(previousTool);
                 }
 
                 Build();
@@ -195,7 +200,7 @@ namespace Fossick.Preview.Views
 
             var title = AddText(panel, "矿井", 20, FontStyle.Bold, TextAnchor.MiddleLeft);
             SetTopLeft(title.GetComponent<RectTransform>(), 22f, 16f, 240f, 28f);
-            var sub = AddText(panel, $"可视窗口 {controller.Mine.Spec.width} x {controller.Mine.Spec.visibleHeight}，点击或触摸格子执行当前工具", 14, FontStyle.Normal, TextAnchor.MiddleLeft);
+            var sub = AddText(panel, $"可视窗口 {preview.Mine.Spec.width} x {preview.Mine.Spec.visibleHeight}，点击或触摸格子执行当前工具", 14, FontStyle.Normal, TextAnchor.MiddleLeft);
             sub.color = MutedTextColor;
             SetTopLeft(sub.GetComponent<RectTransform>(), 22f, 48f, 620f, 24f);
 
@@ -204,7 +209,7 @@ namespace Fossick.Preview.Views
 
         private void DrawBoardGrid(RectTransform parent, float panelWidth, float panelHeight)
         {
-            var mine = controller.Mine;
+            var mine = preview.Mine;
             var labelWidth = 56f;
             var gridMaxWidth = panelWidth - 120f;
             var gridMaxHeight = panelHeight - 126f;
@@ -235,7 +240,7 @@ namespace Fossick.Preview.Views
                     return;
                 }
 
-                var result = controller.UseTool(x, y);
+                var result = preview.UseTool(x, y);
                 PlayResultOrRebuild(result);
             };
             boardView.Render(mine, previewTargetKeys);
@@ -253,7 +258,7 @@ namespace Fossick.Preview.Views
             hint.color = MutedTextColor;
             SetTopLeft(hint.GetComponent<RectTransform>(), 18f, 48f, 240f, 22f);
 
-            var log = controller.ActionLog;
+            var log = preview.ActionLog;
             if (log == null || log.Count == 0)
             {
                 var empty = AddText(panel, "暂无操作", 15, FontStyle.Normal, TextAnchor.UpperLeft);
@@ -272,7 +277,7 @@ namespace Fossick.Preview.Views
         private void ShowPreview(int x, int y)
         {
             previewTargetKeys.Clear();
-            var targets = controller.GetPreviewTargets(x, y);
+            var targets = preview.GetPreviewTargets(x, y);
             if (targets != null)
             {
                 for (var i = 0; i < targets.Count; i++)
@@ -326,22 +331,22 @@ namespace Fossick.Preview.Views
             var duration = Mathf.Max(0.01f, boardScrollAnimationDuration);
             var elapsed = 0f;
 
-            while (elapsed < duration && boardView != null && controller != null && controller.Mine != null)
+            while (elapsed < duration && boardView != null && preview != null && preview.Mine != null)
             {
                 elapsed += Time.unscaledDeltaTime;
                 var t = Mathf.Clamp01(elapsed / duration);
                 var eased = 1f - Mathf.Pow(1f - t, 3f);
                 boardView.SetVisualRowOffset(Mathf.Lerp(scrollRows, 0f, eased));
-                boardView.Render(controller.Mine, previewTargetKeys);
+                boardView.Render(preview.Mine, previewTargetKeys);
                 yield return null;
             }
 
-            if (boardView != null && controller != null && controller.Mine != null)
+            if (boardView != null && preview != null && preview.Mine != null)
             {
                 boardView.RenderRowsAbove = previousRowsAbove;
                 boardView.RenderRowsBelow = previousRowsBelow;
                 boardView.SetVisualRowOffset(0f);
-                boardView.Render(controller.Mine, previewTargetKeys);
+                boardView.Render(preview.Mine, previewTargetKeys);
             }
 
             isBoardAnimating = false;

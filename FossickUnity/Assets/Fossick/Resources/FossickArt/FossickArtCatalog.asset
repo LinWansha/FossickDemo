@@ -151,6 +151,10 @@ MonoBehaviour:
         sprite: {fileID: 21300000, guid: 2e0d0dd600349492b80ee1a663585e72, type: 3}
       - index: 18
         sprite: {fileID: 21300000, guid: 012aa13123aa24da98eefd63514cab2b, type: 3}
+    terrainSprites:
+    - terrain: 4
+      id: explosive_crate
+      sprite: {fileID: 21300000, guid: 4b92154952ce747b680b85ba9bce8f49, type: 3}
   layer3TerrainAttachment:
     attachments:
     - type: 1

@@ -3,13 +3,15 @@ using System.Collections.Generic;
 using System.IO;
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Generation;
-using Fossick.Core.State;
+using Fossick.Core.Data;
 using Fossick.Core.Definition.Serialization;
-using Fossick.Core.Definition.Validation;
+using Fossick.Core.Mine.Objects;
 using Fossick.Core.Visual;
 using Fossick.Core.Visual.Tiling;
 using Fossick.MapStudio.Controllers;
+using Fossick.MapStudio.Definition;
 using Fossick.MapStudio.ImportExport;
+using Fossick.MapStudio.Validation;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -392,7 +394,9 @@ namespace Fossick.MapStudio.Views
             var labelRoot = CreateRect("Grid Labels", gridRoot);
             SetTopLeft(labelRoot, 0f, 0f, GridLabelWidth, fragment.height * CellSize);
 
-            DrawTerrainSmoothGrid(terrainRoot, BuildConfigRows(fragment), fragment.width, fragment.height, CellSize);
+            var rows = BuildConfigRows(fragment);
+            DrawTerrainSmoothGrid(terrainRoot, rows, fragment.width, fragment.height, CellSize);
+            DrawSingleTerrainSprites(terrainRoot, rows, fragment.width, fragment.height, CellSize);
 
             for (var y = 0; y < fragment.height; y++)
             {
@@ -618,6 +622,7 @@ namespace Fossick.MapStudio.Views
             SetTopLeft(terrainRoot, GridLabelWidth, 0f, controller.CurrentConfig.boardWidth * MineCellSize, mine.rows.Count * MineCellSize);
             terrainRoot.gameObject.AddComponent<RectMask2D>();
             DrawTerrainSmoothGrid(terrainRoot, mineCellRows, controller.CurrentConfig.boardWidth, mine.rows.Count, MineCellSize);
+            DrawSingleTerrainSprites(terrainRoot, mineCellRows, controller.CurrentConfig.boardWidth, mine.rows.Count, MineCellSize);
 
             for (var i = 0; i < mine.rows.Count; i++)
             {
@@ -1840,6 +1845,7 @@ namespace Fossick.MapStudio.Views
             SetTopLeft(terrainRoot, GridLabelWidth, 0f, fragment.width * MineCellSize, fragment.height * MineCellSize);
             terrainRoot.gameObject.AddComponent<RectMask2D>();
             DrawTerrainSmoothGrid(terrainRoot, rows, fragment.width, fragment.height, MineCellSize);
+            DrawSingleTerrainSprites(terrainRoot, rows, fragment.width, fragment.height, MineCellSize);
 
             for (var y = 0; y < fragment.height; y++)
             {
@@ -2574,6 +2580,45 @@ namespace Fossick.MapStudio.Views
             DrawTerrainSmoothGridLayer(parent, rows, width, height, cellSize, FossickTerrainType.Dirt);
             DrawTerrainSmoothGridLayer(parent, rows, width, height, cellSize, FossickTerrainType.Stone);
             DrawTerrainSmoothGridLayer(parent, rows, width, height, cellSize, FossickTerrainType.Unbreakable);
+        }
+
+        private void DrawSingleTerrainSprites(RectTransform parent, IReadOnlyList<FossickCellConfig[]> rows, int width, int height, float cellSize)
+        {
+            if (parent == null || rows == null || width <= 0 || height <= 0)
+            {
+                return;
+            }
+
+            for (var y = 0; y < height; y++)
+            {
+                var row = y < rows.Count ? rows[y] : null;
+                if (row == null)
+                {
+                    continue;
+                }
+
+                for (var x = 0; x < width && x < row.Length; x++)
+                {
+                    var cell = row[x];
+                    if (cell == null || cell.terrain == FossickTerrainType.Empty || FossickArtLibrary.HasAutoTileSprites(cell.terrain))
+                    {
+                        continue;
+                    }
+
+                    var sprite = FossickArtLibrary.GetTerrainSprite(cell.terrain);
+                    if (sprite == null)
+                    {
+                        continue;
+                    }
+
+                    var rect = CreateRect($"{cell.terrain} Terrain Sprite {x},{y}", parent);
+                    SetTopLeft(rect, x * cellSize, y * cellSize, cellSize, cellSize);
+                    var image = AddImage(rect.gameObject, Color.white);
+                    image.raycastTarget = false;
+                    image.sprite = sprite;
+                    image.preserveAspect = true;
+                }
+            }
         }
 
         private void DrawTerrainSmoothGridLayer(RectTransform parent, IReadOnlyList<FossickCellConfig[]> rows, int width, int height, float cellSize, FossickTerrainType terrain)
@@ -3524,7 +3569,7 @@ namespace Fossick.MapStudio.Views
             if (selectedBrushMode == FossickBrushMode.Terrain)
             {
                 cell.terrain = selectedTerrain;
-                cell.hp = selectedTerrain == FossickTerrainType.Stone ? 2 : selectedTerrain == FossickTerrainType.Dirt ? 1 : 0;
+                cell.hp = GetDefaultTerrainHp(selectedTerrain);
                 if (!CanAttachOre(cell) && IsOreReward(GetReward(cell)))
                 {
                     cell.reward = null;
@@ -4224,8 +4269,24 @@ namespace Fossick.MapStudio.Views
                     return "石头";
                 case FossickTerrainType.Unbreakable:
                     return "基岩";
+                case FossickTerrainType.Explosives:
+                    return "炸药箱";
                 default:
                     return terrain.ToString();
+            }
+        }
+
+        private static int GetDefaultTerrainHp(FossickTerrainType terrain)
+        {
+            switch (terrain)
+            {
+                case FossickTerrainType.Dirt:
+                case FossickTerrainType.Explosives:
+                    return 1;
+                case FossickTerrainType.Stone:
+                    return 2;
+                default:
+                    return 0;
             }
         }
 
@@ -4417,7 +4478,9 @@ namespace Fossick.MapStudio.Views
 
         private static bool CanAttachOre(FossickCellConfig cell)
         {
-            return cell != null && cell.terrain != FossickTerrainType.Empty && cell.terrain != FossickTerrainType.Unbreakable && cell.hp > 0;
+            return cell != null
+                && (cell.terrain == FossickTerrainType.Dirt || cell.terrain == FossickTerrainType.Stone)
+                && cell.hp > 0;
         }
 
         private static bool HasDecoration(FossickCellConfig cell)
@@ -4500,6 +4563,11 @@ namespace Fossick.MapStudio.Views
                 return "基\n" + cell.x + "," + cell.y;
             }
 
+            if (cell.terrain == FossickTerrainType.Explosives)
+            {
+                return "爆\n" + cell.x + "," + cell.y;
+            }
+
             return ".\n" + cell.x + "," + cell.y;
         }
 
@@ -4524,6 +4592,11 @@ namespace Fossick.MapStudio.Views
             if (cell.terrain == FossickTerrainType.Unbreakable)
             {
                 return "基";
+            }
+
+            if (cell.terrain == FossickTerrainType.Explosives)
+            {
+                return "爆";
             }
 
             return ".";
@@ -4612,6 +4685,10 @@ namespace Fossick.MapStudio.Views
                     return "格子血量不能为负数。";
                 case "Breakable terrain should have hp greater than zero.":
                     return "可破坏地形的血量应该大于 0。";
+                case "Terrain object hp cannot be negative.":
+                    return "地形对象血量不能为负数。";
+                case "Terrain object cannot overlap terrain.":
+                    return "地形对象不能和土、石头或基岩叠放。";
                 case "Reward amount cannot be negative.":
                     return "奖励数量不能为负数。";
                 case "Reward is buried under unbreakable terrain.":
@@ -4620,6 +4697,8 @@ namespace Fossick.MapStudio.Views
                     return "矿石只能埋在可挖掘地形上。";
                 case "Buried reward must be attached to diggable terrain.":
                     return "埋藏奖励或道具只能放在可挖掘地形上。";
+                case "Reward cannot overlap terrain object.":
+                    return "奖励不能和地形对象叠放。";
                 case "Reward background is usually reserved for reward fragments.":
                     return "奖励层背景通常只应放在奖励碎片中。";
                 case "Reward background region shape is invalid.":

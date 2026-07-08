@@ -689,7 +689,7 @@
                     "y": 0,
                     "backgroundId": "mine_default",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
+                    "terrain": 4,
                     "hp": 1,
                     "reward": {
                         "type": 0,
@@ -794,7 +794,7 @@
                     "y": 1,
                     "backgroundId": "mine_default",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
+                    "terrain": 4,
                     "hp": 1,
                     "reward": {
                         "type": 0,
@@ -1154,7 +1154,7 @@
                     "y": 4,
                     "backgroundId": "mine_default",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
+                    "terrain": 4,
                     "hp": 1,
                     "reward": {
                         "type": 0,
@@ -2496,7 +2496,7 @@
                     "y": 5,
                     "backgroundId": "mine_default",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
+                    "terrain": 4,
                     "hp": 1,
                     "reward": {
                         "type": 0,
@@ -2511,8 +2511,8 @@
                     "y": 5,
                     "backgroundId": "mine_default",
                     "rewardBackgroundId": "",
-                    "terrain": 0,
-                    "hp": 0,
+                    "terrain": 4,
+                    "hp": 1,
                     "reward": {
                         "type": 0,
                         "id": "",

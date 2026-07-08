@@ -2,7 +2,8 @@
   "name": "Fossick.Core.Tests",
   "rootNamespace": "Fossick.Core.Tests",
   "references": [
-    "Fossick.Core"
+    "Fossick.Core",
+    "Fossick.MapStudio"
   ],
   "includePlatforms": [
     "Editor"

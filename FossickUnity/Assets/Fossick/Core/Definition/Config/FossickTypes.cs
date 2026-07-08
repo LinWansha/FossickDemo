@@ -12,7 +12,8 @@ namespace Fossick.Core.Definition.Config
         Empty = 0,
         Dirt = 1,
         Stone = 2,
-        Unbreakable = 3
+        Unbreakable = 3,
+        Explosives = 4
     }
 
     public enum FossickElementType
@@ -31,16 +32,6 @@ namespace Fossick.Core.Definition.Config
         Dynamite = 1,
         Tnt = 2,
         Radar = 3
-    }
-
-    public enum FossickBrushMode
-    {
-        RewardBackground = 0,
-        Terrain = 1,
-        Reward = 2,
-        Tool = 3,
-        Decoration = 4,
-        Fog = 5
     }
 
     public enum FossickFogType

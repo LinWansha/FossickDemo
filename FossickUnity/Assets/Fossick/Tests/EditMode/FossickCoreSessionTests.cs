@@ -3,7 +3,7 @@ using Fossick.Core.Application.Results;
 using Fossick.Core.Application.Commands;
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Generation;
-using Fossick.Core.State;
+using Fossick.Core.Data;
 using Fossick.Core.Mine;
 using Fossick.Core.Mine.Objects;
 using NUnit.Framework;
@@ -20,8 +20,8 @@ namespace Fossick.Core.Tests
             var session = new FossickGameplaySession(config, 12345);
             var snapshot = session.CreateSnapshot();
 
-            Assert.That(session.State, Is.Not.Null);
-            Assert.That(session.State.Mine, Is.TypeOf<FossickMine>());
+            Assert.That(session.Data, Is.Not.Null);
+            Assert.That(session.Data.Mine, Is.TypeOf<FossickMine>());
             Assert.That(snapshot.Spec.width, Is.EqualTo(config.BoardSpec.width));
             Assert.That(snapshot.Spec.visibleHeight, Is.EqualTo(config.BoardSpec.visibleHeight));
             Assert.That(snapshot.TopVisibleRow, Is.EqualTo(0));
@@ -54,8 +54,8 @@ namespace Fossick.Core.Tests
             Assert.That(result.toolConsumed, Is.False);
             Assert.That(snapshot.TopVisibleRow, Is.EqualTo(12));
             Assert.That(snapshot.Depth, Is.EqualTo(12));
-            Assert.That(session.State.Mine.Window.TopDepth, Is.EqualTo(12));
-            Assert.That(session.State.Mine.LoadedRowCount, Is.GreaterThanOrEqualTo(12 + config.visibleHeight));
+            Assert.That(session.Data.Mine.Window.TopDepth, Is.EqualTo(12));
+            Assert.That(session.Data.Mine.LoadedRowCount, Is.GreaterThanOrEqualTo(12 + config.visibleHeight));
         }
 
         [Test]
@@ -103,6 +103,24 @@ namespace Fossick.Core.Tests
         }
 
         [Test]
+        public void RuntimeObjectFactory_WhenCellContainsExplosivesTerrain_CreatesTerrainLayerObject()
+        {
+            var cell = FossickRuntimeObjectFactory.CreateCell(new FossickCellConfig
+            {
+                x = 2,
+                y = 3,
+                terrain = FossickTerrainType.Explosives,
+                hp = 1,
+                fog = FossickFogType.None,
+            }, 2, 3);
+
+            Assert.That(cell.Terrain, Is.TypeOf<FossickExplosivesTerrain>());
+            Assert.That(cell.Terrain.Layer, Is.EqualTo(FossickVisualLayer.Terrain));
+            Assert.That(cell.HasObstacle, Is.True);
+            Assert.That(cell.Pickup, Is.Null);
+        }
+
+        [Test]
         public void Mine_WhenBuiltFromGeneratedRows_ExposesVisibleWindowWithoutBoard()
         {
             var config = FossickSampleMapFactory.CreateDefaultConfig();
@@ -127,7 +145,7 @@ namespace Fossick.Core.Tests
             mine.GetCellAtAbsoluteRow(1, 0).Fog.Cover();
             mine.GetCellAtAbsoluteRow(1, 1).Fog.Cover();
             mine.GetCellAtAbsoluteRow(2, 1).Fog.Cover();
-            mine.GetCellAtAbsoluteRow(2, 1).Terrain = new FossickTerrainInstance(FossickTerrainType.Dirt, 1, new FossickPosition(2, 1));
+            mine.GetCellAtAbsoluteRow(2, 1).Terrain = new FossickDirtTerrain(1, new FossickPosition(2, 1));
 
             var reveals = mine.RefreshFogFromOpenSpace();
 
@@ -174,21 +192,56 @@ namespace Fossick.Core.Tests
         {
             var session = new FossickGameplaySession(FossickSampleMapFactory.CreateDefaultConfig(), 12345);
             var position = new FossickPosition(0, 0);
-            var cell = session.State.Mine.GetCellAtAbsoluteRow(position.x, position.y);
+            var cell = session.Data.Mine.GetCellAtAbsoluteRow(position.x, position.y);
             cell.Fog = new FossickFogState(true);
-            cell.Terrain = new FossickTerrainInstance(FossickTerrainType.Dirt, 1, position);
+            cell.Terrain = new FossickDirtTerrain(1, position);
             cell.FossickEmbeddedContent = FossickEmbeddedContent.FromPayload(new OrePayload("ore_gold", 10), "ore_gold_dirt", position);
-            var pickaxesBefore = session.State.Inventory.pickaxes;
+            var pickaxesBefore = session.Data.Inventory.pickaxes;
 
             var result = session.Execute(new FossickUseToolCommand(FossickToolType.Pickaxe, position));
 
             Assert.That(result.isApplied, Is.True);
             Assert.That(result.toolConsumed, Is.True);
-            Assert.That(session.State.Inventory.pickaxes, Is.EqualTo(pickaxesBefore - 1));
-            Assert.That(session.State.Rewards.score, Is.EqualTo(0));
+            Assert.That(session.Data.Inventory.pickaxes, Is.EqualTo(pickaxesBefore - 1));
+            Assert.That(session.Data.Rewards.score, Is.EqualTo(0));
             Assert.That(cell.Terrain, Is.Null);
             Assert.That(cell.FossickEmbeddedContent, Is.Null);
             Assert.That(cell.Pickup, Is.TypeOf<OrePickupEntity>());
+        }
+
+        [Test]
+        public void Session_WhenPickaxeTriggersExplosivesTerrain_DamagesAdjacentTerrainWithoutCreatingPickup()
+        {
+            var session = new FossickGameplaySession(FossickSampleMapFactory.CreateDefaultConfig(), 12345);
+            var center = new FossickPosition(1, 1);
+            for (var y = 0; y <= 2; y++)
+            {
+                for (var x = 0; x <= 2; x++)
+                {
+                    var cell = session.Data.Mine.GetCellAtAbsoluteRow(x, y);
+                    cell.Fog = new FossickFogState(true);
+                    cell.ClearTerrain();
+                    cell.ClearEmbeddedContent();
+                    cell.ClearPickup();
+                }
+            }
+
+            var centerCell = session.Data.Mine.GetCellAtAbsoluteRow(center.x, center.y);
+            centerCell.Terrain = new FossickExplosivesTerrain(1, center);
+            var stonePosition = new FossickPosition(0, 1);
+            var adjacentStone = session.Data.Mine.GetCellAtAbsoluteRow(stonePosition.x, stonePosition.y);
+            adjacentStone.Terrain = new FossickStoneTerrain(2, stonePosition);
+            var pickaxesBefore = session.Data.Inventory.pickaxes;
+
+            var result = session.Execute(new FossickUseToolCommand(FossickToolType.Pickaxe, center));
+
+            Assert.That(result.isApplied, Is.True);
+            Assert.That(result.toolConsumed, Is.True);
+            Assert.That(session.Data.Inventory.pickaxes, Is.EqualTo(pickaxesBefore - 1));
+            Assert.That(centerCell.Terrain, Is.Null);
+            Assert.That(centerCell.Pickup, Is.Null);
+            Assert.That(adjacentStone.Terrain, Is.Null);
+            Assert.That(result.steps.Exists(step => step.type == FossickActionStepType.ExplosiveCrateTriggered), Is.True);
         }
 
         [Test]
@@ -196,19 +249,19 @@ namespace Fossick.Core.Tests
         {
             var session = new FossickGameplaySession(FossickSampleMapFactory.CreateDefaultConfig(), 12345);
             var position = new FossickPosition(0, 0);
-            var cell = session.State.Mine.GetCellAtAbsoluteRow(position.x, position.y);
+            var cell = session.Data.Mine.GetCellAtAbsoluteRow(position.x, position.y);
             cell.Fog = new FossickFogState(true);
             cell.Terrain = null;
             cell.SetPickup(new CoinPickupEntity(new CoinPayload("coin_pile", 5), position));
-            var pickaxesBefore = session.State.Inventory.pickaxes;
+            var pickaxesBefore = session.Data.Inventory.pickaxes;
 
             var result = session.Execute(new FossickUseToolCommand(FossickToolType.Pickaxe, position));
 
             Assert.That(result.isApplied, Is.True);
             Assert.That(result.isCollectOnly, Is.True);
             Assert.That(result.toolConsumed, Is.False);
-            Assert.That(session.State.Inventory.pickaxes, Is.EqualTo(pickaxesBefore));
-            Assert.That(session.State.Rewards.coins, Is.EqualTo(5));
+            Assert.That(session.Data.Inventory.pickaxes, Is.EqualTo(pickaxesBefore));
+            Assert.That(session.Data.Rewards.coins, Is.EqualTo(5));
             Assert.That(cell.Pickup, Is.Null);
         }
 
@@ -217,7 +270,7 @@ namespace Fossick.Core.Tests
         {
             var session = new FossickGameplaySession(FossickSampleMapFactory.CreateDefaultConfig(), 12345);
             var position = new FossickPosition(0, 0);
-            var cell = session.State.Mine.GetCellAtAbsoluteRow(position.x, position.y);
+            var cell = session.Data.Mine.GetCellAtAbsoluteRow(position.x, position.y);
             cell.Fog = new FossickFogState(true);
             cell.Terrain = null;
             cell.SetPickup(new OrePickupEntity(new OrePayload("ore_gold", 10), position));
@@ -227,9 +280,9 @@ namespace Fossick.Core.Tests
             Assert.That(result.isApplied, Is.True);
             Assert.That(result.isCollectOnly, Is.True);
             Assert.That(result.toolConsumed, Is.False);
-            Assert.That(session.State.Rewards.score, Is.EqualTo(10));
-            Assert.That(session.State.Progress.oreFound, Is.EqualTo(1));
-            Assert.That(session.State.Progress.toolUsed, Is.EqualTo(0));
+            Assert.That(session.Data.Rewards.score, Is.EqualTo(10));
+            Assert.That(session.Data.Progress.oreFound, Is.EqualTo(1));
+            Assert.That(session.Data.Progress.toolUsed, Is.EqualTo(0));
         }
 
         [Test]
@@ -237,15 +290,15 @@ namespace Fossick.Core.Tests
         {
             var session = new FossickGameplaySession(FossickSampleMapFactory.CreateDefaultConfig(), 12345);
             var position = new FossickPosition(0, 0);
-            var cell = session.State.Mine.GetCellAtAbsoluteRow(position.x, position.y);
+            var cell = session.Data.Mine.GetCellAtAbsoluteRow(position.x, position.y);
             cell.Fog = new FossickFogState(true);
-            cell.Terrain = new FossickTerrainInstance(FossickTerrainType.Dirt, 1, position);
+            cell.Terrain = new FossickDirtTerrain(1, position);
 
             var result = session.Execute(new FossickUseToolCommand(FossickToolType.Pickaxe, position));
 
             Assert.That(result.isApplied, Is.True);
             Assert.That(result.toolConsumed, Is.True);
-            Assert.That(session.State.Progress.toolUsed, Is.EqualTo(1));
+            Assert.That(session.Data.Progress.toolUsed, Is.EqualTo(1));
         }
 
         [Test]
@@ -253,7 +306,7 @@ namespace Fossick.Core.Tests
         {
             var session = new FossickGameplaySession(FossickSampleMapFactory.CreateDefaultConfig(), 12345);
             var position = new FossickPosition(0, 0);
-            var cell = session.State.Mine.GetCellAtAbsoluteRow(position.x, position.y);
+            var cell = session.Data.Mine.GetCellAtAbsoluteRow(position.x, position.y);
             cell.Fog = new FossickFogState(true);
             cell.Terrain = null;
             cell.SetPickup(new CoinPickupEntity(new CoinPayload("coin_pile", 5), position));
@@ -261,7 +314,7 @@ namespace Fossick.Core.Tests
             session.Execute(new FossickUseToolCommand(FossickToolType.Pickaxe, position));
             var settlement = session.CreateSettlementResult();
 
-            Assert.That(settlement.depth, Is.EqualTo(session.State.Mine.Depth));
+            Assert.That(settlement.depth, Is.EqualTo(session.Data.Mine.Depth));
             Assert.That(settlement.remainingCoinAmount, Is.EqualTo(5));
             Assert.That(settlement.toolUsed, Is.EqualTo(0));
         }
@@ -270,15 +323,15 @@ namespace Fossick.Core.Tests
         public void Session_WhenRadarIsUsed_RevealsVisibleWindowFog()
         {
             var session = new FossickGameplaySession(FossickSampleMapFactory.CreateDefaultConfig(), 12345);
-            var coveredCell = session.State.Mine.GetCellAtAbsoluteRow(0, 1);
+            var coveredCell = session.Data.Mine.GetCellAtAbsoluteRow(0, 1);
             coveredCell.Fog = new FossickFogState(false);
-            var radarBefore = session.State.Inventory.radar;
+            var radarBefore = session.Data.Inventory.radar;
 
             var result = session.Execute(new FossickUseToolCommand(FossickToolType.Radar, new FossickPosition(0, 0)));
 
             Assert.That(result.isApplied, Is.True);
             Assert.That(result.toolConsumed, Is.True);
-            Assert.That(session.State.Inventory.radar, Is.EqualTo(radarBefore - 1));
+            Assert.That(session.Data.Inventory.radar, Is.EqualTo(radarBefore - 1));
             Assert.That(coveredCell.IsVisible, Is.True);
         }
 
@@ -287,18 +340,18 @@ namespace Fossick.Core.Tests
         {
             var session = new FossickGameplaySession(FossickSampleMapFactory.CreateDefaultConfig(), 12345);
             var position = new FossickPosition(0, 1);
-            var cell = session.State.Mine.GetCellAtAbsoluteRow(position.x, position.y);
+            var cell = session.Data.Mine.GetCellAtAbsoluteRow(position.x, position.y);
             cell.Fog = new FossickFogState(false);
-            cell.Terrain = new FossickTerrainInstance(FossickTerrainType.Dirt, 1, position);
-            var pickaxesBefore = session.State.Inventory.pickaxes;
-            var depthBefore = session.State.Mine.Depth;
+            cell.Terrain = new FossickDirtTerrain(1, position);
+            var pickaxesBefore = session.Data.Inventory.pickaxes;
+            var depthBefore = session.Data.Mine.Depth;
 
             var result = session.Execute(new FossickUseToolCommand(FossickToolType.Pickaxe, position));
 
             Assert.That(result.isApplied, Is.False);
             Assert.That(result.toolConsumed, Is.False);
-            Assert.That(session.State.Inventory.pickaxes, Is.EqualTo(pickaxesBefore));
-            Assert.That(session.State.Mine.Depth, Is.EqualTo(depthBefore));
+            Assert.That(session.Data.Inventory.pickaxes, Is.EqualTo(pickaxesBefore));
+            Assert.That(session.Data.Mine.Depth, Is.EqualTo(depthBefore));
         }
 
         [Test]
@@ -307,7 +360,7 @@ namespace Fossick.Core.Tests
             var config = FossickSampleMapFactory.CreateDefaultConfig();
             var system = new Systems.FossickGenerationSystem(config);
             var mine = new FossickMine(config.BoardSpec);
-            var state = new FossickGenerationState(12345);
+            var state = new FossickGenerationData(12345);
 
             system.EnsureRows(mine, state, 12);
 
@@ -324,8 +377,8 @@ namespace Fossick.Core.Tests
             var leftMine = new FossickMine(config.BoardSpec);
             var rightMine = new FossickMine(config.BoardSpec);
 
-            system.EnsureRows(leftMine, new FossickGenerationState(23456), 18);
-            system.EnsureRows(rightMine, new FossickGenerationState(23456), 18);
+            system.EnsureRows(leftMine, new FossickGenerationData(23456), 18);
+            system.EnsureRows(rightMine, new FossickGenerationData(23456), 18);
 
             for (var y = 0; y < 18; y++)
             {
@@ -345,8 +398,8 @@ namespace Fossick.Core.Tests
 
             var session = new FossickGameplaySession(config, 12345);
 
-            Assert.That(session.State.Mine.RowCount, Is.GreaterThan(config.visibleHeight));
-            Assert.That(session.State.Generation.sequenceIndex, Is.GreaterThan(0));
+            Assert.That(session.Data.Mine.RowCount, Is.GreaterThan(config.visibleHeight));
+            Assert.That(session.Data.Generation.sequenceIndex, Is.GreaterThan(0));
         }
 
         private static FossickTerrainType GetTerrain(FossickMine mine, int x, int y)

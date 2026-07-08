@@ -279,6 +279,7 @@ namespace Fossick.Runtime.Views
             used = RenderTerrainLayer(rows, width, rows == null ? 0 : rows.Count, cellSize, FossickTerrainType.Dirt, used);
             used = RenderTerrainLayer(rows, width, rows == null ? 0 : rows.Count, cellSize, FossickTerrainType.Stone, used);
             used = RenderTerrainLayer(rows, width, rows == null ? 0 : rows.Count, cellSize, FossickTerrainType.Unbreakable, used);
+            used = RenderSingleTerrainSprites(rows, width, cellSize, used);
             DisableUnused(terrainImages, used);
             RenderStoneDamageOverlay(rows, width, cellSize);
         }
@@ -344,6 +345,45 @@ namespace Fossick.Runtime.Views
             }
 
             DisableUnused(stoneDamageImages, used);
+        }
+
+        private int RenderSingleTerrainSprites(IReadOnlyList<FossickCellRenderData[]> rows, int width, float cellSize, int startIndex)
+        {
+            if (rows == null)
+            {
+                return startIndex;
+            }
+
+            var used = startIndex;
+            for (var y = 0; y < rows.Count; y++)
+            {
+                var row = rows[y];
+                if (row == null)
+                {
+                    continue;
+                }
+
+                for (var x = 0; x < width; x++)
+                {
+                    var cell = row[x];
+                    if (cell == null || !cell.isContentVisible || cell.terrain == FossickTerrainType.Empty || FossickArtLibrary.HasAutoTileSprites(cell.terrain))
+                    {
+                        continue;
+                    }
+
+                    var sprite = FossickArtLibrary.GetTerrainSprite(cell.terrain);
+                    if (sprite == null)
+                    {
+                        continue;
+                    }
+
+                    var image = GetImage(terrainImages, terrainRoot, "Terrain Sprite", used++);
+                    BindSprite(image, sprite);
+                    SetTopLeft(image.rectTransform, x * cellSize, GetRenderTop(y, cellSize), cellSize, cellSize);
+                }
+            }
+
+            return used;
         }
 
         private void RenderCellSpriteLayers(IReadOnlyList<FossickCellRenderData[]> rows, float cellSize)

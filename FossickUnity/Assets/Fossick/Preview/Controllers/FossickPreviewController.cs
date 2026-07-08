@@ -3,17 +3,21 @@ using Fossick.Core.Application.Results;
 using Fossick.Core.Application.Commands;
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Generation;
-using Fossick.Core.State;
+using Fossick.Core.Data;
 using Fossick.Core.Mine;
 using Fossick.Core.Definition.Serialization;
 using Fossick.Core.Systems;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace Fossick.Preview.Controllers
 {
     public sealed class FossickPreviewController : MonoBehaviour
     {
+        private const string SaveFolder = "Fossick/Preview";
+        private const string SaveFileName = "FossickGameplaySave.json";
+
         [SerializeField] private TextAsset mapJson;
         [SerializeField] private TextAsset fragmentLibraryJson;
         [SerializeField] private TextAsset generationRulesJson;
@@ -25,11 +29,11 @@ namespace Fossick.Preview.Controllers
         private FossickGameplaySession session;
         private readonly List<string> actionLog = new List<string>();
 
-        public FossickMine Mine => session == null ? null : session.State.Mine;
+        public FossickMine Mine => session == null ? null : session.Data.Mine;
         public FossickToolType SelectedTool { get; private set; } = FossickToolType.Pickaxe;
-        public FossickProgressState Progress => session == null ? null : session.State.Progress;
-        public FossickInventoryState Inventory => session == null ? null : session.State.Inventory;
-        public FossickRewardState Rewards => session == null ? null : session.State.Rewards;
+        public FossickProgressData Progress => session == null ? null : session.Data.Progress;
+        public FossickInventoryData Inventory => session == null ? null : session.Data.Inventory;
+        public FossickRewardData Rewards => session == null ? null : session.Data.Rewards;
         public bool UnlimitedTools { get; private set; } = true;
         public IReadOnlyList<string> ActionLog => actionLog;
 
@@ -39,6 +43,24 @@ namespace Fossick.Preview.Controllers
             toolSystem = new FossickToolSystem(config.tools);
 
             BuildMine();
+        }
+
+        private void OnDisable()
+        {
+            SavePreviewData();
+        }
+
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused)
+            {
+                SavePreviewData();
+            }
+        }
+
+        private void OnApplicationQuit()
+        {
+            SavePreviewData();
         }
 
         public FossickActionResult Dig(int x, int y)
@@ -84,26 +106,65 @@ namespace Fossick.Preview.Controllers
             var absoluteTarget = new FossickPosition(x, Mine.TopVisibleRow + y);
             var result = session.Execute(new FossickUseToolCommand(SelectedTool, absoluteTarget));
             AppendActionLog(result);
+            if (result != null && result.isApplied)
+            {
+                SavePreviewData();
+            }
+
             return result;
         }
 
         public void ResetPreview()
         {
             actionLog.Clear();
+            DeletePreviewData();
             BuildMine();
+            SavePreviewData();
             AddLog("已重置灰盒预览。");
+        }
+
+        public void SavePreviewData()
+        {
+            if (session == null)
+            {
+                return;
+            }
+
+            var folder = GetSaveFolderPath();
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            File.WriteAllText(GetSaveFilePath(), JsonUtility.ToJson(session.CaptureGameplayData(), true));
         }
 
         private void BuildMine()
         {
-            session = new FossickGameplaySession(config, seed);
-            if (UnlimitedTools && session.State.Inventory != null)
+            var savedData = LoadPreviewData();
+            session = savedData == null
+                ? new FossickGameplaySession(config, seed)
+                : new FossickGameplaySession(config, savedData);
+
+            EnsureUnlimitedTools();
+
+            if (savedData != null)
             {
-                session.State.Inventory.pickaxes = 9999;
-                session.State.Inventory.dynamite = 9999;
-                session.State.Inventory.tnt = 9999;
-                session.State.Inventory.radar = 9999;
+                AddLog($"已读取试玩进度，当前深度 {session.Data.Mine.Depth}。");
             }
+        }
+
+        private void EnsureUnlimitedTools()
+        {
+            if (!UnlimitedTools || session == null || session.Data.Inventory == null)
+            {
+                return;
+            }
+
+            session.Data.Inventory.pickaxes = 9999;
+            session.Data.Inventory.dynamite = 9999;
+            session.Data.Inventory.tnt = 9999;
+            session.Data.Inventory.radar = 9999;
         }
 
         private FossickMapConfig LoadConfig()
@@ -188,6 +249,64 @@ namespace Fossick.Preview.Controllers
             {
                 actionLog.RemoveAt(actionLog.Count - 1);
             }
+        }
+
+        private FossickGameplayData LoadPreviewData()
+        {
+            var path = GetSaveFilePath();
+            if (!File.Exists(path))
+            {
+                return null;
+            }
+
+            try
+            {
+                var savedData = JsonUtility.FromJson<FossickGameplayData>(File.ReadAllText(path));
+                if (savedData == null || savedData.schemaVersion != FossickGameplayData.CurrentSchemaVersion)
+                {
+                    return null;
+                }
+
+                if (savedData.seed != seed)
+                {
+                    return null;
+                }
+
+                if (savedData.boardWidth > 0 && savedData.boardWidth != config.boardWidth)
+                {
+                    return null;
+                }
+
+                if (savedData.visibleHeight > 0 && savedData.visibleHeight != config.visibleHeight)
+                {
+                    return null;
+                }
+
+                return savedData;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static void DeletePreviewData()
+        {
+            var path = GetSaveFilePath();
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+
+        private static string GetSaveFolderPath()
+        {
+            return Path.Combine(Application.persistentDataPath, SaveFolder);
+        }
+
+        private static string GetSaveFilePath()
+        {
+            return Path.Combine(GetSaveFolderPath(), SaveFileName);
         }
 
         private static string FormatToolName(FossickToolType toolType)

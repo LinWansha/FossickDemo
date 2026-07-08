@@ -1,5 +1,5 @@
 using Fossick.Core.Definition.Serialization;
-using Fossick.Core.Definition.Validation;
+using Fossick.MapStudio.Validation;
 using Fossick.Core.Definition.Config;
 using Fossick.MapStudio.Controllers;
 using Fossick.MapStudio.Views;

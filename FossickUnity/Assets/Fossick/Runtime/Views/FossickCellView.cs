@@ -113,6 +113,8 @@ namespace Fossick.Runtime.Views
                     return "石" + cell.hp;
                 case FossickTerrainType.Unbreakable:
                     return "X";
+                case FossickTerrainType.Explosives:
+                    return "爆";
                 default:
                     return cell.HasCollectableReward ? GetRewardLabel(cell.pickupPayload.ElementType) : string.Empty;
             }

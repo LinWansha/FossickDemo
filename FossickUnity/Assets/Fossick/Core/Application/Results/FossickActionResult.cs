@@ -35,7 +35,8 @@ namespace Fossick.Core.Application.Results
         FogRevealed = 7,
         RadarScanned = 8,
         RewardAutoCollected = 9,
-        RewardMissed = 10
+        RewardMissed = 10,
+        ExplosiveCrateTriggered = 11
     }
 
     public sealed class FossickActionStep

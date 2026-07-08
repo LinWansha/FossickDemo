@@ -14,17 +14,19 @@ namespace Fossick.Core.Mine
         }
 
         public FossickPosition Position { get; }
-        public FossickTerrainInstance Terrain { get; set; }
+        public FossickTerrainBlock Terrain { get; set; }
         public FossickEmbeddedContent FossickEmbeddedContent { get; set; }
         public FossickPickupEntity Pickup { get; private set; }
         public FossickFogState Fog { get; set; }
         public string BackgroundId { get; set; }
         public string RewardBackgroundId { get; set; }
         public IReadOnlyList<FossickDecorationObject> Decorations => decorations;
-        public bool HasObstacle => Terrain != null && Terrain.IsObstacle && !Terrain.IsDestroyed;
+        public bool HasObstacle => HasBlockingTerrain;
+        public bool HasBlockingTerrain => Terrain != null && Terrain.IsObstacle && !Terrain.IsDestroyed;
         public bool HasPickup => Pickup != null && !Pickup.Collected;
         public bool IsVisible => Fog == null || Fog.IsVisible;
         public bool HasDiggableTerrain => Terrain != null && Terrain.CanDig;
+        public bool HasTriggerableTerrain => Terrain != null && Terrain.IsTriggerable && !Terrain.IsDestroyed;
         public bool IsPassable => !HasObstacle;
         public bool HasCollectablePickup => Pickup != null && !Pickup.Collected;
 
@@ -38,9 +40,9 @@ namespace Fossick.Core.Mine
             FossickEmbeddedContent = null;
         }
 
-        public void SetPickup(FossickPickupEntity pickup)
+        public void SetPickup(FossickPickupEntity entity)
         {
-            Pickup = pickup;
+            Pickup = entity;
         }
 
         public void ClearPickup()
