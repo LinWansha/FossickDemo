@@ -8,7 +8,6 @@ namespace Fossick.MapStudio.Controllers
 {
     public sealed class FossickMapStudioController : MonoBehaviour
     {
-        [SerializeField] private TextAsset initialMapJson;
         [SerializeField] private int seed = 12345;
 
         public FossickMapConfig CurrentConfig { get; private set; }
@@ -17,11 +16,7 @@ namespace Fossick.MapStudio.Controllers
 
         private void Awake()
         {
-            if (initialMapJson != null)
-            {
-                LoadJson(initialMapJson.text);
-            }
-            else if (TryLoadSplitProject())
+            if (TryLoadSplitProject())
             {
                 Validate();
             }
@@ -30,17 +25,6 @@ namespace Fossick.MapStudio.Controllers
                 CurrentConfig = FossickSampleMapFactory.CreateDefaultConfig();
                 Validate();
             }
-        }
-
-        public void LoadJson(string json)
-        {
-            CurrentConfig = FossickMapJsonUtility.FromJson(json);
-            Validate();
-        }
-
-        public string ExportJson()
-        {
-            return FossickMapJsonUtility.ToJson(CurrentConfig);
         }
 
         public void LoadProject(FossickMapProjectConfig project)

@@ -18,7 +18,7 @@
                     "y": 0,
                     "backgroundId": "mine_default",
                     "rewardBackgroundId": "",
-                    "terrain": 0,
+                    "terrain": 3,
                     "hp": 0,
                     "reward": {
                         "type": 0,
@@ -126,9 +126,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 2,
+                        "id": "coin_pile",
+                        "amount": 100
                     },
                     "decorations": [],
                     "fog": 1
@@ -689,7 +689,7 @@
                     "y": 0,
                     "backgroundId": "mine_default",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
+                    "terrain": 4,
                     "hp": 1,
                     "reward": {
                         "type": 0,
@@ -794,7 +794,7 @@
                     "y": 1,
                     "backgroundId": "mine_default",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
+                    "terrain": 4,
                     "hp": 1,
                     "reward": {
                         "type": 0,
@@ -1154,7 +1154,7 @@
                     "y": 4,
                     "backgroundId": "mine_default",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
+                    "terrain": 4,
                     "hp": 1,
                     "reward": {
                         "type": 0,
@@ -2496,7 +2496,7 @@
                     "y": 5,
                     "backgroundId": "mine_default",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
+                    "terrain": 4,
                     "hp": 1,
                     "reward": {
                         "type": 0,
@@ -2511,8 +2511,8 @@
                     "y": 5,
                     "backgroundId": "mine_default",
                     "rewardBackgroundId": "",
-                    "terrain": 0,
-                    "hp": 0,
+                    "terrain": 4,
+                    "hp": 1,
                     "reward": {
                         "type": 0,
                         "id": "",
@@ -2897,7 +2897,7 @@
         {
             "id": 2000,
             "type": 1,
-            "difficulty": 1,
+            "difficulty": 3,
             "weight": 1,
             "tags": [],
             "width": 7,
@@ -2908,8 +2908,8 @@
                     "y": 0,
                     "backgroundId": "",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
+                    "terrain": 3,
+                    "hp": 0,
                     "reward": {
                         "type": 0,
                         "id": "",
@@ -3013,8 +3013,8 @@
                     "y": 1,
                     "backgroundId": "",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
+                    "terrain": 3,
+                    "hp": 0,
                     "reward": {
                         "type": 0,
                         "id": "",
@@ -3031,9 +3031,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 2,
+                        "id": "coin_pile",
+                        "amount": 100
                     },
                     "decorations": [],
                     "fog": 1
@@ -3106,9 +3106,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 4,
+                        "id": "collection_piece",
+                        "amount": 1
                     },
                     "decorations": [],
                     "fog": 1
@@ -3118,8 +3118,8 @@
                     "y": 2,
                     "backgroundId": "",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
+                    "terrain": 3,
+                    "hp": 0,
                     "reward": {
                         "type": 0,
                         "id": "",
@@ -3133,8 +3133,8 @@
                     "y": 2,
                     "backgroundId": "",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
+                    "terrain": 3,
+                    "hp": 0,
                     "reward": {
                         "type": 0,
                         "id": "",
@@ -3148,8 +3148,8 @@
                     "y": 2,
                     "backgroundId": "",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
+                    "terrain": 3,
+                    "hp": 0,
                     "reward": {
                         "type": 0,
                         "id": "",
@@ -3160,6 +3160,36 @@
                 },
                 {
                     "x": 3,
+                    "y": 2,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 3,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1
+                },
+                {
+                    "x": 4,
+                    "y": 2,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 3,
+                    "hp": 0,
+                    "reward": {
+                        "type": 0,
+                        "id": "",
+                        "amount": 0
+                    },
+                    "decorations": [],
+                    "fog": 1
+                },
+                {
+                    "x": 5,
                     "y": 2,
                     "backgroundId": "",
                     "rewardBackgroundId": "",
@@ -3174,98 +3204,8 @@
                     "fog": 1
                 },
                 {
-                    "x": 4,
-                    "y": 2,
-                    "backgroundId": "",
-                    "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
-                    "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
-                    },
-                    "decorations": [],
-                    "fog": 1
-                },
-                {
-                    "x": 5,
-                    "y": 2,
-                    "backgroundId": "",
-                    "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
-                    "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
-                    },
-                    "decorations": [],
-                    "fog": 1
-                },
-                {
                     "x": 6,
                     "y": 2,
-                    "backgroundId": "",
-                    "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
-                    "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
-                    },
-                    "decorations": [],
-                    "fog": 1
-                },
-                {
-                    "x": 0,
-                    "y": 3,
-                    "backgroundId": "",
-                    "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
-                    "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
-                    },
-                    "decorations": [],
-                    "fog": 1
-                },
-                {
-                    "x": 1,
-                    "y": 3,
-                    "backgroundId": "",
-                    "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
-                    "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
-                    },
-                    "decorations": [],
-                    "fog": 1
-                },
-                {
-                    "x": 2,
-                    "y": 3,
-                    "backgroundId": "",
-                    "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
-                    "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
-                    },
-                    "decorations": [],
-                    "fog": 1
-                },
-                {
-                    "x": 3,
-                    "y": 3,
                     "backgroundId": "",
                     "rewardBackgroundId": "",
                     "terrain": 2,
@@ -3279,6 +3219,66 @@
                     "fog": 1
                 },
                 {
+                    "x": 0,
+                    "y": 3,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 1,
+                        "id": "ore_copper",
+                        "amount": 10
+                    },
+                    "decorations": [],
+                    "fog": 1
+                },
+                {
+                    "x": 1,
+                    "y": 3,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 1,
+                        "id": "ore_copper",
+                        "amount": 10
+                    },
+                    "decorations": [],
+                    "fog": 1
+                },
+                {
+                    "x": 2,
+                    "y": 3,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 1,
+                        "id": "ore_gem",
+                        "amount": 30
+                    },
+                    "decorations": [],
+                    "fog": 1
+                },
+                {
+                    "x": 3,
+                    "y": 3,
+                    "backgroundId": "",
+                    "rewardBackgroundId": "",
+                    "terrain": 1,
+                    "hp": 1,
+                    "reward": {
+                        "type": 1,
+                        "id": "ore_gem",
+                        "amount": 30
+                    },
+                    "decorations": [],
+                    "fog": 1
+                },
+                {
                     "x": 4,
                     "y": 3,
                     "backgroundId": "",
@@ -3286,9 +3286,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_copper",
+                        "amount": 10
                     },
                     "decorations": [],
                     "fog": 1
@@ -3301,9 +3301,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_copper",
+                        "amount": 10
                     },
                     "decorations": [],
                     "fog": 1
@@ -3313,8 +3313,8 @@
                     "y": 3,
                     "backgroundId": "",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
+                    "terrain": 3,
+                    "hp": 0,
                     "reward": {
                         "type": 0,
                         "id": "",
@@ -3331,9 +3331,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_silver",
+                        "amount": 20
                     },
                     "decorations": [],
                     "fog": 1
@@ -3346,9 +3346,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_silver",
+                        "amount": 20
                     },
                     "decorations": [],
                     "fog": 1
@@ -3361,9 +3361,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_gem",
+                        "amount": 30
                     },
                     "decorations": [],
                     "fog": 1
@@ -3376,9 +3376,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_gem",
+                        "amount": 30
                     },
                     "decorations": [],
                     "fog": 1
@@ -3391,9 +3391,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_silver",
+                        "amount": 20
                     },
                     "decorations": [],
                     "fog": 1
@@ -3406,9 +3406,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_silver",
+                        "amount": 20
                     },
                     "decorations": [],
                     "fog": 1
@@ -3418,8 +3418,8 @@
                     "y": 4,
                     "backgroundId": "",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
+                    "terrain": 3,
+                    "hp": 0,
                     "reward": {
                         "type": 0,
                         "id": "",
@@ -3436,9 +3436,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_gold",
+                        "amount": 50
                     },
                     "decorations": [],
                     "fog": 1
@@ -3451,9 +3451,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_gold",
+                        "amount": 50
                     },
                     "decorations": [],
                     "fog": 1
@@ -3466,9 +3466,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_gem",
+                        "amount": 30
                     },
                     "decorations": [],
                     "fog": 1
@@ -3481,9 +3481,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_gem",
+                        "amount": 30
                     },
                     "decorations": [],
                     "fog": 1
@@ -3496,9 +3496,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_gold",
+                        "amount": 50
                     },
                     "decorations": [],
                     "fog": 1
@@ -3511,9 +3511,9 @@
                     "terrain": 1,
                     "hp": 1,
                     "reward": {
-                        "type": 0,
-                        "id": "",
-                        "amount": 0
+                        "type": 1,
+                        "id": "ore_gold",
+                        "amount": 50
                     },
                     "decorations": [],
                     "fog": 1
@@ -3523,8 +3523,8 @@
                     "y": 5,
                     "backgroundId": "",
                     "rewardBackgroundId": "",
-                    "terrain": 1,
-                    "hp": 1,
+                    "terrain": 3,
+                    "hp": 0,
                     "reward": {
                         "type": 0,
                         "id": "",

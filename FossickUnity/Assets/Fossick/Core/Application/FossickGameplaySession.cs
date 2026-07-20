@@ -22,10 +22,11 @@ namespace Fossick.Core.Application
         private readonly FossickRewardSystem rewardSystem;
         private readonly FossickGenerationSystem generationSystem;
 
-        public FossickGameplaySession(FossickMapConfig config, int seed)
+        public FossickGameplaySession(FossickMapConfig config, int seed, FossickInventoryData initialInventory)
         {
             this.config = config ?? FossickSampleMapFactory.CreateDefaultConfig();
             this.seed = seed;
+            initialInventory = initialInventory ?? new FossickInventoryData();
 
             pickupSystem = new FossickPickupSystem();
             toolSystem = new FossickToolSystem(this.config.tools);
@@ -41,7 +42,7 @@ namespace Fossick.Core.Application
             Data = new FossickGameplayData(
                 seed,
                 mine,
-                FossickInventoryData.FromConfig(this.config.gameplay),
+                initialInventory,
                 new FossickRewardData(),
                 new FossickProgressData(),
                 generationData);
@@ -49,7 +50,7 @@ namespace Fossick.Core.Application
         }
 
         public FossickGameplaySession(FossickMapConfig config, FossickGameplayData data)
-            : this(config, data == null ? 0 : data.seed)
+            : this(config, data == null ? 0 : data.seed, data == null ? null : data.Inventory)
         {
             Restore(data);
         }

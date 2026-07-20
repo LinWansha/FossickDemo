@@ -12,7 +12,6 @@ namespace Fossick.Core.Definition.Config
         public int boardWidth = FossickBoardSpec.DefaultWidth;
         public int visibleHeight = FossickBoardSpec.DefaultVisibleHeight;
         public FossickGenerationConfig generation = new FossickGenerationConfig();
-        public FossickGameplayConfig gameplay = new FossickGameplayConfig();
         public FossickToolRulesConfig tools = new FossickToolRulesConfig();
         public FossickVisualConfig visual = new FossickVisualConfig();
         public List<FossickFragmentConfig> fragments = new List<FossickFragmentConfig>();
@@ -39,7 +38,6 @@ namespace Fossick.Core.Definition.Config
         public int boardWidth = FossickBoardSpec.DefaultWidth;
         public int visibleHeight = FossickBoardSpec.DefaultVisibleHeight;
         public FossickGenerationConfig generation = new FossickGenerationConfig();
-        public FossickGameplayConfig gameplay = new FossickGameplayConfig();
         public FossickToolRulesConfig tools = new FossickToolRulesConfig();
         public FossickVisualConfig visual = new FossickVisualConfig();
     }
@@ -91,7 +89,6 @@ namespace Fossick.Core.Definition.Config
                 boardWidth = config.boardWidth,
                 visibleHeight = config.visibleHeight,
                 generation = CloneGenerationWithoutMapOverrides(generation),
-                gameplay = config.gameplay ?? new FossickGameplayConfig(),
                 tools = config.tools ?? new FossickToolRulesConfig(),
                 visual = config.visual ?? new FossickVisualConfig()
             };
@@ -125,7 +122,6 @@ namespace Fossick.Core.Definition.Config
                 config.boardWidth = generationRules.boardWidth;
                 config.visibleHeight = generationRules.visibleHeight;
                 config.generation = CloneGenerationWithoutMapOverrides(generationRules.generation ?? new FossickGenerationConfig());
-                config.gameplay = generationRules.gameplay ?? new FossickGameplayConfig();
                 config.tools = generationRules.tools ?? new FossickToolRulesConfig();
                 config.visual = generationRules.visual ?? new FossickVisualConfig();
             }
@@ -292,15 +288,6 @@ namespace Fossick.Core.Definition.Config
     public sealed class FossickVisualConfig
     {
         public string dirtAutoTileSet = "Dirt";
-    }
-
-    [Serializable]
-    public sealed class FossickGameplayConfig
-    {
-        public int startingPickaxes = 20;
-        public int startingDynamite = 3;
-        public int startingTnt = 1;
-        public int startingRadar = 1;
     }
 
     [Serializable]

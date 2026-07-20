@@ -1330,7 +1330,12 @@ namespace Fossick.MapStudio.Views
                 return null;
             }
 
-            return FossickMapJsonUtility.FromJson(FossickMapJsonUtility.ToJson(source));
+            var clone = JsonUtility.FromJson<FossickMapConfig>(JsonUtility.ToJson(source));
+            clone.generation = clone.generation ?? new FossickGenerationConfig();
+            clone.tools = clone.tools ?? new FossickToolRulesConfig();
+            clone.visual = clone.visual ?? new FossickVisualConfig();
+            clone.fragments = clone.fragments ?? new List<FossickFragmentConfig>();
+            return clone;
         }
 
         private FossickGenerationConfig EnsureGenerationConfig()

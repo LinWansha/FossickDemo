@@ -9,30 +9,6 @@ namespace Fossick.Core.Definition.Serialization
     {
         public const int CurrentVersion = 1;
 
-        public static FossickMapConfig FromJson(string json)
-        {
-            var config = JsonUtility.FromJson<FossickMapConfig>(json);
-            NormalizeRuntimeConfig(config);
-            return config;
-        }
-
-        public static string ToJson(FossickMapConfig config, bool prettyPrint = true)
-        {
-            NormalizeRuntimeConfig(config);
-            return JsonUtility.ToJson(config, prettyPrint);
-        }
-
-        public static FossickMapProjectConfig ProjectFromJson(string json)
-        {
-            return NormalizeProject(JsonUtility.FromJson<FossickMapProjectConfig>(json));
-        }
-
-        public static string ProjectToJson(FossickMapProjectConfig project, bool prettyPrint = true)
-        {
-            NormalizeProject(project);
-            return JsonUtility.ToJson(project, prettyPrint);
-        }
-
         public static string FragmentLibraryToJson(FossickFragmentLibraryConfig library, bool prettyPrint = true)
         {
             NormalizeFragmentLibrary(library);
@@ -85,31 +61,6 @@ namespace Fossick.Core.Definition.Serialization
             return project;
         }
 
-        private static void NormalizeRuntimeConfig(FossickMapConfig config)
-        {
-            if (config == null)
-            {
-                return;
-            }
-
-            EnsureSupportedVersion(config.version, "Fossick 地图配置");
-            config.version = NormalizeVersion(config.version);
-            config.activity = NormalizeActivity(config.activity);
-            config.generation = config.generation ?? new FossickGenerationConfig();
-            config.gameplay = config.gameplay ?? new FossickGameplayConfig();
-            config.tools = config.tools ?? new FossickToolRulesConfig();
-            config.visual = config.visual ?? new FossickVisualConfig();
-            if (config.generation.sequenceOverrides == null)
-            {
-                config.generation.sequenceOverrides = new System.Collections.Generic.List<FossickSequenceOverrideConfig>();
-            }
-
-            if (config.generation.rowOverrides == null)
-            {
-                config.generation.rowOverrides = new System.Collections.Generic.List<FossickRowOverrideConfig>();
-            }
-        }
-
         private static FossickFragmentLibraryConfig NormalizeFragmentLibrary(FossickFragmentLibraryConfig library)
         {
             if (library == null)
@@ -134,7 +85,6 @@ namespace Fossick.Core.Definition.Serialization
             rules.version = NormalizeVersion(rules.version);
             rules.activity = NormalizeActivity(rules.activity);
             rules.generation = rules.generation ?? new FossickGenerationConfig();
-            rules.gameplay = rules.gameplay ?? new FossickGameplayConfig();
             rules.tools = rules.tools ?? new FossickToolRulesConfig();
             rules.visual = rules.visual ?? new FossickVisualConfig();
             if (rules.generation.sequenceOverrides == null)

@@ -18,7 +18,6 @@ namespace Fossick.Preview.Controllers
         private const string SaveFolder = "Fossick/Preview";
         private const string SaveFileName = "FossickGameplaySave.json";
 
-        [SerializeField] private TextAsset mapJson;
         [SerializeField] private TextAsset fragmentLibraryJson;
         [SerializeField] private TextAsset generationRulesJson;
         [SerializeField] private TextAsset mapDefinitionJson;
@@ -143,7 +142,7 @@ namespace Fossick.Preview.Controllers
         {
             var savedData = LoadPreviewData();
             session = savedData == null
-                ? new FossickGameplaySession(config, seed)
+                ? new FossickGameplaySession(config, seed, CreatePreviewInventory())
                 : new FossickGameplaySession(config, savedData);
 
             EnsureUnlimitedTools();
@@ -165,6 +164,17 @@ namespace Fossick.Preview.Controllers
             session.Data.Inventory.dynamite = 9999;
             session.Data.Inventory.tnt = 9999;
             session.Data.Inventory.radar = 9999;
+        }
+
+        private static FossickInventoryData CreatePreviewInventory()
+        {
+            return new FossickInventoryData
+            {
+                pickaxes = 9999,
+                dynamite = 9999,
+                tnt = 9999,
+                radar = 9999
+            };
         }
 
         private FossickMapConfig LoadConfig()
@@ -195,11 +205,6 @@ namespace Fossick.Preview.Controllers
                 }
 
                 return project.ToRuntimeConfig();
-            }
-
-            if (mapJson != null)
-            {
-                return FossickMapJsonUtility.FromJson(mapJson.text);
             }
 
             return FossickSampleMapFactory.CreateDefaultConfig();

@@ -45,12 +45,6 @@
             ]
         }
     },
-    "gameplay": {
-        "startingPickaxes": 20,
-        "startingDynamite": 3,
-        "startingTnt": 1,
-        "startingRadar": 1
-    },
     "tools": {
         "tnt": {
             "offsets": [

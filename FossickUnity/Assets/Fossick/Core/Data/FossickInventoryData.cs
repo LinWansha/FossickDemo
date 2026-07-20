@@ -9,18 +9,6 @@ namespace Fossick.Core.Data
         public int tnt;
         public int radar;
 
-        public static FossickInventoryData FromConfig(FossickGameplayConfig config)
-        {
-            config = config ?? new FossickGameplayConfig();
-            return new FossickInventoryData
-            {
-                pickaxes = config.startingPickaxes,
-                dynamite = config.startingDynamite,
-                tnt = config.startingTnt,
-                radar = config.startingRadar
-            };
-        }
-
         public bool HasTool(FossickToolType toolType)
         {
             return GetToolCount(toolType) > 0;

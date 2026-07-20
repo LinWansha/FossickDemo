@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fossick Core Architecture</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101918;
+      --header: #1d2528;
+      --panel: #1d2528;
+      --panel-2: #263034;
+      --diagram: #f7f8f8;
+      --diagram-line: #d7d7d2;
+      --text: #f1f5f7;
+      --muted: #b8c3c8;
+      --line: #2c393c;
+      --accent: #8fb4c0;
+      --accent-soft: #223136;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.6;
+    }
+
+    header {
+      padding: 28px 40px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--header);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 20px;
+    }
+
+    p {
+      margin: 8px 0;
+      color: var(--muted);
+    }
+
+    main {
+      padding: 24px 40px 44px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 22px 24px;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .card {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      padding: 14px 16px;
+    }
+
+    .card strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .card span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .diagram {
+      background: var(--diagram);
+      border: 1px solid var(--diagram-line);
+      padding: 16px;
+      overflow: auto;
+    }
+
+    .note {
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      padding: 12px 14px;
+      color: var(--text);
+      margin-top: 14px;
+    }
+
+    .checklist {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .check {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      padding: 12px 14px;
+    }
+
+    .check::before {
+      content: "✓";
+      color: var(--accent);
+      font-weight: 800;
+      margin-right: 8px;
+    }
+
+    code {
+      color: #bfdbfe;
+      background: #11191b;
+      padding: 1px 5px;
+    }
+
+    @media (max-width: 1100px) {
+      .summary,
+      .checklist {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      themeVariables: {
+        darkMode: false,
+        background: "#f7f8f8",
+        mainBkg: "#eaf4f7",
+        secondBkg: "#f4eedc",
+        tertiaryBkg: "#f7f8f8",
+        primaryColor: "#eaf4f7",
+        primaryTextColor: "#172026",
+        primaryBorderColor: "#8ca2aa",
+        secondaryColor: "#f4eedc",
+        secondaryTextColor: "#172026",
+        secondaryBorderColor: "#d7d0b9",
+        tertiaryColor: "#ffffff",
+        tertiaryTextColor: "#172026",
+        tertiaryBorderColor: "#d7d7d2",
+        clusterBkg: "#f4eedc",
+        clusterBorder: "#d7d0b9",
+        lineColor: "#455d6a",
+        textColor: "#172026",
+        noteBkgColor: "#f4eedc",
+        noteTextColor: "#172026",
+        activationBkgColor: "#dbeafe",
+        activationBorderColor: "#8ca2aa",
+        actorBkg: "#eaf4f7",
+        actorTextColor: "#172026",
+        actorBorder: "#8ca2aa",
+        labelBoxBkgColor: "#f7f8f8",
+        labelTextColor: "#172026",
+        classText: "#172026"
+      },
+      securityLevel: "loose",
+      flowchart: { curve: "basis", htmlLabels: true },
+      class: { useMaxWidth: true }
+    });
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Fossick Core Architecture</h1>
+    <p>当前实现架构图。无阶段版本名；所有节点均对应现有 Core、Runtime、MapStudio、Preview 代码中的实际职责或类族。</p>
+    <div class="summary">
+      <div class="card"><strong>Core</strong><span>玩法规则、矿井对象、局内数据、资源索引</span></div>
+      <div class="card"><strong>Runtime</strong><span>正式矿井表现层，负责棋盘与格子渲染</span></div>
+      <div class="card"><strong>MapStudio</strong><span>策划模板编辑、生成规则和地图预览</span></div>
+      <div class="card"><strong>Preview</strong><span>独立试玩壳，用于验证核心玩法</span></div>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <h2>1. 模块总览</h2>
+      <p>Core 是玩法中心；MapStudio、Runtime、Preview 都依赖 Core，Core 不反向依赖它们。</p>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart LR
+  subgraph EditorSide["MapStudio 策划编辑"]
+    Studio["FossickMapStudioController / Views"]
+    Maps["FossickFragmentLibrary.json\nFossickGenerationRules.json\nFossickMapDefinition.json"]
+    Validator["MapStudio Validation"]
+    Studio --> Maps
+    Studio --> Validator
+  end
+
+  subgraph Core["Fossick.Core"]
+    Definition["Definition\nConfig / Types / Serialization"]
+    Application["Application\nSession / Facade / Command / Result / Adapter"]
+    Data["Data\nFossickGameplayData"]
+    Generation["Generation\nFragmentGenerator / MineLayout / SeededRandom"]
+    Mine["Mine\nGrid / Objects / Layers"]
+    Systems["Systems\nDig / Tools / Pickup / Visibility / Scroll / Reward / Generation"]
+    Visual["Visual\nArtCatalog / ArtLibrary / AutoTile"]
+  end
+
+  subgraph Runtime["Runtime 正式表现"]
+    BoardView["FossickBoardView"]
+    CellView["FossickCellView"]
+    Prefabs["Runtime Prefabs"]
+  end
+
+  subgraph Preview["Preview 独立试玩"]
+    PreviewController["FossickPreviewController"]
+    PreviewView["FossickPreviewView"]
+  end
+
+  Maps --> Definition
+  Definition --> Application
+  Application --> Systems
+  Systems --> Data
+  Systems --> Mine
+  Generation --> Mine
+  Visual --> Runtime
+  Application --> Runtime
+  Application --> Preview
+  Runtime --> Preview
+  BoardView --> CellView
+  Prefabs --> BoardView
+        </pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>2. Application 调用主线</h2>
+      <p>所有外部操作先变成 Command，由 Session 编排系统执行，再用 Result 和 Snapshot 驱动表现与外部适配。</p>
+      <div class="diagram">
+        <pre class="mermaid">
+sequenceDiagram
+  participant Input as HOP 或 Preview 输入
+  participant Facade as FossickGameplayFacade
+  participant Session as FossickGameplaySession
+  participant Systems as FossickSystem 子系统
+  participant Data as FossickGameplayData
+  participant Adapters as FossickGameplayAdapters
+
+  Input->>Facade: UseTool / Pickup / Preview
+  Facade->>Session: Execute(FossickCommand)
+  Session->>Systems: 按规则执行
+  Systems->>Data: 修改局内数据
+  Systems-->>Session: 写入 FossickActionResult
+  Session-->>Facade: FossickActionResult + FossickSnapshot
+  Facade->>Adapters: View / Animation / Reward / Storage / Telemetry
+        </pre>
+      </div>
+      <div class="note">当前实现存在 `FossickGameplaySession`、`FossickGameplayFacade`、`FossickGameplayAdapters`、`FossickActionResult`、`FossickSnapshot`，与该图一致。</div>
+    </section>
+
+    <section>
+      <h2>3. Command 与 System</h2>
+      <p>Command 表示意图，System 表示规则执行者。Command 不直接改矿井对象。</p>
+      <div class="diagram">
+        <pre class="mermaid">
+classDiagram
+  class FossickCommand
+  class FossickUseToolCommand
+  class FossickPickupCommand
+  class FossickPreviewCommand
+
+  class FossickSystem {
+    +SystemName
+  }
+  class FossickToolSystem
+  class FossickDigSystem
+  class FossickPickupSystem
+  class FossickVisibilitySystem
+  class FossickScrollSystem
+  class FossickRewardSystem
+  class FossickGenerationSystem
+
+  FossickCommand <|-- FossickUseToolCommand
+  FossickCommand <|-- FossickPickupCommand
+  FossickCommand <|-- FossickPreviewCommand
+
+  FossickSystem <|-- FossickToolSystem
+  FossickSystem <|-- FossickDigSystem
+  FossickSystem <|-- FossickPickupSystem
+  FossickSystem <|-- FossickVisibilitySystem
+  FossickSystem <|-- FossickScrollSystem
+  FossickSystem <|-- FossickRewardSystem
+  FossickSystem <|-- FossickGenerationSystem
+
+  FossickGameplaySession --> FossickCommand : receives
+  FossickGameplaySession --> FossickSystem : orchestrates
+  FossickGameplaySession --> FossickActionResult : returns
+        </pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>4. Mine 对象族</h2>
+      <p>矿井由窗口、行、格子、区域和格子对象组成。地形、附着内容、实体奖励、阴影分别是不同对象，不互相混淆。</p>
+      <div class="diagram">
+        <pre class="mermaid">
+classDiagram
+  class FossickMine {
+    +Spec
+    +Window
+    +Rows
+    +Regions
+    +GetCellAtAbsoluteRow()
+  }
+  class FossickMineWindow
+  class FossickMineRow
+  class FossickCell
+  class FossickPosition
+  class FossickMineRegionLayer
+  class FossickVisualLayer
+
+  class FossickCellObject
+  class FossickTerrainBlock
+  class FossickDirtTerrain
+  class FossickStoneTerrain
+  class FossickBedrockTerrain
+  class FossickExplosivesTerrain
+  class FossickFogState
+  class FossickDecorationObject
+  class FossickRegionObject
+  class BackgroundRegion
+  class RewardBackdropRegion
+
+  FossickMine --> FossickMineWindow
+  FossickMine --> FossickMineRow
+  FossickMine --> FossickMineRegionLayer
+  FossickMineRow --> FossickCell
+  FossickCell --> FossickPosition
+  FossickCell --> FossickTerrainBlock
+  FossickCell --> FossickFogState
+  FossickCellObject <|-- FossickTerrainBlock
+  FossickTerrainBlock <|-- FossickDirtTerrain
+  FossickTerrainBlock <|-- FossickStoneTerrain
+  FossickTerrainBlock <|-- FossickBedrockTerrain
+  FossickTerrainBlock <|-- FossickExplosivesTerrain
+  FossickCellObject <|-- FossickDecorationObject
+  FossickRegionObject <|-- BackgroundRegion
+  FossickRegionObject <|-- RewardBackdropRegion
+  FossickRegionObject --> FossickVisualLayer
+        </pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>5. 奖励对象族</h2>
+      <p>嵌入内容是“埋在地形里”的东西；实体是地形破坏后出现在空格上的东西；Payload 是入账数据。</p>
+      <div class="diagram">
+        <pre class="mermaid">
+classDiagram
+  class FossickEmbeddedContent {
+    +CreatePickupEntity()
+  }
+  class OreEmbeddedContent
+  class CoinEmbeddedContent
+  class ToolEmbeddedContent
+  class ChestEmbeddedContent
+  class CollectionEmbeddedContent
+
+  class FossickPickupEntity {
+    +Payload
+    +Collect()
+  }
+  class OrePickupEntity
+  class CoinPickupEntity
+  class ToolPickupEntity
+  class ChestPickupEntity
+  class CollectionEntity
+
+  class FossickRewardPayload
+  class OrePayload
+  class CoinPayload
+  class ToolPayload
+  class ChestPayload
+  class CollectionPayload
+
+  FossickEmbeddedContent <|-- OreEmbeddedContent
+  FossickEmbeddedContent <|-- CoinEmbeddedContent
+  FossickEmbeddedContent <|-- ToolEmbeddedContent
+  FossickEmbeddedContent <|-- ChestEmbeddedContent
+  FossickEmbeddedContent <|-- CollectionEmbeddedContent
+
+  FossickPickupEntity <|-- OrePickupEntity
+  FossickPickupEntity <|-- CoinPickupEntity
+  FossickPickupEntity <|-- ToolPickupEntity
+  FossickPickupEntity <|-- ChestPickupEntity
+  FossickPickupEntity <|-- CollectionEntity
+
+  FossickRewardPayload <|-- OrePayload
+  FossickRewardPayload <|-- CoinPayload
+  FossickRewardPayload <|-- ToolPayload
+  FossickRewardPayload <|-- ChestPayload
+  FossickRewardPayload <|-- CollectionPayload
+
+  FossickEmbeddedContent --> FossickPickupEntity : terrain destroyed
+  FossickPickupEntity --> FossickRewardPayload : collect
+  FossickRewardSystem --> FossickRewardPayload : apply
+        </pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>6. Data 与持久化边界</h2>
+      <p>Core 直接操作可持久化数据对象。迁移到 HOP 后，由 HOP 侧 StorageAdapter 决定怎么保存。</p>
+      <div class="diagram">
+        <pre class="mermaid">
+classDiagram
+  class FossickGameplayData {
+    +seed
+    +Mine
+    +Inventory
+    +Rewards
+    +Progress
+    +Generation
+  }
+  class FossickMineData
+  class FossickMineRowData
+  class FossickCellData
+  class FossickInventoryData
+  class FossickRewardData
+  class FossickProgressData
+  class FossickGenerationData
+
+  FossickGameplayData --> FossickMineData
+  FossickMineData --> FossickMineRowData
+  FossickMineRowData --> FossickCellData
+  FossickGameplayData --> FossickInventoryData
+  FossickGameplayData --> FossickRewardData
+  FossickGameplayData --> FossickProgressData
+  FossickGameplayData --> FossickGenerationData
+  FossickGameplaySession --> FossickGameplayData
+  IFossickStorageAdapter --> FossickGameplayData : save
+        </pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>7. Visual 与表现层</h2>
+      <p>Visual 只负责资源索引和四方连续查询；真正的 Unity 表现由 Runtime Views 承接。</p>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart LR
+  subgraph Catalog["FossickArtCatalog"]
+    L0["Layer0 Background"]
+    L1["Layer1 RewardBackground"]
+    L2["Layer2 Terrain"]
+    L3["Layer3 TerrainAttachment"]
+    L4["Layer4 Reward"]
+    L5["Layer5 Decoration"]
+    L6["Layer6 Fog"]
+  end
+
+  AutoTile["FossickAutoTileResolver"] --> L2
+  AutoTile --> L6
+  Library["FossickArtLibrary"] --> Catalog
+  Catalog --> BoardView["FossickBoardView"]
+  BoardView --> CellView["FossickCellView"]
+  CellView --> Layers["Background / RewardBackdrop / Terrain / Attachment / Reward / Decoration / Fog"]
+        </pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>8. 实现一致性检查</h2>
+      <div class="checklist">
+        <div class="check">Application 下存在 Session、Facade、Adapters、Commands、Events、Results。</div>
+        <div class="check">Systems 下存在 Digging、Tools、Pickup、Visibility、Scrolling、Rewards、Generation。</div>
+        <div class="check">Mine 下存在 Grid、Layers、Terrain、Regions、Fog、Rewards 对象族。</div>
+        <div class="check">Reward 对象拆成 Embedded、Entities、Payloads，符合当前地形破坏后生成实体的规则。</div>
+        <div class="check">Data 下存在 Gameplay、Mine、Inventory、Reward、Progress、Generation 数据根。</div>
+        <div class="check">Visual 下存在 ArtCatalog、ArtLibrary、AutoTileResolver。</div>
+        <div class="check">Runtime/Views 存在 FossickBoardView 和 FossickCellView，是正式表现层基础。</div>
+        <div class="check">MapStudio 和 Preview 位于 Core 外，依赖 Core，不被 Core 反向引用。</div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

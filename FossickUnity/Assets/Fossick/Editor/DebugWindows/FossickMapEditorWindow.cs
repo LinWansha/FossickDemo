@@ -1,6 +1,6 @@
+using Fossick.Core.Definition.Config;
 using Fossick.Core.Definition.Serialization;
 using Fossick.MapStudio.Validation;
-using Fossick.Core.Definition.Config;
 using Fossick.MapStudio.Controllers;
 using Fossick.MapStudio.Views;
 using UnityEditor;
@@ -10,7 +10,6 @@ namespace Fossick.Editor.DebugWindows
 {
     public sealed class FossickMapEditorWindow : EditorWindow
     {
-        private TextAsset mapJson;
         private FossickValidationResult validation;
         private Vector2 scroll;
 
@@ -22,13 +21,11 @@ namespace Fossick.Editor.DebugWindows
 
         private void OnGUI()
         {
-            mapJson = (TextAsset)EditorGUILayout.ObjectField("Map JSON", mapJson, typeof(TextAsset), false);
-
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Validate Selected JSON"))
+                if (GUILayout.Button("Validate MapStudio Project"))
                 {
-                    ValidateSelectedJson();
+                    ValidateEditableProject();
                 }
 
                 if (GUILayout.Button("Create MapStudio Object"))
@@ -40,16 +37,16 @@ namespace Fossick.Editor.DebugWindows
             DrawValidation();
         }
 
-        private void ValidateSelectedJson()
+        private void ValidateEditableProject()
         {
-            if (mapJson == null)
+            var project = FossickMapProjectFileService.LoadEditableProject();
+            if (project == null)
             {
                 validation = FossickMapValidator.Validate(FossickSampleMapFactory.CreateDefaultConfig());
                 return;
             }
 
-            var config = FossickMapJsonUtility.FromJson(mapJson.text);
-            validation = FossickMapValidator.Validate(config);
+            validation = FossickMapValidator.Validate(project.ToRuntimeConfig());
         }
 
         private static void CreateMapStudioObject()
