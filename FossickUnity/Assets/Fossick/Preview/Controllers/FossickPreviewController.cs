@@ -6,7 +6,7 @@ using Fossick.Core.Generation;
 using Fossick.Core.Data;
 using Fossick.Core.Mine;
 using Fossick.Core.Definition.Serialization;
-using Fossick.Core.Systems;
+using Fossick.MapStudio;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -23,7 +23,7 @@ namespace Fossick.Preview.Controllers
         [SerializeField] private TextAsset mapDefinitionJson;
         [SerializeField] private int seed = 12345;
 
-        private FossickToolSystem toolSystem;
+        private readonly IFossickRewardProvider rewardProvider = new FossickPreviewRewardProvider();
         private FossickMapConfig config;
         private FossickGameplaySession session;
         private readonly List<string> actionLog = new List<string>();
@@ -39,8 +39,6 @@ namespace Fossick.Preview.Controllers
         private void Awake()
         {
             config = LoadConfig();
-            toolSystem = new FossickToolSystem(config.tools);
-
             BuildMine();
         }
 
@@ -75,20 +73,20 @@ namespace Fossick.Preview.Controllers
         public IReadOnlyList<FossickToolTarget> GetPreviewTargets(int x, int y)
         {
             var result = new List<FossickToolTarget>();
-            if (Mine == null || toolSystem == null)
+            if (Mine == null || session == null)
             {
                 return result;
             }
 
             var absoluteTarget = new FossickPosition(x, Mine.TopVisibleRow + y);
-            var targets = toolSystem.GetTargets(Mine, SelectedTool, absoluteTarget);
+            var targets = session.GetToolTargets(SelectedTool, absoluteTarget);
             for (var i = 0; i < targets.Count; i++)
             {
                 var target = targets[i];
                 result.Add(new FossickToolTarget
                 {
                     x = target.x,
-                    y = target.y - Mine.TopVisibleRow
+                    y = target.y
                 });
             }
 
@@ -116,7 +114,15 @@ namespace Fossick.Preview.Controllers
         public void ResetPreview()
         {
             actionLog.Clear();
-            DeletePreviewData();
+            if (FossickMapEditorBridge.IsOfficialMapTesting)
+            {
+                FossickMapEditorBridge.SaveTestGameplayData(null);
+            }
+            else
+            {
+                DeletePreviewData();
+            }
+
             BuildMine();
             SavePreviewData();
             AddLog("已重置灰盒预览。");
@@ -129,21 +135,38 @@ namespace Fossick.Preview.Controllers
                 return;
             }
 
+            var gameplayData = session.CaptureGameplayData();
+            if (FossickMapEditorBridge.IsOfficialMapTesting)
+            {
+                FossickMapEditorBridge.SaveTestGameplayData(gameplayData);
+                return;
+            }
+
             var folder = GetSaveFolderPath();
             if (!Directory.Exists(folder))
             {
                 Directory.CreateDirectory(folder);
             }
 
-            File.WriteAllText(GetSaveFilePath(), JsonUtility.ToJson(session.CaptureGameplayData(), true));
+            File.WriteAllText(GetSaveFilePath(), JsonUtility.ToJson(gameplayData, true));
         }
 
         private void BuildMine()
         {
-            var savedData = LoadPreviewData();
+            if (config == null)
+            {
+                session = null;
+                AddLog("地图配置未就绪。");
+                return;
+            }
+
+            var savedData = FossickMapEditorBridge.IsOfficialMapTesting
+                ? FossickMapEditorBridge.TestGameplayData
+                : LoadPreviewData();
             session = savedData == null
-                ? new FossickGameplaySession(config, seed, CreatePreviewInventory())
-                : new FossickGameplaySession(config, savedData);
+                ? new FossickGameplaySession(config, seed, CreatePreviewInventory(), rewardProvider)
+                : new FossickGameplaySession(config, savedData, rewardProvider);
+            session.InfiniteTools = UnlimitedTools;
 
             EnsureUnlimitedTools();
 
@@ -179,14 +202,15 @@ namespace Fossick.Preview.Controllers
 
         private FossickMapConfig LoadConfig()
         {
-            var editableProject = FossickMapProjectFileService.LoadEditableProject();
+            if (FossickMapEditorBridge.IsOfficialMapTesting && FossickMapEditorBridge.TestMapConfig != null)
+            {
+                seed = FossickMapEditorBridge.TestSeed;
+                return FossickMapEditorBridge.TestMapConfig;
+            }
+
+            var editableProject = FossickMapProjectFileService.LoadEditableProject(FossickMapEditorBridge.ActSubType);
             if (editableProject != null)
             {
-                if (editableProject.mapDefinition != null)
-                {
-                    seed = editableProject.mapDefinition.seed;
-                }
-
                 return editableProject.ToRuntimeConfig();
             }
 
@@ -199,15 +223,10 @@ namespace Fossick.Preview.Controllers
                     mapDefinition = FossickMapJsonUtility.MapDefinitionFromJson(mapDefinitionJson.text)
                 };
 
-                if (project.mapDefinition != null)
-                {
-                    seed = project.mapDefinition.seed;
-                }
-
                 return project.ToRuntimeConfig();
             }
 
-            return FossickSampleMapFactory.CreateDefaultConfig();
+            return null;
         }
 
         private void AppendActionLog(FossickActionResult result)

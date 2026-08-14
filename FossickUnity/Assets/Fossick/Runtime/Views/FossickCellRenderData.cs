@@ -13,12 +13,10 @@ namespace Fossick.Runtime.Views
 
         public int x;
         public int y;
-        public string backgroundId;
-        public string rewardBackgroundId;
         public FossickTerrainType terrain;
         public int hp;
-        public FossickRewardPayload pickupPayload;
-        public FossickRewardPayload embeddedPayload;
+        public FossickEntityPayload pickupPayload;
+        public FossickEntityPayload embeddedPayload;
         public bool isContentVisible;
         public string[] decorations;
 
@@ -38,8 +36,6 @@ namespace Fossick.Runtime.Views
             {
                 x = cell.Position.x,
                 y = cell.Position.y,
-                backgroundId = cell.BackgroundId,
-                rewardBackgroundId = cell.RewardBackgroundId,
                 terrain = cell.Terrain == null ? FossickTerrainType.Empty : cell.Terrain.Terrain,
                 hp = cell.Terrain == null ? 0 : cell.Terrain.Hp,
                 pickupPayload = cell.HasCollectablePickup ? cell.Pickup.Payload : null,

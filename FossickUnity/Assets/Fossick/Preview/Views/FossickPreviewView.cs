@@ -35,8 +35,7 @@ namespace Fossick.Preview.Views
         private static readonly Color SelectedColor = new Color(0.25f, 0.5f, 0.78f);
         private static readonly Color PreviewColor = new Color(0.32f, 0.9f, 0.48f, 0.95f);
 
-        private readonly Dictionary<string, Image> cellImages = new Dictionary<string, Image>();
-        private readonly HashSet<string> previewTargetKeys = new HashSet<string>();
+        private IReadOnlyList<FossickToolTarget> previewTargets;
         private FossickPreviewController preview;
         private GameObject canvasObject;
         private RectTransform root;
@@ -106,8 +105,7 @@ namespace Fossick.Preview.Views
 
         private void ClearCanvas()
         {
-            cellImages.Clear();
-            previewTargetKeys.Clear();
+            previewTargets = null;
             if (canvasObject != null)
             {
                 canvasObject.SetActive(false);
@@ -229,8 +227,6 @@ namespace Fossick.Preview.Views
             boardView.ShowDebugLabels = true;
             boardView.SetFont(font);
             boardView.SetArtCatalog(artCatalog);
-            boardView.CellPointerEntered += ShowPreview;
-            boardView.CellPointerExited += ClearPreview;
             boardView.CellPointerDown += ShowPreview;
             boardView.CellPointerUp += ClearPreview;
             boardView.CellClicked += (x, y) =>
@@ -243,7 +239,7 @@ namespace Fossick.Preview.Views
                 var result = preview.UseTool(x, y);
                 PlayResultOrRebuild(result);
             };
-            boardView.Render(mine, previewTargetKeys);
+            boardView.Render(mine);
         }
 
         private void DrawLogPanel()
@@ -276,33 +272,24 @@ namespace Fossick.Preview.Views
 
         private void ShowPreview(int x, int y)
         {
-            previewTargetKeys.Clear();
-            var targets = preview.GetPreviewTargets(x, y);
-            if (targets != null)
-            {
-                for (var i = 0; i < targets.Count; i++)
-                {
-                    previewTargetKeys.Add(GetCellKey(targets[i].x, targets[i].y));
-                }
-            }
-
+            previewTargets = preview.GetPreviewTargets(x, y);
             RefreshCellColors();
         }
 
         private void ClearPreview()
         {
-            if (previewTargetKeys.Count == 0)
+            if (previewTargets == null || previewTargets.Count == 0)
             {
                 return;
             }
 
-            previewTargetKeys.Clear();
+            previewTargets = null;
             RefreshCellColors();
         }
 
         private void PlayResultOrRebuild(FossickActionResult result)
         {
-            previewTargetKeys.Clear();
+            previewTargets = null;
             if (result == null || !result.scrolled || result.scrollCount <= 0 || boardView == null)
             {
                 Build();
@@ -337,7 +324,7 @@ namespace Fossick.Preview.Views
                 var t = Mathf.Clamp01(elapsed / duration);
                 var eased = 1f - Mathf.Pow(1f - t, 3f);
                 boardView.SetVisualRowOffset(Mathf.Lerp(scrollRows, 0f, eased));
-                boardView.Render(preview.Mine, previewTargetKeys);
+                boardView.Render(preview.Mine);
                 yield return null;
             }
 
@@ -346,7 +333,7 @@ namespace Fossick.Preview.Views
                 boardView.RenderRowsAbove = previousRowsAbove;
                 boardView.RenderRowsBelow = previousRowsBelow;
                 boardView.SetVisualRowOffset(0f);
-                boardView.Render(preview.Mine, previewTargetKeys);
+                boardView.Render(preview.Mine);
             }
 
             isBoardAnimating = false;
@@ -358,16 +345,17 @@ namespace Fossick.Preview.Views
         {
             if (boardView != null)
             {
-                boardView.SetPreviewKeys(previewTargetKeys);
-                boardView.RefreshPreviews();
+                if (previewTargets == null || previewTargets.Count == 0)
+                {
+                    boardView.ClearEffectRangeHighlights();
+                }
+                else
+                {
+                    boardView.ShowEffectRangeHighlights(previewTargets, preview.Mine.TopVisibleRow);
+                }
+
                 return;
             }
-
-        }
-
-        private static string GetCellKey(int x, int y)
-        {
-            return x + ":" + y;
         }
 
         private RectTransform AddButton(Transform parent, string label, Vector2 size, Action onClick, bool disabled, Color color, Vector2 topLeft)

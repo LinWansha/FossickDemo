@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Fossick.Core.Application.Commands;
 using Fossick.Core.Application.Results;
@@ -21,24 +22,29 @@ namespace Fossick.Core.Application
         private readonly FossickScrollSystem scrollSystem;
         private readonly FossickRewardSystem rewardSystem;
         private readonly FossickGenerationSystem generationSystem;
+        private readonly FossickGravitySystem gravitySystem;
 
-        public FossickGameplaySession(FossickMapConfig config, int seed, FossickInventoryData initialInventory)
+        public FossickGameplaySession(
+            FossickMapConfig config,
+            int seed,
+            FossickInventoryData initialInventory,
+            IFossickRewardProvider rewardProvider)
         {
-            this.config = config ?? FossickSampleMapFactory.CreateDefaultConfig();
+            this.config = config;
             this.seed = seed;
-            initialInventory = initialInventory ?? new FossickInventoryData();
 
             pickupSystem = new FossickPickupSystem();
-            toolSystem = new FossickToolSystem(this.config.tools);
+            toolSystem = new FossickToolSystem();
             digSystem = new FossickDigSystem();
             visibilitySystem = new FossickVisibilitySystem();
             scrollSystem = new FossickScrollSystem(visibilitySystem);
-            rewardSystem = new FossickRewardSystem(this.config.generation == null ? null : this.config.generation.smallCoinDrop, seed);
+            rewardSystem = new FossickRewardSystem(rewardProvider);
             generationSystem = new FossickGenerationSystem(this.config);
+            gravitySystem = new FossickGravitySystem();
 
             var generationData = new FossickGenerationData(seed);
             var generatedMine = FossickMineLayoutBuilder.Build(this.config, generationData, generationSystem.GetGenerationBufferRows());
-            var mine = FossickRuntimeObjectFactory.CreateMine(this.config, generatedMine);
+            var mine = FossickRuntimeObjectFactory.CreateMine(this.config, generatedMine, rewardProvider);
             Data = new FossickGameplayData(
                 seed,
                 mine,
@@ -49,13 +55,18 @@ namespace Fossick.Core.Application
             visibilitySystem.RefreshFromOpenSpace(Data.Mine, null);
         }
 
-        public FossickGameplaySession(FossickMapConfig config, FossickGameplayData data)
-            : this(config, data == null ? 0 : data.seed, data == null ? null : data.Inventory)
+        public FossickGameplaySession(
+            FossickMapConfig config,
+            FossickGameplayData data,
+            IFossickRewardProvider rewardProvider)
+            : this(config, GetSeed(data), GetInventory(data), rewardProvider)
         {
             Restore(data);
         }
 
         public FossickGameplayData Data { get; }
+
+        public bool InfiniteTools { get; set; }
 
         public FossickGameplayData CaptureGameplayData()
         {
@@ -67,17 +78,13 @@ namespace Fossick.Core.Application
             Data.mineData.topVisibleRow = Data.Mine.TopVisibleRow;
             Data.mineData.depth = Data.Mine.Depth;
             Data.rewards.collectionItems = Data.Rewards.CreateCollectionSaveList();
+            Data.rewards.collectionDiscoveredItems = Data.Rewards.CreateCollectionDiscoveredSaveList();
             Data.mineData.loadedRows.Clear();
 
             var rows = Data.Mine.Rows;
             for (var i = 0; i < rows.Count; i++)
             {
                 var row = rows[i];
-                if (row == null)
-                {
-                    continue;
-                }
-
                 var savedRow = new FossickMineRowData { rowIndex = row.Depth };
                 for (var x = 0; x < row.Cells.Count; x++)
                 {
@@ -93,6 +100,11 @@ namespace Fossick.Core.Application
         public FossickSnapshot CreateSnapshot()
         {
             return new FossickSnapshot(Data.Mine.Spec, Data.Mine.TopVisibleRow, Data.Mine.Depth, Data.Mine.LoadedRowCount);
+        }
+
+        public IReadOnlyList<FossickToolTarget> GetToolTargets(FossickToolType toolType, FossickPosition target)
+        {
+            return toolSystem.GetTargets(Data.Mine, toolType, target);
         }
 
         public FossickSettlementResult CreateSettlementResult()
@@ -131,11 +143,6 @@ namespace Fossick.Core.Application
             {
                 ExecutePickup(pickupCommand, result);
             }
-            else if (command is FossickPreviewCommand previewCommand)
-            {
-                ExecutePreview(previewCommand, result);
-                return result;
-            }
             else
             {
                 MarkInvalid(result, 0, 0, "Command is not implemented in FossickGameplaySession yet.");
@@ -143,6 +150,11 @@ namespace Fossick.Core.Application
 
             if (result.isApplied)
             {
+                EnsureGeneratedRowsAhead();
+                gravitySystem.Settle(
+                    Data.Mine,
+                    result,
+                    requiredRows => generationSystem.EnsureRows(Data.Mine, Data.Generation, requiredRows));
                 visibilitySystem.RefreshFromOpenSpace(Data.Mine, result);
                 scrollSystem.TryScrollUntilStable(Data.Mine, result, result.targetX, result.targetY, EnsureGeneratedRowsAhead);
                 EnsureGeneratedRowsAhead();
@@ -174,7 +186,7 @@ namespace Fossick.Core.Application
                 return;
             }
 
-            if (!Data.Inventory.ConsumeTool(command.ToolType))
+            if (!InfiniteTools && !Data.Inventory.ConsumeTool(command.ToolType))
             {
                 MarkInvalid(result, command.Target.x, command.Target.y, "Selected tool is not available.");
                 return;
@@ -182,12 +194,22 @@ namespace Fossick.Core.Application
 
             result.isApplied = true;
             result.toolConsumed = true;
+            result.countsForSettlementToolUsage = true;
             result.steps.Add(new FossickActionStep
             {
                 type = FossickActionStepType.ToolConsumed,
                 x = command.Target.x,
                 y = command.Target.y
             });
+
+            for (var i = 0; i < targets.Count; i++)
+            {
+                result.affectedCells.Add(new FossickToolTarget
+                {
+                    x = targets[i].x,
+                    y = targets[i].y
+                });
+            }
 
             if (command.ToolType == FossickToolType.Radar)
             {
@@ -201,34 +223,83 @@ namespace Fossick.Core.Application
             }
 
             var damage = FossickToolSystem.GetToolDamage(command.ToolType);
+            var triggeredObjects = new HashSet<string>();
+            var explosiveTargets = new List<FossickPosition>();
             for (var i = 0; i < targets.Count; i++)
             {
                 var target = targets[i];
+                var cell = Data.Mine.GetCellAtAbsoluteRow(target.x, target.y);
+                if (cell != null && cell.HasTriggerableTerrain)
+                {
+                    explosiveTargets.Add(cell.Position);
+                    continue;
+                }
+
                 var invalidWhenNoEffect = command.ToolType == FossickToolType.Pickaxe && i == 0;
-                ApplyCellEffect(Data.Mine.GetCellAtAbsoluteRow(target.x, target.y), result, invalidWhenNoEffect, damage, null);
+                ApplyCellEffect(cell, result, invalidWhenNoEffect, damage, triggeredObjects);
+            }
+
+            for (var i = 0; i < explosiveTargets.Count; i++)
+            {
+                var target = explosiveTargets[i];
+                TriggerExplosivesTerrain(
+                    Data.Mine.GetCellAtAbsoluteRow(target.x, target.y),
+                    result,
+                    triggeredObjects);
             }
         }
 
-        private void ApplyCellEffect(FossickCell cell, FossickActionResult result, bool invalidWhenNoEffect, int damage, HashSet<string> triggeredObjects)
+        private void ApplyCellEffect(
+            FossickCell cell,
+            FossickActionResult result,
+            bool invalidWhenNoEffect,
+            int damage,
+            HashSet<string> triggeredObjects,
+            int sourceX = -1,
+            int sourceY = -1)
         {
             if (cell != null && cell.HasTriggerableTerrain)
             {
-                TriggerExplosivesTerrain(cell, result, triggeredObjects);
+                TriggerExplosivesTerrain(cell, result, triggeredObjects, sourceX, sourceY);
                 return;
             }
 
             var terrainBefore = cell == null || cell.Terrain == null ? FossickTerrainType.Empty : cell.Terrain.Terrain;
             var hadEmbeddedContent = cell != null && cell.FossickEmbeddedContent != null;
-            var applied = digSystem.ApplyCellEffect(cell, result, invalidWhenNoEffect, damage);
+            var hasSupportBelowBefore = HasSupportBelow(cell);
+            var deltaStartIndex = result.cellDeltas.Count;
+            var applied = digSystem.ApplyCellEffect(
+                cell,
+                result,
+                invalidWhenNoEffect,
+                damage,
+                hasSupportBelowBefore);
+            SetDeltaSource(result, deltaStartIndex, sourceX, sourceY);
             if (!applied || cell == null || hadEmbeddedContent || cell.Terrain != null || cell.HasCollectablePickup)
             {
                 return;
             }
 
-            rewardSystem.TrySpawnSmallCoinDrop(cell, terrainBefore, result);
+            rewardSystem.TrySpawnCoinDrop(cell, terrainBefore, result);
         }
 
-        private void TriggerExplosivesTerrain(FossickCell cell, FossickActionResult result, HashSet<string> triggeredObjects)
+        private bool HasSupportBelow(FossickCell cell)
+        {
+            if (cell == null)
+            {
+                return false;
+            }
+
+            var below = Data.Mine.GetCellAtAbsoluteRow(cell.Position.x, cell.Position.y + 1);
+            return below != null && (below.Terrain != null || below.HasCollectablePickup);
+        }
+
+        private void TriggerExplosivesTerrain(
+            FossickCell cell,
+            FossickActionResult result,
+            HashSet<string> triggeredObjects,
+            int sourceX = -1,
+            int sourceY = -1)
         {
             if (cell == null || !cell.HasTriggerableTerrain)
             {
@@ -242,10 +313,12 @@ namespace Fossick.Core.Application
                 return;
             }
 
+            var deltaStartIndex = result.cellDeltas.Count;
             if (!digSystem.TriggerExplosivesTerrain(cell, result))
             {
                 return;
             }
+            SetDeltaSource(result, deltaStartIndex, sourceX, sourceY);
 
             for (var y = cell.Position.y - FossickExplosivesTerrain.BlastRadius; y <= cell.Position.y + FossickExplosivesTerrain.BlastRadius; y++)
             {
@@ -256,8 +329,35 @@ namespace Fossick.Core.Application
                         continue;
                     }
 
-                    ApplyCellEffect(Data.Mine.GetCellAtAbsoluteRow(x, y), result, false, FossickExplosivesTerrain.BlastDamage, triggeredObjects);
+                    ApplyCellEffect(
+                        Data.Mine.GetCellAtAbsoluteRow(x, y),
+                        result,
+                        false,
+                        FossickExplosivesTerrain.BlastDamage,
+                        triggeredObjects,
+                        cell.Position.x,
+                        cell.Position.y);
                 }
+            }
+        }
+
+        private static void SetDeltaSource(
+            FossickActionResult result,
+            int startIndex,
+            int sourceX,
+            int sourceY)
+        {
+            if (sourceX < 0 || sourceY < 0)
+            {
+                return;
+            }
+
+            for (var i = startIndex; i < result.cellDeltas.Count; i++)
+            {
+                var delta = result.cellDeltas[i];
+                delta.source = FossickCellDeltaSource.ExplosiveCrate;
+                delta.sourceX = sourceX;
+                delta.sourceY = sourceY;
             }
         }
 
@@ -276,30 +376,6 @@ namespace Fossick.Core.Application
             pickupSystem.Collect(cell, result);
         }
 
-        private void ExecutePreview(FossickPreviewCommand command, FossickActionResult result)
-        {
-            if (command.Seed != seed)
-            {
-                MarkInvalid(result, 0, command.StartDepth, "Preview seed does not match this gameplay session.");
-                return;
-            }
-
-            var depthBefore = Data.Mine.Depth;
-            generationSystem.EnsureRows(Data.Mine, Data.Generation, command.StartDepth + generationSystem.GetGenerationBufferRows());
-            if (!Data.Mine.MoveWindowTo(command.StartDepth))
-            {
-                MarkInvalid(result, 0, command.StartDepth, "Preview depth is outside generated mine range.");
-                return;
-            }
-
-            result.isApplied = true;
-            result.targetX = 0;
-            result.targetY = command.StartDepth;
-            result.depthBeforeAction = depthBefore;
-            result.depthAfterAction = Data.Mine.Depth;
-            visibilitySystem.RefreshFromOpenSpace(Data.Mine, result);
-        }
-
         private void EnsureGeneratedRowsAhead()
         {
             generationSystem.EnsureGeneratedRowsAhead(Data.Mine, Data.Generation);
@@ -307,21 +383,11 @@ namespace Fossick.Core.Application
 
         private void Restore(FossickGameplayData sourceData)
         {
-            sourceData?.EnsureDefaults();
-            var mineData = sourceData == null ? null : sourceData.mineData;
-            if (sourceData == null || mineData == null || mineData.loadedRows == null || mineData.loadedRows.Count == 0)
+            var mineData = sourceData.mineData;
+            if (sourceData.boardWidth != Data.Mine.Spec.width ||
+                sourceData.visibleHeight != Data.Mine.Spec.visibleHeight)
             {
-                return;
-            }
-
-            if (sourceData.boardWidth > 0 && sourceData.boardWidth != Data.Mine.Spec.width)
-            {
-                return;
-            }
-
-            if (sourceData.visibleHeight > 0 && sourceData.visibleHeight != Data.Mine.Spec.visibleHeight)
-            {
-                return;
+                throw new InvalidOperationException("Fossick gameplay save dimensions do not match the current map config.");
             }
 
             CopyGenerationData(sourceData.Generation, Data.Generation);
@@ -331,44 +397,39 @@ namespace Fossick.Core.Application
             Data.Inventory.radar = sourceData.Inventory.radar;
             Data.Rewards.score = sourceData.Rewards.score;
             Data.Rewards.coins = sourceData.Rewards.coins;
+            Data.Rewards.collectionDrawCount = sourceData.Rewards.collectionDrawCount;
             Data.Rewards.LoadCollectionSaveList(sourceData.Rewards.collectionItems);
+            Data.Rewards.LoadCollectionDiscoveredSaveList(sourceData.Rewards.collectionDiscoveredItems);
             Data.Progress.depth = sourceData.Progress.depth;
             Data.Progress.oreFound = sourceData.Progress.oreFound;
             Data.Progress.collectionFound = sourceData.Progress.collectionFound;
             Data.Progress.toolUsed = sourceData.Progress.toolUsed;
 
-            var rows = new List<IReadOnlyList<FossickCellConfig>>();
-            for (var i = 0; i < mineData.loadedRows.Count; i++)
-            {
-                var savedRow = mineData.loadedRows[i];
-                var row = new List<FossickCellConfig>();
-                if (savedRow != null && savedRow.cells != null)
-                {
-                    for (var j = 0; j < savedRow.cells.Count; j++)
-                    {
-                        row.Add(CreateCellConfig(savedRow.cells[j]));
-                    }
-                }
-
-                rows.Add(row);
-            }
-
-            Data.Mine.RestoreRows(mineData.loadedStartRow, rows, mineData.topVisibleRow);
+            Data.Mine.RestoreRows(
+                mineData.loadedStartRow,
+                mineData.loadedRows,
+                mineData.topVisibleRow);
+            Data.Mine.RebuildRewardBackgroundRegions(config, Data.Generation.generatedFragmentIds);
             EnsureGeneratedRowsAhead();
+        }
+
+        private static int GetSeed(FossickGameplayData data)
+        {
+            data.Validate();
+            return data.seed;
+        }
+
+        private static FossickInventoryData GetInventory(FossickGameplayData data)
+        {
+            return data.inventory;
         }
 
         private static FossickCellData CreateCellData(FossickCell cell)
         {
             var saved = new FossickCellData();
-            if (cell == null)
-            {
-                return saved;
-            }
 
             saved.x = cell.Position.x;
             saved.y = cell.Position.y;
-            saved.backgroundId = cell.BackgroundId;
-            saved.rewardBackgroundId = cell.RewardBackgroundId;
             saved.terrain = cell.Terrain == null ? FossickTerrainType.Empty : cell.Terrain.Terrain;
             saved.hp = cell.Terrain == null ? 0 : cell.Terrain.Hp;
             saved.reward = CreateElementConfig(cell.FossickEmbeddedContent == null ? null : cell.FossickEmbeddedContent.Payload)
@@ -387,28 +448,7 @@ namespace Fossick.Core.Application
             return saved;
         }
 
-        private static FossickCellConfig CreateCellConfig(FossickCellData saved)
-        {
-            if (saved == null)
-            {
-                return new FossickCellConfig();
-            }
-
-            return new FossickCellConfig
-            {
-                x = saved.x,
-                y = saved.y,
-                backgroundId = saved.backgroundId,
-                rewardBackgroundId = saved.rewardBackgroundId,
-                terrain = saved.terrain,
-                hp = saved.hp,
-                reward = saved.collected ? null : saved.reward,
-                decorations = saved.decorations == null ? new List<string>() : new List<string>(saved.decorations),
-                fog = saved.fog
-            };
-        }
-
-        private static FossickElementConfig CreateElementConfig(FossickRewardPayload payload)
+        private static FossickElementConfig CreateElementConfig(FossickEntityPayload payload)
         {
             if (payload == null)
             {
@@ -418,18 +458,12 @@ namespace Fossick.Core.Application
             return new FossickElementConfig
             {
                 type = payload.ElementType,
-                id = payload.Id,
-                amount = payload.Amount
+                id = payload.Id
             };
         }
 
         private static void CopyGenerationData(FossickGenerationData source, FossickGenerationData target)
         {
-            if (source == null || target == null)
-            {
-                return;
-            }
-
             target.seed = source.seed;
             target.randomState = source.randomState;
             target.sequenceIndex = source.sequenceIndex;
@@ -438,15 +472,9 @@ namespace Fossick.Core.Application
             target.regularSinceLastReward = source.regularSinceLastReward;
             target.nextRewardAfterRegularCount = source.nextRewardAfterRegularCount;
             target.groupIndex = source.groupIndex;
-            target.pendingRegularFragmentIds = source.pendingRegularFragmentIds == null
-                ? new List<int>()
-                : new List<int>(source.pendingRegularFragmentIds);
-            target.generatedFragmentIds = source.generatedFragmentIds == null
-                ? new List<int>()
-                : new List<int>(source.generatedFragmentIds);
-            target.rewardInsertedAfterRegularCounts = source.rewardInsertedAfterRegularCounts == null
-                ? new List<int>()
-                : new List<int>(source.rewardInsertedAfterRegularCounts);
+            target.pendingRegularFragmentIds = new List<int>(source.pendingRegularFragmentIds);
+            target.generatedFragmentIds = new List<int>(source.generatedFragmentIds);
+            target.rewardInsertedAfterRegularCounts = new List<int>(source.rewardInsertedAfterRegularCounts);
         }
 
         private static void MarkInvalid(FossickActionResult result, int x, int y, string reason)

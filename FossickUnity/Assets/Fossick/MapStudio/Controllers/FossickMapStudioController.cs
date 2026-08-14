@@ -1,18 +1,15 @@
 using Fossick.Core.Definition.Config;
+using Fossick.Core.Validation;
 using Fossick.Core.Definition.Serialization;
-using Fossick.MapStudio.Validation;
-using System;
 using UnityEngine;
 
 namespace Fossick.MapStudio.Controllers
 {
     public sealed class FossickMapStudioController : MonoBehaviour
     {
-        [SerializeField] private int seed = 12345;
-
         public FossickMapConfig CurrentConfig { get; private set; }
         public FossickValidationResult LastValidation { get; private set; }
-        public int Seed => seed;
+        public string ActSubType => FossickMapEditorBridge.ActSubType;
 
         private void Awake()
         {
@@ -20,9 +17,14 @@ namespace Fossick.MapStudio.Controllers
             {
                 Validate();
             }
+            else if (TryLoadBundledProject())
+            {
+                Validate();
+            }
             else
             {
-                CurrentConfig = FossickSampleMapFactory.CreateDefaultConfig();
+                Debug.LogError("Map project config not found.");
+                CurrentConfig = new FossickMapConfig();
                 Validate();
             }
         }
@@ -31,34 +33,13 @@ namespace Fossick.MapStudio.Controllers
         {
             if (project == null)
             {
-                CurrentConfig = FossickSampleMapFactory.CreateDefaultConfig();
+                CurrentConfig = new FossickMapConfig();
                 Validate();
                 return;
             }
 
             CurrentConfig = project.ToRuntimeConfig();
-            if (project.mapDefinition != null)
-            {
-                seed = project.mapDefinition.seed;
-            }
-
             Validate();
-        }
-
-        public void SetSeed(int value)
-        {
-            seed = value;
-        }
-
-        public int RandomizeSeed()
-        {
-            seed = Math.Abs(Guid.NewGuid().GetHashCode());
-            if (seed == 0)
-            {
-                seed = 1;
-            }
-
-            return seed;
         }
 
         public FossickValidationResult Validate()
@@ -69,7 +50,7 @@ namespace Fossick.MapStudio.Controllers
 
         private bool TryLoadSplitProject()
         {
-            var project = FossickMapProjectFileService.LoadEditableProject();
+            var project = FossickMapProjectFileService.LoadEditableProject(ActSubType);
             if (project == null)
             {
                 return false;
@@ -77,6 +58,50 @@ namespace Fossick.MapStudio.Controllers
 
             LoadProject(project);
             return true;
+        }
+
+        private bool TryLoadBundledProject()
+        {
+            var project = LoadBundledProject();
+            if (project == null)
+            {
+                return false;
+            }
+
+            LoadProject(project);
+            FossickMapProjectFileService.SaveEditableProject(
+                FossickMapProjectConfig.FromRuntimeConfig(CurrentConfig),
+                ActSubType);
+            return true;
+        }
+
+        private FossickMapProjectConfig LoadBundledProject()
+        {
+            var libraryText = LoadBundledText(FossickMapProjectFileService.FragmentLibraryFileName);
+            var rulesText = LoadBundledText(FossickMapProjectFileService.GenerationRulesFileName);
+            var definitionText = LoadBundledText(FossickMapProjectFileService.MapDefinitionFileName);
+            if (string.IsNullOrEmpty(libraryText) || string.IsNullOrEmpty(rulesText) || string.IsNullOrEmpty(definitionText))
+            {
+                return null;
+            }
+
+            return FossickMapJsonUtility.NormalizeProject(new FossickMapProjectConfig
+            {
+                fragmentLibrary = FossickMapJsonUtility.FragmentLibraryFromJson(libraryText),
+                generationRules = FossickMapJsonUtility.GenerationRulesFromJson(rulesText),
+                mapDefinition = FossickMapJsonUtility.MapDefinitionFromJson(definitionText)
+            });
+        }
+
+        private string LoadBundledText(string fileName)
+        {
+            if (FossickMapEditorBridge.LoadBundledText == null || string.IsNullOrEmpty(ActSubType))
+            {
+                return null;
+            }
+
+            var assetPath = $"Assets/Art/AbResources/Activity/Fossick/{ActSubType}/Map/Config/{fileName}";
+            return FossickMapEditorBridge.LoadBundledText(assetPath);
         }
     }
 }

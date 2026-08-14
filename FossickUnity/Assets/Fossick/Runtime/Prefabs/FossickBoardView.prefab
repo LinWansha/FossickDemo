@@ -51,6 +51,6 @@ MonoBehaviour:
   artCatalog: {fileID: 11400000, guid: c9746b3a2067e487e925dff6a888f386, type: 2}
   cellViewPrefab: {fileID: 4009567615822321377, guid: dd09c6f87a1da4ee8a04e38d694558da, type: 3}
   showDebugLabels: 0
-  labelWidth: 56
+  labelWidth: 0
   renderRowsAbove: 1
   renderRowsBelow: 2

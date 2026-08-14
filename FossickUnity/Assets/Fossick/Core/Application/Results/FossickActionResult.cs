@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Application.Events;
+using Fossick.Core.Mine.Objects;
 
 namespace Fossick.Core.Application.Results
 {
@@ -12,9 +13,12 @@ namespace Fossick.Core.Application.Results
         public bool isApplied;
         public bool isCollectOnly;
         public bool toolConsumed;
+        public bool countsForSettlementToolUsage;
         public string invalidReason;
         public readonly List<FossickActionStep> steps = new List<FossickActionStep>();
+        public readonly List<FossickToolTarget> affectedCells = new List<FossickToolTarget>();
         public readonly List<FossickCellDelta> cellDeltas = new List<FossickCellDelta>();
+        public readonly List<FossickEntityDrop> entityDrops = new List<FossickEntityDrop>();
         public readonly List<FossickRewardEvent> rewards = new List<FossickRewardEvent>();
         public readonly List<FossickDomainEvent> domainEvents = new List<FossickDomainEvent>();
         public bool scrolled;
@@ -29,14 +33,13 @@ namespace Fossick.Core.Application.Results
         ToolConsumed = 1,
         ObstacleHit = 2,
         ObstacleBroken = 3,
-        RewardRevealed = 4,
-        RewardCollected = 5,
+        EntityRevealed = 4,
+        EntityCollected = 5,
         MineScrolled = 6,
         FogRevealed = 7,
         RadarScanned = 8,
-        RewardAutoCollected = 9,
-        RewardMissed = 10,
-        ExplosiveCrateTriggered = 11
+        EntityAutoCollected = 9,
+        EntityMissed = 10
     }
 
     public sealed class FossickActionStep
@@ -59,21 +62,40 @@ namespace Fossick.Core.Application.Results
     {
         public int x;
         public int y;
+        public FossickCellDeltaSource source;
+        public int sourceX;
+        public int sourceY;
         public FossickTerrainType terrainBefore;
         public FossickTerrainType terrainAfter;
         public int hpBefore;
         public int hpAfter;
+        public bool hasSupportBelowBefore;
         public FossickFogType fogBefore;
         public FossickFogType fogAfter;
-        public bool rewardRevealed;
-        public bool elementRevealed;
-        public bool rewardCollected;
+    }
+
+    public enum FossickCellDeltaSource
+    {
+        Tool = 0,
+        ExplosiveCrate = 1
+    }
+
+    public sealed class FossickEntityDrop
+    {
+        public FossickPickupEntity entity;
+        public int fromX;
+        public int fromY;
+        public int toX;
+        public int toY;
+        public FossickElementType elementType;
+        public string id;
     }
 
     public sealed class FossickRewardEvent
     {
         public FossickElementType elementType;
         public string id;
+        public string resolvedId;
         public int amount;
         public int x;
         public int y;

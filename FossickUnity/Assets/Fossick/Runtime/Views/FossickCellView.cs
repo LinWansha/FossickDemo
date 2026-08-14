@@ -8,17 +8,36 @@ namespace Fossick.Runtime.Views
 {
     public sealed class FossickCellView : MonoBehaviour
     {
+        [SerializeField] private Image effectHighlight;
         [SerializeField] private Text label;
 
         private int x;
         private int y;
+        private bool effectHighlighted;
         private Action<int, int> clicked;
-        private Action<int, int> pointerEnter;
-        private Action pointerExit;
         private Action<int, int> pointerDown;
         private Action pointerUp;
 
         public RectTransform RectTransform => (RectTransform)transform;
+
+        public void SetEffectHighlighted(bool highlighted, Color color)
+        {
+            effectHighlighted = highlighted;
+            color.a = highlighted ? color.a : 0f;
+            effectHighlight.color = color;
+        }
+
+        public void SetEffectHighlightAlpha(float alpha)
+        {
+            if (!effectHighlighted)
+            {
+                return;
+            }
+
+            var color = effectHighlight.color;
+            color.a = alpha;
+            effectHighlight.color = color;
+        }
 
         public void Bind(
             FossickCellRenderData cell,
@@ -26,10 +45,7 @@ namespace Fossick.Runtime.Views
             int viewY,
             Font font,
             bool showDebugLabel,
-            bool previewed,
             Action<int, int> onClick,
-            Action<int, int> onPointerEnter,
-            Action onPointerExit,
             Action<int, int> onPointerDown,
             Action onPointerUp)
         {
@@ -37,22 +53,25 @@ namespace Fossick.Runtime.Views
             x = viewX;
             y = viewY;
             clicked = onClick;
-            pointerEnter = onPointerEnter;
-            pointerExit = onPointerExit;
             pointerDown = onPointerDown;
             pointerUp = onPointerUp;
 
-            SetPreviewed(previewed);
             BindLabel(cell, font, showDebugLabel);
-        }
-
-        public void SetPreviewed(bool value)
-        {
-            EnsureLayers(null);
         }
 
         private void EnsureLayers(Font font)
         {
+            if (effectHighlight == null)
+            {
+                var highlightObject = new GameObject("Effect Highlight", typeof(RectTransform), typeof(Image));
+                highlightObject.transform.SetParent(transform, false);
+                highlightObject.transform.SetAsFirstSibling();
+                Stretch((RectTransform)highlightObject.transform);
+                effectHighlight = highlightObject.GetComponent<Image>();
+                effectHighlight.color = Color.clear;
+                effectHighlight.raycastTarget = false;
+            }
+
             if (label == null)
             {
                 var labelObject = new GameObject("Debug Label", typeof(RectTransform), typeof(Text));
@@ -71,8 +90,6 @@ namespace Fossick.Runtime.Views
             if (GetComponent<EventTrigger>() == null)
             {
                 var trigger = gameObject.AddComponent<EventTrigger>();
-                AddEvent(trigger, EventTriggerType.PointerEnter, _ => pointerEnter?.Invoke(x, y));
-                AddEvent(trigger, EventTriggerType.PointerExit, _ => pointerExit?.Invoke());
                 AddEvent(trigger, EventTriggerType.PointerDown, _ => pointerDown?.Invoke(x, y));
                 AddEvent(trigger, EventTriggerType.PointerClick, _ => clicked?.Invoke(x, y));
                 AddEvent(trigger, EventTriggerType.PointerUp, _ => pointerUp?.Invoke());

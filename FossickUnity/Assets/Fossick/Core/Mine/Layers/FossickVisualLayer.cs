@@ -6,7 +6,7 @@ namespace Fossick.Core.Mine
         RewardBackground = 1,
         Terrain = 2,
         TerrainAttachment = 3,
-        Reward = 4,
+        Entity = 4,
         Decoration = 5,
         Fog = 6
     }

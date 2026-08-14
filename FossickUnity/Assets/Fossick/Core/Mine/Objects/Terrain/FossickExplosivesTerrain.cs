@@ -7,7 +7,7 @@ namespace Fossick.Core.Mine.Objects
     {
         public const string Id = "explosive_crate";
         public const int BlastRadius = 1;
-        public const int BlastDamage = 2;
+        public const int BlastDamage = 1;
 
         public FossickExplosivesTerrain(int hp, FossickPosition position)
             : base(Id, FossickTerrainType.Explosives, hp <= 0 ? 1 : hp, position)

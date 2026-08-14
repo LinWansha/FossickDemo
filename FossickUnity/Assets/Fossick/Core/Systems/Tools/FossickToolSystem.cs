@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using Fossick.Core.Application;
 using Fossick.Core.Application.Results;
 using Fossick.Core.Definition.Config;
@@ -8,12 +9,11 @@ namespace Fossick.Core.Systems
 {
     public sealed class FossickToolSystem : FossickSystem
     {
-        private readonly FossickToolRulesConfig toolRules;
+        private const int TntRadius = 1;
 
-        public FossickToolSystem(FossickToolRulesConfig toolRules)
+        public FossickToolSystem()
             : base("Tool")
         {
-            this.toolRules = toolRules ?? new FossickToolRulesConfig();
         }
 
         public IReadOnlyList<FossickToolTarget> GetTargets(FossickMine mine, FossickToolType toolType, FossickPosition target)
@@ -55,7 +55,7 @@ namespace Fossick.Core.Systems
             {
                 if (IsVisibleEmptyCell(mine.GetCellAtAbsoluteRow(target.x, target.y)))
                 {
-                    AddConfiguredTargets(mine, toolRules.tnt, target.x, target.y, targets);
+                    AddSquareTargets(mine, target.x, target.y, TntRadius, targets);
                 }
             }
 
@@ -77,23 +77,14 @@ namespace Fossick.Core.Systems
             return cell != null && cell.IsVisible && cell.IsPassable && !cell.HasCollectablePickup;
         }
 
-        private static void AddConfiguredTargets(FossickMine mine, FossickToolShapeConfig shape, int x, int y, List<FossickToolTarget> targets)
+        private static void AddSquareTargets(FossickMine mine, int x, int y, int radius, List<FossickToolTarget> targets)
         {
-            if (shape == null || shape.offsets == null || shape.offsets.Count == 0)
+            for (var offsetY = -radius; offsetY <= radius; offsetY++)
             {
-                AddTargetIfValid(mine, x, y, targets);
-                return;
-            }
-
-            for (var i = 0; i < shape.offsets.Count; i++)
-            {
-                var offset = shape.offsets[i];
-                if (offset == null)
+                for (var offsetX = -radius; offsetX <= radius; offsetX++)
                 {
-                    continue;
+                    AddTargetIfValid(mine, x + offsetX, y + offsetY, targets);
                 }
-
-                AddTargetIfValid(mine, x + offset.x, y + offset.y, targets);
             }
         }
 

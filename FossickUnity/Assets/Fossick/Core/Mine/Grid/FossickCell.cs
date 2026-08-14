@@ -18,8 +18,6 @@ namespace Fossick.Core.Mine
         public FossickEmbeddedContent FossickEmbeddedContent { get; set; }
         public FossickPickupEntity Pickup { get; private set; }
         public FossickFogState Fog { get; set; }
-        public string BackgroundId { get; set; }
-        public string RewardBackgroundId { get; set; }
         public IReadOnlyList<FossickDecorationObject> Decorations => decorations;
         public bool HasObstacle => HasBlockingTerrain;
         public bool HasBlockingTerrain => Terrain != null && Terrain.IsObstacle && !Terrain.IsDestroyed;

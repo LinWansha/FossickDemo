@@ -1,9 +1,9 @@
-using Fossick.Core.Application.Results;
+using System;
 
 namespace Fossick.Core.Application.Adapters
 {
     public interface IFossickAnimationAdapter
     {
-        void Play(FossickActionResult result, FossickSnapshot snapshot);
+        bool Play(FossickAnimationContext context, Action onCompleted);
     }
 }

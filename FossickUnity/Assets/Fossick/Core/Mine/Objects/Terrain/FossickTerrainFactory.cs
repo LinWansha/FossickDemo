@@ -5,6 +5,11 @@ namespace Fossick.Core.Mine.Objects
 {
     public static class FossickTerrainFactory
     {
+        public static FossickTerrainBlock Create(FossickTerrainType terrain, FossickPosition position)
+        {
+            return Create(terrain, 0, position);
+        }
+
         public static FossickTerrainBlock Create(FossickTerrainType terrain, int hp, FossickPosition position)
         {
             switch (terrain)

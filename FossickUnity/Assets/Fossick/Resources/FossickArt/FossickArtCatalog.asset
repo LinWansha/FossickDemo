@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: FossickArtCatalog
   m_EditorClassIdentifier: 
   emptyCellColor: {r: 0.08, g: 0.18, b: 0.22, a: 1}
-  previewColor: {r: 0.32, g: 0.9, b: 0.48, a: 0.95}
+  effectHighlightColor: {r: 0.32, g: 0.9, b: 0.48, a: 0.95}
+  collectionIcons: []
   layer0Background:
     backgrounds:
     - id: mine_default
@@ -209,11 +210,30 @@ MonoBehaviour:
       id: treasure_chest
       terrain: 1
       sprite: {fileID: 21300000, guid: 793ce072220594b34849bc41730b7c35, type: 3}
-  layer4Reward:
-    rewards:
+    - type: 4
+      id: collection_box
+      terrain: 1
+      sprite: {fileID: 21300000, guid: 793ce072220594b34849bc41730b7c35, type: 3}
+  layer4Entity:
+    entities:
     - type: 2
-      id: coin_pile
+      id: coin_drop
       sprite: {fileID: 21300000, guid: 49525bdf703c04c12b71a863387c396f, type: 3}
+    - type: 2
+      id: coin_drop_small
+      sprite: {fileID: 21300000, guid: 49525bdf703c04c12b71a863387c396f, type: 3}
+    - type: 2
+      id: coin_drop_medium
+      sprite: {fileID: 21300000, guid: 49525bdf703c04c12b71a863387c396f, type: 3}
+    - type: 2
+      id: coin_drop_large
+      sprite: {fileID: 21300000, guid: 49525bdf703c04c12b71a863387c396f, type: 3}
+    - type: 2
+      id: coin_pile_small
+      sprite: {fileID: 21300000, guid: 72a155012443c4d3da5cfe9d1c655a72, type: 3}
+    - type: 2
+      id: coin_pile_large
+      sprite: {fileID: 21300000, guid: 7be1b0f16272f408fb583534b2b34e26, type: 3}
     - type: 1
       id: ore_copper
       sprite: {fileID: 21300000, guid: 296cb8612702143a1abbd76970862680, type: 3}
@@ -242,7 +262,13 @@ MonoBehaviour:
       id: treasure_chest
       sprite: {fileID: 21300000, guid: 931ce7a82d3c74f348af08e7a83c11ef, type: 3}
     - type: 4
+      id: collection_box
+      sprite: {fileID: 21300000, guid: 793ce072220594b34849bc41730b7c35, type: 3}
+    - type: 4
       id: collection_piece
+      sprite: {fileID: 21300000, guid: c7e21d090b62140809e12aa14838e736, type: 3}
+    - type: 6
+      id: message_bottle
       sprite: {fileID: 21300000, guid: c7e21d090b62140809e12aa14838e736, type: 3}
   layer5Decoration:
     decorations:

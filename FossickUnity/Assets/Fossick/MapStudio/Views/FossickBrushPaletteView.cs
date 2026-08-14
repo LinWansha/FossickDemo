@@ -26,7 +26,6 @@ namespace Fossick.MapStudio.Views
             public FossickTerrainType selectedTerrain;
             public FossickElementType selectedRewardType;
             public string selectedRewardId;
-            public int selectedRewardAmount;
             public string selectedRewardBackgroundId;
             public int selectedRewardBackgroundWidth;
             public int selectedRewardBackgroundHeight;
@@ -38,7 +37,7 @@ namespace Fossick.MapStudio.Views
         {
             public Action<FossickBrushMode> selectBrushMode;
             public Action<FossickTerrainType> selectTerrain;
-            public Action<FossickElementType, string, string, int> selectReward;
+            public Action<FossickElementType, string, string> selectReward;
             public Action<string, string, int, int> selectRewardBackground;
             public Action<string, string> selectDecoration;
             public Action<FossickFogType, string> selectFog;
@@ -59,9 +58,9 @@ namespace Fossick.MapStudio.Views
             if (state.selectedBrushMode == FossickBrushMode.RewardBackground)
             {
                 AddRewardBackgroundBrushTile(parent, state, callbacks, string.Empty, "清空", 0, 0);
-                AddRewardBackgroundBrushTile(parent, state, callbacks, "treasure_room_3x2", "小藏宝阁 3x2", 3, 2);
-                AddRewardBackgroundBrushTile(parent, state, callbacks, "treasure_room_5x2", "中藏宝阁 5x2", 5, 2);
-                AddRewardBackgroundBrushTile(parent, state, callbacks, "treasure_room_7x2", "大藏宝阁 7x2", 7, 2);
+                AddRewardBackgroundBrushTile(parent, state, callbacks, FossickContentIds.RewardBackground.TreasureRoomSmall, "小藏宝阁 3x2", 3, 2);
+                AddRewardBackgroundBrushTile(parent, state, callbacks, FossickContentIds.RewardBackground.TreasureRoomMedium, "中藏宝阁 5x2", 5, 2);
+                AddRewardBackgroundBrushTile(parent, state, callbacks, FossickContentIds.RewardBackground.TreasureRoomLarge, "大藏宝阁 7x2", 7, 2);
                 return;
             }
 
@@ -78,34 +77,35 @@ namespace Fossick.MapStudio.Views
             if (state.selectedBrushMode == FossickBrushMode.Reward)
             {
                 AddRewardBrushTile(parent, state, callbacks, FossickElementType.None, "清空", null);
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Coin, "金币 100", "coin_pile", 100);
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Coin, "金币 300", "coin_pile", 300);
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Coin, "金币 600", "coin_pile", 600);
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Ore, "铜矿", "ore_copper");
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Ore, "银矿", "ore_silver");
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Ore, "金矿", "ore_gold");
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Ore, "宝石矿", "ore_gem");
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Chest, "宝箱", "treasure_chest");
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Collection, "收藏品", "collection_piece");
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Coin, "掉落金币堆", FossickContentIds.Reward.CoinDrop);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Coin, "小金币堆", FossickContentIds.Reward.CoinPileSmall);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Coin, "大金币堆", FossickContentIds.Reward.CoinPileLarge);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Ore, "铜矿", FossickContentIds.Reward.OreCopper);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Ore, "银矿", FossickContentIds.Reward.OreSilver);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Ore, "金矿", FossickContentIds.Reward.OreGold);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Ore, "宝石矿", FossickContentIds.Reward.OreGem);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Collection, "收藏品箱", FossickContentIds.Reward.CollectionBox);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Chest, "奖励宝箱", FossickContentIds.Reward.TreasureChest);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Chest, "漂流瓶", FossickContentIds.Reward.MessageBottle);
                 return;
             }
 
             if (state.selectedBrushMode == FossickBrushMode.Tool)
             {
                 AddRewardBrushTile(parent, state, callbacks, FossickElementType.None, "清空", null);
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Item, "矿镐", "pickaxe");
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Item, "雷管", "dynamite");
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Item, "炸药", "tnt");
-                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Item, "雷达", "radar");
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Item, "矿镐", FossickContentIds.Tool.Pickaxe);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Item, "雷管", FossickContentIds.Tool.Dynamite);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Item, "炸药", FossickContentIds.Tool.Tnt);
+                AddRewardBrushTile(parent, state, callbacks, FossickElementType.Item, "雷达", FossickContentIds.Tool.Radar);
                 return;
             }
 
             if (state.selectedBrushMode == FossickBrushMode.Decoration)
             {
                 AddDecorationBrushTile(parent, state, callbacks, string.Empty, "清空");
-                AddDecorationBrushTile(parent, state, callbacks, "grass_large", "草丛");
-                AddDecorationBrushTile(parent, state, callbacks, "grass_small", "小草");
-                AddDecorationBrushTile(parent, state, callbacks, "mushroom", "蘑菇");
+                AddDecorationBrushTile(parent, state, callbacks, FossickContentIds.Decoration.GrassLarge, "草丛");
+                AddDecorationBrushTile(parent, state, callbacks, FossickContentIds.Decoration.GrassSmall, "小草");
+                AddDecorationBrushTile(parent, state, callbacks, FossickContentIds.Decoration.Mushroom, "蘑菇");
                 return;
             }
 
@@ -127,33 +127,33 @@ namespace Fossick.MapStudio.Views
                 && state.selectedRewardBackgroundId == id
                 && state.selectedRewardBackgroundWidth == width
                 && state.selectedRewardBackgroundHeight == height;
-            var sprite = string.IsNullOrEmpty(id) ? null : FossickArtLibrary.GetBackgroundSprite(id);
+            var sprite = string.IsNullOrEmpty(id) ? null : FossickArtLibrary.GetRewardBackgroundSprite(id);
             AddBrushTile(parent, label, selected, sprite, string.IsNullOrEmpty(id) ? "×" : null, string.IsNullOrEmpty(id) ? new Color(0.11f, 0.13f, 0.15f) : new Color(0.38f, 0.27f, 0.1f, 0.9f), () =>
             {
                 callbacks.selectRewardBackground?.Invoke(id, label, width, height);
             });
         }
 
-        private void AddRewardBrushTile(RectTransform parent, State state, Callbacks callbacks, FossickElementType type, string label, string rewardId, int amountOverride = 0)
+        private void AddRewardBrushTile(RectTransform parent, State state, Callbacks callbacks, FossickElementType type, string label, string rewardId)
         {
             var id = rewardId ?? GetDefaultRewardId(type);
-            var amount = amountOverride > 0 ? amountOverride : GetDefaultRewardAmount(type, id);
             var selected = state.selectedRewardType == type
                 && state.selectedRewardId == id
-                && (type != FossickElementType.Coin || state.selectedRewardAmount == amount)
                 && (state.selectedBrushMode == FossickBrushMode.Reward || state.selectedBrushMode == FossickBrushMode.Tool);
+            var previewId = FossickContentIds.Reward.IsCoinDropPlaceholder(id)
+                ? FossickContentIds.Reward.CoinDropSmall
+                : id;
             var sprite = type == FossickElementType.None
                 ? null
-                : FossickArtLibrary.GetRewardSprite(new FossickElementConfig
+                : FossickArtLibrary.GetEntitySprite(new FossickElementConfig
                 {
                     type = type,
-                    id = id,
-                    amount = amount
+                    id = previewId
                 });
 
             AddBrushTile(parent, label, selected, type == FossickElementType.None ? null : sprite, type == FossickElementType.None ? "×" : null, type == FossickElementType.None ? new Color(0.11f, 0.13f, 0.15f) : GetRewardColor(type), () =>
             {
-                callbacks.selectReward?.Invoke(type, id, label, amountOverride);
+                callbacks.selectReward?.Invoke(type, id, label);
             });
         }
 
@@ -335,60 +335,31 @@ namespace Fossick.MapStudio.Views
         {
             if (type == FossickElementType.Coin)
             {
-                return "coin_pile";
+                return FossickContentIds.Reward.CoinPileLarge;
             }
 
             if (type == FossickElementType.Ore)
             {
-                return "ore_copper";
+                return FossickContentIds.Reward.OreCopper;
             }
 
             if (type == FossickElementType.Item)
             {
-                return "pickaxe";
+                return FossickContentIds.Tool.Pickaxe;
             }
 
             if (type == FossickElementType.Chest)
             {
-                return "treasure_chest";
+                return FossickContentIds.Reward.TreasureChest;
             }
 
             if (type == FossickElementType.Collection)
             {
-                return "collection_piece";
+                return FossickContentIds.Reward.CollectionBox;
             }
 
             return null;
         }
 
-        private static int GetDefaultRewardAmount(FossickElementType type, string id)
-        {
-            if (type == FossickElementType.Coin)
-            {
-                return 100;
-            }
-
-            if (type == FossickElementType.Ore)
-            {
-                if (id == "ore_gold")
-                {
-                    return 30;
-                }
-
-                if (id == "ore_silver")
-                {
-                    return 20;
-                }
-
-                if (id == "ore_gem")
-                {
-                    return 50;
-                }
-
-                return 10;
-            }
-
-            return 1;
-        }
     }
 }

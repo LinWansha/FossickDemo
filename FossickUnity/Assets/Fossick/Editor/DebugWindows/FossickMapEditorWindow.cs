@@ -1,6 +1,6 @@
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Definition.Serialization;
-using Fossick.MapStudio.Validation;
+using Fossick.Core.Validation;
 using Fossick.MapStudio.Controllers;
 using Fossick.MapStudio.Views;
 using UnityEditor;
@@ -39,10 +39,10 @@ namespace Fossick.Editor.DebugWindows
 
         private void ValidateEditableProject()
         {
-            var project = FossickMapProjectFileService.LoadEditableProject();
+            var project = FossickMapProjectFileService.LoadEditableProject(string.Empty);
             if (project == null)
             {
-                validation = FossickMapValidator.Validate(FossickSampleMapFactory.CreateDefaultConfig());
+                validation = FossickMapValidator.Validate(new FossickMapConfig());
                 return;
             }
 

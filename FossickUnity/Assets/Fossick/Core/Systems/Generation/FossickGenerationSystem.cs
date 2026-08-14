@@ -1,3 +1,4 @@
+using System;
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Generation;
 using Fossick.Core.Data;
@@ -7,12 +8,16 @@ namespace Fossick.Core.Systems
 {
     public sealed class FossickGenerationSystem : FossickSystem
     {
+        private const int PrefetchVisibleScreens = 4;
+        private const int MinimumRowsAhead = 24;
+        private const int RetainRowsBehind = 12;
+
         private readonly FossickMapConfig config;
 
         public FossickGenerationSystem(FossickMapConfig config)
             : base("Generation")
         {
-            this.config = config ?? FossickSampleMapFactory.CreateDefaultConfig();
+            this.config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
         public void EnsureRows(FossickMine mine, FossickGenerationData generationState, int targetRows)
@@ -49,40 +54,14 @@ namespace Fossick.Core.Systems
 
         public int GetGenerationBufferRows()
         {
-            var generation = config == null ? null : config.generation;
-            var visibleHeight = config == null ? FossickBoardSpec.DefaultVisibleHeight : config.visibleHeight;
-            var screenCount = generation == null ? 4 : generation.prefetchVisibleScreens;
-            var minimumRowsAhead = generation == null ? 24 : generation.minimumRowsAhead;
-            if (screenCount < 1)
-            {
-                screenCount = 1;
-            }
-
-            if (minimumRowsAhead < visibleHeight)
-            {
-                minimumRowsAhead = visibleHeight;
-            }
-
-            var rowsAhead = visibleHeight * screenCount;
-            if (rowsAhead < minimumRowsAhead)
-            {
-                rowsAhead = minimumRowsAhead;
-            }
-
+            var visibleHeight = config.visibleHeight;
+            var rowsAhead = Math.Max(visibleHeight * PrefetchVisibleScreens, MinimumRowsAhead);
             return visibleHeight + rowsAhead;
         }
 
         public int GetRetentionRowsBehind()
         {
-            var generation = config == null ? null : config.generation;
-            var visibleHeight = config == null ? FossickBoardSpec.DefaultVisibleHeight : config.visibleHeight;
-            var retainRowsBehind = generation == null ? visibleHeight * 2 : generation.retainRowsBehind;
-            if (retainRowsBehind < 0)
-            {
-                return 0;
-            }
-
-            return retainRowsBehind;
+            return RetainRowsBehind;
         }
     }
 }

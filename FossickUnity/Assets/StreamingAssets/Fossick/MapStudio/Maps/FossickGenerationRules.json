@@ -21,73 +21,14 @@
             }
         ],
         "rewardInsertMin": 4,
-        "rewardInsertMax": 6,
-        "prefetchVisibleScreens": 4,
-        "minimumRowsAhead": 24,
-        "retainRowsBehind": 12,
-        "smallCoinDrop": {
-            "enabled": true,
-            "coinId": "coin_pile",
-            "chancePerMille": 60,
-            "amounts": [
-                {
-                    "amount": 5,
-                    "weight": 5
-                },
-                {
-                    "amount": 10,
-                    "weight": 3
-                },
-                {
-                    "amount": 20,
-                    "weight": 1
-                }
-            ]
-        }
-    },
-    "tools": {
-        "tnt": {
-            "offsets": [
-                {
-                    "x": -1,
-                    "y": -1
-                },
-                {
-                    "x": 0,
-                    "y": -1
-                },
-                {
-                    "x": 1,
-                    "y": -1
-                },
-                {
-                    "x": -1,
-                    "y": 0
-                },
-                {
-                    "x": 0,
-                    "y": 0
-                },
-                {
-                    "x": 1,
-                    "y": 0
-                },
-                {
-                    "x": -1,
-                    "y": 1
-                },
-                {
-                    "x": 0,
-                    "y": 1
-                },
-                {
-                    "x": 1,
-                    "y": 1
-                }
-            ]
-        }
+        "rewardInsertMax": 6
     },
     "visual": {
-        "dirtAutoTileSet": "Dirt"
+        "dirtAutoTileSet": "Dirt",
+        "backgroundIds": [
+            "mine_default",
+            "mine_map",
+            "mine_variant"
+        ]
     }
 }

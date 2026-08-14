@@ -1,3 +1,4 @@
+using System;
 using Fossick.Core.Application;
 using Fossick.Core.Application.Commands;
 using Fossick.Core.Application.Results;
@@ -29,20 +30,27 @@ namespace Fossick.Core.Application
                 return null;
             }
 
+            var beforeSnapshot = session.CreateSnapshot();
             var result = session.Execute(command);
-            var snapshot = session.CreateSnapshot();
+            var afterSnapshot = session.CreateSnapshot();
 
             if (result == null || !result.isApplied)
             {
-                adapters.Telemetry?.Track(command, result, snapshot);
+                adapters.Telemetry?.Track(command, result, afterSnapshot);
                 return result;
             }
 
-            adapters.View?.Refresh(session.Data, result, snapshot);
-            adapters.Animation?.Play(result, snapshot);
             adapters.Reward?.Commit(result, session.Data.Rewards);
             adapters.Storage?.Save(session.CaptureGameplayData());
-            adapters.Telemetry?.Track(command, result, snapshot);
+            adapters.Telemetry?.Track(command, result, afterSnapshot);
+
+            var presentation = new PresentationCompletion(
+                () => adapters.View?.Refresh(session.Data, result, afterSnapshot));
+            var context = new FossickAnimationContext(command, result, beforeSnapshot, afterSnapshot);
+            if (adapters.Animation == null || !adapters.Animation.Play(context, presentation.Complete))
+            {
+                presentation.Complete();
+            }
 
             return result;
         }
@@ -50,6 +58,23 @@ namespace Fossick.Core.Application
         public FossickActionResult UseTool(FossickToolType toolType, FossickPosition target)
         {
             return Execute(new FossickUseToolCommand(toolType, target));
+        }
+
+        private sealed class PresentationCompletion
+        {
+            private Action onCompleted;
+
+            public PresentationCompletion(Action onCompleted)
+            {
+                this.onCompleted = onCompleted;
+            }
+
+            public void Complete()
+            {
+                var callback = onCompleted;
+                onCompleted = null;
+                callback?.Invoke();
+            }
         }
     }
 }

@@ -4,6 +4,7 @@
   "references": [
     "Fossick.Core",
     "Fossick.Runtime",
+    "Fossick.MapStudio",
     "UnityEngine.UI"
   ],
   "includePlatforms": [],

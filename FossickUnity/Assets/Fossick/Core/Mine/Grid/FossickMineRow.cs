@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 
 namespace Fossick.Core.Mine
 {
@@ -8,8 +9,8 @@ namespace Fossick.Core.Mine
 
         public FossickMineRow(int depth, FossickCell[] cells)
         {
-            Depth = depth < 0 ? 0 : depth;
-            this.cells = cells ?? new FossickCell[0];
+            Depth = depth;
+            this.cells = cells;
         }
 
         public int Depth { get; }

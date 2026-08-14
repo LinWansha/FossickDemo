@@ -1,13 +1,39 @@
 using Fossick.Core.Definition.Config;
 using System;
 using System.IO;
+using System.IO.Compression;
 using UnityEngine;
+using CompressionLevel = System.IO.Compression.CompressionLevel;
 
 namespace Fossick.Core.Definition.Serialization
 {
     public static class FossickMapJsonUtility
     {
         public const int CurrentVersion = 1;
+
+        public static FossickMapConfig FromJson(string json)
+        {
+            var config = JsonUtility.FromJson<FossickMapConfig>(json);
+            NormalizeRuntimeConfig(config);
+            return config;
+        }
+
+        public static string ToJson(FossickMapConfig config, bool prettyPrint = true)
+        {
+            NormalizeRuntimeConfig(config);
+            return JsonUtility.ToJson(config, prettyPrint);
+        }
+
+        public static FossickMapProjectConfig ProjectFromJson(string json)
+        {
+            return NormalizeProject(JsonUtility.FromJson<FossickMapProjectConfig>(json));
+        }
+
+        public static string ProjectToJson(FossickMapProjectConfig project, bool prettyPrint = true)
+        {
+            NormalizeProject(project);
+            return JsonUtility.ToJson(project, prettyPrint);
+        }
 
         public static string FragmentLibraryToJson(FossickFragmentLibraryConfig library, bool prettyPrint = true)
         {
@@ -52,13 +78,39 @@ namespace Fossick.Core.Definition.Serialization
             EnsureSupportedVersion(project.version, "Fossick 项目");
             project.version = NormalizeVersion(project.version);
             project.activity = NormalizeActivity(project.activity);
-            project.fragmentLibrary = NormalizeFragmentLibrary(project.fragmentLibrary ?? new FossickFragmentLibraryConfig());
-            project.generationRules = NormalizeGenerationRules(project.generationRules ?? new FossickGenerationRulesConfig());
-            project.mapDefinition = NormalizeMapDefinition(project.mapDefinition ?? new FossickMapDefinitionConfig());
-            project.fragmentLibrary.activity = project.activity;
-            project.generationRules.activity = project.activity;
-            project.mapDefinition.activity = project.activity;
+            project.fragmentLibrary = NormalizeFragmentLibrary(project.fragmentLibrary);
+            project.generationRules = NormalizeGenerationRules(project.generationRules);
+            project.mapDefinition = NormalizeMapDefinition(project.mapDefinition);
+            if (project.fragmentLibrary != null) project.fragmentLibrary.activity = project.activity;
+            if (project.generationRules != null) project.generationRules.activity = project.activity;
+            if (project.mapDefinition != null) project.mapDefinition.activity = project.activity;
             return project;
+        }
+
+        private static void NormalizeRuntimeConfig(FossickMapConfig config)
+        {
+            if (config == null)
+            {
+                return;
+            }
+
+            EnsureSupportedVersion(config.version, "Fossick 地图配置");
+            config.version = NormalizeVersion(config.version);
+            config.activity = NormalizeActivity(config.activity);
+            if (config.generation == null)
+            {
+                return;
+            }
+
+            if (config.generation.sequenceOverrides == null)
+            {
+                config.generation.sequenceOverrides = new System.Collections.Generic.List<FossickSequenceOverrideConfig>();
+            }
+
+            if (config.generation.rowOverrides == null)
+            {
+                config.generation.rowOverrides = new System.Collections.Generic.List<FossickRowOverrideConfig>();
+            }
         }
 
         private static FossickFragmentLibraryConfig NormalizeFragmentLibrary(FossickFragmentLibraryConfig library)
@@ -84,9 +136,11 @@ namespace Fossick.Core.Definition.Serialization
             EnsureSupportedVersion(rules.version, "Fossick 生成规则");
             rules.version = NormalizeVersion(rules.version);
             rules.activity = NormalizeActivity(rules.activity);
-            rules.generation = rules.generation ?? new FossickGenerationConfig();
-            rules.tools = rules.tools ?? new FossickToolRulesConfig();
-            rules.visual = rules.visual ?? new FossickVisualConfig();
+            if (rules.generation == null)
+            {
+                return rules;
+            }
+
             if (rules.generation.sequenceOverrides == null)
             {
                 rules.generation.sequenceOverrides = new System.Collections.Generic.List<FossickSequenceOverrideConfig>();
@@ -123,12 +177,12 @@ namespace Fossick.Core.Definition.Serialization
 
         private static int NormalizeVersion(int version)
         {
-            return version <= 0 ? CurrentVersion : version;
+            return version;
         }
 
         private static string NormalizeActivity(string activity)
         {
-            return string.IsNullOrEmpty(activity) ? "Fossick" : activity;
+            return activity;
         }
 
         private static void EnsureSupportedVersion(int version, string label)
@@ -145,39 +199,42 @@ namespace Fossick.Core.Definition.Serialization
         public const string FragmentLibraryFileName = "FossickFragmentLibrary.json";
         public const string GenerationRulesFileName = "FossickGenerationRules.json";
         public const string MapDefinitionFileName = "FossickMapDefinition.json";
-        public const string RelativeMapsFolder = "Fossick/MapStudio/Maps";
 
-        public static string GetEditableMapsFolder()
+        public static string GetEditableMapsFolder(string actSubType)
         {
 #if UNITY_EDITOR
-            return Path.Combine(UnityEngine.Application.dataPath, "Fossick/MapStudio/Maps");
+            return Path.Combine(
+                UnityEngine.Application.dataPath,
+                "Art/AbResources/Activity/Fossick",
+                actSubType,
+                "Map/Config");
 #else
-            return GetPlayerWritableMapsFolder();
+            return GetPlayerWritableMapsFolder(actSubType);
 #endif
         }
 
-        public static string GetPlayerWritableMapsFolder()
+        public static string GetPlayerWritableMapsFolder(string actSubType)
         {
-            return Path.Combine(UnityEngine.Application.persistentDataPath, RelativeMapsFolder);
+            return Path.Combine(UnityEngine.Application.persistentDataPath, "Fossick/MapStudio", actSubType, "Maps");
         }
 
-        public static string GetBundledPlayerMapsFolder()
+        public static string GetBundledPlayerMapsFolder(string actSubType)
         {
-            return Path.Combine(UnityEngine.Application.streamingAssetsPath, RelativeMapsFolder);
+            return Path.Combine(UnityEngine.Application.streamingAssetsPath, "Fossick/MapStudio", actSubType, "Maps");
         }
 
-        public static void EnsurePlayerEditableProject()
+        public static void EnsurePlayerEditableProject(string actSubType)
         {
 #if UNITY_EDITOR
             return;
 #else
-            var target = GetPlayerWritableMapsFolder();
+            var target = GetPlayerWritableMapsFolder(actSubType);
             if (HasSplitProject(target))
             {
                 return;
             }
 
-            var source = GetBundledPlayerMapsFolder();
+            var source = GetBundledPlayerMapsFolder(actSubType);
             if (!HasSplitProject(source))
             {
                 return;
@@ -190,12 +247,12 @@ namespace Fossick.Core.Definition.Serialization
 #endif
         }
 
-        public static FossickMapProjectConfig LoadEditableProject()
+        public static FossickMapProjectConfig LoadEditableProject(string actSubType)
         {
 #if !UNITY_EDITOR
-            EnsurePlayerEditableProject();
+            EnsurePlayerEditableProject(actSubType);
 #endif
-            return LoadSplitProject(GetEditableMapsFolder());
+            return LoadSplitProject(GetEditableMapsFolder(actSubType));
         }
 
         public static FossickMapProjectConfig LoadSplitProject(string folder)
@@ -219,7 +276,36 @@ namespace Fossick.Core.Definition.Serialization
 
         public static void SaveEditableProject(FossickMapProjectConfig project)
         {
-            SaveSplitProject(GetEditableMapsFolder(), project);
+            SaveEditableProject(project, null);
+        }
+
+        public static void SaveEditableProject(FossickMapProjectConfig project, string actSubType)
+        {
+            SaveSplitProject(GetEditableMapsFolder(actSubType), project);
+        }
+
+        public static string ExportEditableProjectPackage(string actSubType)
+        {
+            var sourceFolder = GetEditableMapsFolder(actSubType);
+            if (!HasSplitProject(sourceFolder))
+            {
+                throw new InvalidOperationException($"Fossick map project is incomplete: {sourceFolder}");
+            }
+
+            var exportFolder = Path.Combine(UnityEngine.Application.persistentDataPath, "Fossick/MapStudio/Exports");
+            Directory.CreateDirectory(exportFolder);
+
+            var packageName = string.IsNullOrEmpty(actSubType)
+                ? "FossickMapProject"
+                : $"FossickMapProject_{actSubType}";
+            var packagePath = Path.Combine(exportFolder, packageName + ".zip");
+            if (File.Exists(packagePath))
+            {
+                File.Delete(packagePath);
+            }
+
+            ZipFile.CreateFromDirectory(sourceFolder, packagePath, CompressionLevel.Optimal, false);
+            return packagePath;
         }
 
         public static void SaveSplitProject(string folder, FossickMapProjectConfig project)

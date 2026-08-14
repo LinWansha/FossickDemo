@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using Fossick.Core.Definition.Config;
+using Fossick.Core.Mine.Objects;
 using Fossick.Core.Visual.Tiling;
 using UnityEngine;
 
@@ -7,21 +9,25 @@ namespace Fossick.Core.Visual
 {
     public static class FossickArtLibrary
     {
-        private const string DefaultCatalogPath = "FossickArt/FossickArtCatalog";
-
         private static FossickArtCatalog activeCatalog;
+        private static Func<FossickArtCatalog> catalogLoader;
 
         public static FossickArtCatalog ActiveCatalog
         {
             get
             {
-                if (activeCatalog == null)
+                if (activeCatalog == null && catalogLoader != null)
                 {
-                    activeCatalog = Resources.Load<FossickArtCatalog>(DefaultCatalogPath);
+                    activeCatalog = catalogLoader();
                 }
 
                 return activeCatalog;
             }
+        }
+
+        public static void SetCatalogLoader(Func<FossickArtCatalog> loader)
+        {
+            catalogLoader = loader;
         }
 
         public static void SetActiveCatalog(FossickArtCatalog catalog)
@@ -64,14 +70,14 @@ namespace Fossick.Core.Visual
             return FossickAutoTileResolver.ResolveConfigCornerAssetIndex(rows, cornerX, cornerY, terrain);
         }
 
-        public static Sprite GetRewardSprite(FossickElementConfig reward)
+        public static Sprite GetEntitySprite(FossickElementConfig entity)
         {
-            return ActiveCatalog == null ? null : ActiveCatalog.GetRewardSprite(reward);
+            return ActiveCatalog == null ? null : ActiveCatalog.GetEntitySprite(entity);
         }
 
-        public static Sprite GetTerrainAttachmentSprite(FossickElementConfig reward, FossickTerrainType terrain)
+        public static Sprite GetTerrainAttachmentSprite(FossickElementConfig entity, FossickTerrainType terrain)
         {
-            return ActiveCatalog == null ? null : ActiveCatalog.GetTerrainAttachmentSprite(reward, terrain);
+            return ActiveCatalog == null ? null : ActiveCatalog.GetTerrainAttachmentSprite(entity, terrain);
         }
 
         public static Sprite GetToolSprite(FossickToolType toolType)
@@ -84,9 +90,19 @@ namespace Fossick.Core.Visual
             return ActiveCatalog == null ? null : ActiveCatalog.GetBackgroundSprite(id);
         }
 
+        public static Sprite GetRewardBackgroundSprite(string id)
+        {
+            return ActiveCatalog == null ? null : ActiveCatalog.GetRewardBackgroundSprite(id);
+        }
+
         public static Sprite GetDecorationSprite(string id)
         {
             return ActiveCatalog == null ? null : ActiveCatalog.GetDecorationSprite(id);
+        }
+
+        public static Sprite GetCollectionSprite(string spriteName)
+        {
+            return ActiveCatalog == null ? null : ActiveCatalog.GetCollectionSprite(spriteName);
         }
 
         public static Color GetEmptyCellColor()
@@ -99,9 +115,11 @@ namespace Fossick.Core.Visual
             return new Color(1f, 1f, 1f, 1f);
         }
 
-        public static Color GetPreviewColor()
+        public static Color GetEffectHighlightColor()
         {
-            return ActiveCatalog == null ? new Color(0.32f, 0.9f, 0.48f, 0.95f) : ActiveCatalog.previewColor;
+            return ActiveCatalog == null
+                ? new Color(0.32f, 0.9f, 0.48f, 0.95f)
+                : ActiveCatalog.effectHighlightColor;
         }
 
         public static List<string> ValidateRequiredSprites()
@@ -110,49 +128,54 @@ namespace Fossick.Core.Visual
             ValidateAutoTileSet(issues, FossickTerrainType.Dirt, 18, "土块四方连续");
             ValidateAutoTileSet(issues, FossickTerrainType.Stone, 19, "石头四方连续");
             ValidateAutoTileSet(issues, FossickTerrainType.Unbreakable, 18, "基岩四方连续");
-            ValidateTerrainSprite(issues, FossickTerrainType.Explosives, "explosive_crate", "炸药箱");
+            ValidateTerrainSprite(issues, FossickTerrainType.Explosives, FossickExplosivesTerrain.Id, "炸药箱");
             ValidateFogAutoTileSet(issues, 15);
-            ValidateRewardSprite(issues, FossickElementType.Coin, "coin_pile", "金币实体");
-            ValidateRewardSprite(issues, FossickElementType.Ore, "ore_copper", "铜矿实体");
-            ValidateRewardSprite(issues, FossickElementType.Ore, "ore_gem", "宝石矿实体");
-            ValidateRewardSprite(issues, FossickElementType.Ore, "ore_gold", "金矿实体");
-            ValidateRewardSprite(issues, FossickElementType.Ore, "ore_silver", "银矿实体");
-            ValidateRewardSprite(issues, FossickElementType.Item, "pickaxe", "矿镐实体");
-            ValidateRewardSprite(issues, FossickElementType.Item, "dynamite", "炸药实体");
-            ValidateRewardSprite(issues, FossickElementType.Item, "tnt", "雷管实体");
-            ValidateRewardSprite(issues, FossickElementType.Item, "radar", "雷达实体");
-            ValidateRewardSprite(issues, FossickElementType.Chest, "treasure_chest", "宝箱实体");
-            ValidateRewardSprite(issues, FossickElementType.Collection, "collection_piece", "收藏品实体");
-            ValidateTerrainAttachment(issues, FossickElementType.Ore, "ore_copper", FossickTerrainType.Dirt, "铜矿土块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Ore, "ore_copper", FossickTerrainType.Stone, "铜矿石块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Ore, "ore_gem", FossickTerrainType.Dirt, "宝石矿土块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Ore, "ore_gem", FossickTerrainType.Stone, "宝石矿石块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Ore, "ore_gold", FossickTerrainType.Dirt, "金矿土块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Ore, "ore_gold", FossickTerrainType.Stone, "金矿石块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Ore, "ore_silver", FossickTerrainType.Dirt, "银矿土块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Ore, "ore_silver", FossickTerrainType.Stone, "银矿石块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Item, "pickaxe", FossickTerrainType.Dirt, "矿镐土块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Item, "pickaxe", FossickTerrainType.Stone, "矿镐石块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Item, "dynamite", FossickTerrainType.Dirt, "炸药土块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Item, "dynamite", FossickTerrainType.Stone, "炸药石块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Item, "tnt", FossickTerrainType.Dirt, "雷管土块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Item, "tnt", FossickTerrainType.Stone, "雷管石块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Item, "radar", FossickTerrainType.Dirt, "雷达土块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Item, "radar", FossickTerrainType.Stone, "雷达石块附着图");
-            ValidateTerrainAttachment(issues, FossickElementType.Chest, "treasure_chest", FossickTerrainType.Dirt, "宝箱土块附着图");
+            ValidateEntitySprite(issues, FossickElementType.Coin, FossickContentIds.Reward.CoinDropSmall, "小金币掉落实体");
+            ValidateEntitySprite(issues, FossickElementType.Coin, FossickContentIds.Reward.CoinDropMedium, "中金币掉落实体");
+            ValidateEntitySprite(issues, FossickElementType.Coin, FossickContentIds.Reward.CoinDropLarge, "大金币掉落实体");
+            ValidateEntitySprite(issues, FossickElementType.Coin, FossickContentIds.Reward.CoinPileSmall, "小金币堆实体");
+            ValidateEntitySprite(issues, FossickElementType.Coin, FossickContentIds.Reward.CoinPileLarge, "大金币堆实体");
+            ValidateEntitySprite(issues, FossickElementType.Ore, FossickContentIds.Reward.OreCopper, "铜矿实体");
+            ValidateEntitySprite(issues, FossickElementType.Ore, FossickContentIds.Reward.OreGem, "宝石矿实体");
+            ValidateEntitySprite(issues, FossickElementType.Ore, FossickContentIds.Reward.OreGold, "金矿实体");
+            ValidateEntitySprite(issues, FossickElementType.Ore, FossickContentIds.Reward.OreSilver, "银矿实体");
+            ValidateEntitySprite(issues, FossickElementType.Item, FossickContentIds.Tool.Pickaxe, "矿镐实体");
+            ValidateEntitySprite(issues, FossickElementType.Item, FossickContentIds.Tool.Dynamite, "炸药实体");
+            ValidateEntitySprite(issues, FossickElementType.Item, FossickContentIds.Tool.Tnt, "雷管实体");
+            ValidateEntitySprite(issues, FossickElementType.Item, FossickContentIds.Tool.Radar, "雷达实体");
+            ValidateEntitySprite(issues, FossickElementType.Collection, FossickContentIds.Reward.CollectionBox, "收藏品箱实体");
+            ValidateEntitySprite(issues, FossickElementType.Chest, FossickContentIds.Reward.TreasureChest, "奖励宝箱实体");
+            ValidateEntitySprite(issues, FossickElementType.Chest, FossickContentIds.Reward.MessageBottle, "漂流瓶实体");
+            ValidateTerrainAttachment(issues, FossickElementType.Ore, FossickContentIds.Reward.OreCopper, FossickTerrainType.Dirt, "铜矿土块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Ore, FossickContentIds.Reward.OreCopper, FossickTerrainType.Stone, "铜矿石块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Ore, FossickContentIds.Reward.OreGem, FossickTerrainType.Dirt, "宝石矿土块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Ore, FossickContentIds.Reward.OreGem, FossickTerrainType.Stone, "宝石矿石块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Ore, FossickContentIds.Reward.OreGold, FossickTerrainType.Dirt, "金矿土块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Ore, FossickContentIds.Reward.OreGold, FossickTerrainType.Stone, "金矿石块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Ore, FossickContentIds.Reward.OreSilver, FossickTerrainType.Dirt, "银矿土块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Ore, FossickContentIds.Reward.OreSilver, FossickTerrainType.Stone, "银矿石块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Item, FossickContentIds.Tool.Pickaxe, FossickTerrainType.Dirt, "矿镐土块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Item, FossickContentIds.Tool.Pickaxe, FossickTerrainType.Stone, "矿镐石块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Item, FossickContentIds.Tool.Dynamite, FossickTerrainType.Dirt, "炸药土块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Item, FossickContentIds.Tool.Dynamite, FossickTerrainType.Stone, "炸药石块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Item, FossickContentIds.Tool.Tnt, FossickTerrainType.Dirt, "雷管土块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Item, FossickContentIds.Tool.Tnt, FossickTerrainType.Stone, "雷管石块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Item, FossickContentIds.Tool.Radar, FossickTerrainType.Dirt, "雷达土块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Item, FossickContentIds.Tool.Radar, FossickTerrainType.Stone, "雷达石块附着图");
+            ValidateTerrainAttachment(issues, FossickElementType.Collection, FossickContentIds.Reward.CollectionBox, FossickTerrainType.Dirt, "收藏品箱土块附着图");
             ValidateToolSprite(issues, FossickToolType.Pickaxe, "矿镐道具图");
             ValidateToolSprite(issues, FossickToolType.Dynamite, "炸药道具图");
             ValidateToolSprite(issues, FossickToolType.Tnt, "雷管道具图");
             ValidateToolSprite(issues, FossickToolType.Radar, "雷达道具图");
-            ValidateBackground(issues, "mine_default", "默认矿井背景");
-            ValidateBackground(issues, "mine_map", "矿井地图背景");
-            ValidateBackground(issues, "mine_variant", "矿井变化背景");
-            ValidateBackground(issues, "treasure_room_3x2", "藏宝阁 3x2 背景");
-            ValidateBackground(issues, "treasure_room_5x2", "藏宝阁 5x2 背景");
-            ValidateBackground(issues, "treasure_room_7x2", "藏宝阁 7x2 背景");
-            ValidateDecoration(issues, "grass_large", "大草装饰");
-            ValidateDecoration(issues, "grass_small", "小草装饰");
-            ValidateDecoration(issues, "mushroom", "蘑菇装饰");
+            ValidateBackground(issues, FossickContentIds.Background.MineDefault, "默认矿井背景");
+            ValidateBackground(issues, FossickContentIds.Background.MineMap, "矿井地图背景");
+            ValidateBackground(issues, FossickContentIds.Background.MineVariant, "矿井变化背景");
+            ValidateRewardBackground(issues, FossickContentIds.RewardBackground.TreasureRoomSmall, "藏宝阁 3x2 背景");
+            ValidateRewardBackground(issues, FossickContentIds.RewardBackground.TreasureRoomMedium, "藏宝阁 5x2 背景");
+            ValidateRewardBackground(issues, FossickContentIds.RewardBackground.TreasureRoomLarge, "藏宝阁 7x2 背景");
+            ValidateDecoration(issues, FossickContentIds.Decoration.GrassLarge, "大草装饰");
+            ValidateDecoration(issues, FossickContentIds.Decoration.GrassSmall, "小草装饰");
+            ValidateDecoration(issues, FossickContentIds.Decoration.Mushroom, "蘑菇装饰");
             return issues;
         }
 
@@ -186,9 +209,9 @@ namespace Fossick.Core.Visual
             }
         }
 
-        private static void ValidateRewardSprite(List<string> issues, FossickElementType type, string id, string label)
+        private static void ValidateEntitySprite(List<string> issues, FossickElementType type, string id, string label)
         {
-            if (GetRewardSprite(new FossickElementConfig { type = type, id = id }) == null)
+            if (GetEntitySprite(new FossickElementConfig { type = type, id = id }) == null)
             {
                 issues.Add($"{label}缺少配置。");
             }
@@ -213,6 +236,14 @@ namespace Fossick.Core.Visual
         private static void ValidateBackground(List<string> issues, string id, string label)
         {
             if (GetBackgroundSprite(id) == null)
+            {
+                issues.Add($"{label}缺少配置。");
+            }
+        }
+
+        private static void ValidateRewardBackground(List<string> issues, string id, string label)
+        {
+            if (GetRewardBackgroundSprite(id) == null)
             {
                 issues.Add($"{label}缺少配置。");
             }

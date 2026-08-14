@@ -17,7 +17,7 @@ namespace Fossick.Core.Data
                 return;
             }
 
-            if (result.toolConsumed)
+            if (result.countsForSettlementToolUsage)
             {
                 toolUsed++;
             }

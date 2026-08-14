@@ -9,8 +9,6 @@ namespace Fossick.Core.Data
     {
         public int x;
         public int y;
-        public string backgroundId;
-        public string rewardBackgroundId;
         public FossickTerrainType terrain;
         public int hp;
         public FossickElementConfig reward;

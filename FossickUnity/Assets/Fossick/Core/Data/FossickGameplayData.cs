@@ -1,4 +1,5 @@
 using System;
+using Fossick.Core.Definition.Config;
 using Fossick.Core.Mine;
 
 namespace Fossick.Core.Data
@@ -23,7 +24,6 @@ namespace Fossick.Core.Data
 
         public FossickGameplayData()
         {
-            EnsureDefaults();
         }
 
         public FossickGameplayData(
@@ -36,13 +36,12 @@ namespace Fossick.Core.Data
         {
             this.seed = seed;
             this.mine = mine;
-            this.inventory = inventory ?? new FossickInventoryData();
-            this.rewards = rewards ?? new FossickRewardData();
-            this.progress = progress ?? new FossickProgressData();
-            this.generation = generation ?? new FossickGenerationData(seed);
-            boardWidth = mine == null ? 0 : mine.Spec.width;
-            visibleHeight = mine == null ? 0 : mine.Spec.visibleHeight;
-            EnsureDefaults();
+            this.inventory = inventory;
+            this.rewards = rewards;
+            this.progress = progress;
+            this.generation = generation;
+            boardWidth = mine.Spec.width;
+            visibleHeight = mine.Spec.visibleHeight;
         }
 
         public FossickMine Mine => mine;
@@ -63,18 +62,79 @@ namespace Fossick.Core.Data
             visibleHeight = mine.Spec.visibleHeight;
         }
 
-        public void EnsureDefaults()
+        public void Validate()
         {
-            if (schemaVersion <= 0)
+            if (schemaVersion <= 0 || seed <= 0 || boardWidth <= 0 || visibleHeight <= 0 ||
+                mineData == null || inventory == null || rewards == null || progress == null || generation == null ||
+                mineData.loadedRows == null || mineData.loadedRows.Count == 0 || rewards.collectionItems == null ||
+                rewards.collectionDiscoveredItems == null ||
+                generation.seed != seed || generation.pendingRegularFragmentIds == null ||
+                generation.generatedFragmentIds == null || generation.rewardInsertedAfterRegularCounts == null ||
+                mineData.loadedStartRow < 0 || mineData.topVisibleRow < mineData.loadedStartRow ||
+                mineData.topVisibleRow + visibleHeight > mineData.loadedStartRow + mineData.loadedRows.Count ||
+                rewards.collectionDrawCount < 0 || !HasValidRows() || !HasValidCollectionItems())
             {
-                schemaVersion = CurrentSchemaVersion;
+                throw new InvalidOperationException("Fossick gameplay data is incomplete or does not match the current map.");
+            }
+        }
+
+        private bool HasValidRows()
+        {
+            for (var rowIndex = 0; rowIndex < mineData.loadedRows.Count; rowIndex++)
+            {
+                var row = mineData.loadedRows[rowIndex];
+                if (row?.cells == null)
+                {
+                    return false;
+                }
+
+                for (var cellIndex = 0; cellIndex < row.cells.Count; cellIndex++)
+                {
+                    var cell = row.cells[cellIndex];
+                    if (cell == null || cell.decorations == null || cell.x < 0 || cell.x >= boardWidth ||
+                        !IsValidReward(cell.reward))
+                    {
+                        return false;
+                    }
+                }
             }
 
-            mineData ??= new FossickMineData();
-            inventory ??= new FossickInventoryData();
-            rewards ??= new FossickRewardData();
-            progress ??= new FossickProgressData();
-            generation ??= new FossickGenerationData(seed);
+            return true;
+        }
+
+        private static bool IsValidReward(FossickElementConfig reward)
+        {
+            if (reward == null || reward.type == FossickElementType.None)
+            {
+                return true;
+            }
+
+            if (string.IsNullOrEmpty(reward.id) ||
+                reward.type != FossickElementType.Ore && reward.type != FossickElementType.Coin &&
+                reward.type != FossickElementType.Item && reward.type != FossickElementType.Chest &&
+                reward.type != FossickElementType.Collection)
+            {
+                return false;
+            }
+
+            return reward.type != FossickElementType.Item ||
+                   FossickContentIds.Tool.TryGetType(reward.id, out _);
+        }
+
+        private bool HasValidCollectionItems()
+        {
+            for (var i = 0; i < rewards.collectionItems.Count; i++)
+            {
+                var value = rewards.collectionItems[i];
+                var splitIndex = string.IsNullOrEmpty(value) ? -1 : value.LastIndexOf(':');
+                if (splitIndex <= 0 || splitIndex >= value.Length - 1 ||
+                    !int.TryParse(value.Substring(splitIndex + 1), out var amount) || amount < 0)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

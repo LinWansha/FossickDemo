@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Generation;
 using Fossick.Core.Data;
@@ -17,16 +18,23 @@ namespace Fossick.Core.Mine
     public sealed class FossickMine
     {
         private readonly List<FossickMineRow> rows = new List<FossickMineRow>();
+        private readonly IFossickRewardProvider rewardProvider;
         private int firstLoadedRow;
 
-        public FossickMine(FossickBoardSpec spec)
+        public FossickMine(
+            FossickBoardSpec spec,
+            FossickBackgroundLayout backgroundLayout,
+            IFossickRewardProvider rewardProvider)
         {
-            Spec = spec.IsValid ? spec : FossickBoardSpec.Default;
+            Spec = spec;
+            BackgroundLayout = backgroundLayout;
+            this.rewardProvider = rewardProvider;
             Window = new FossickMineWindow(0, Spec.width, Spec.visibleHeight);
             RegionLayer = new FossickMineRegionLayer();
         }
 
         public FossickBoardSpec Spec { get; }
+        public FossickBackgroundLayout BackgroundLayout { get; }
         public FossickMineWindow Window { get; }
         public FossickMineRegionLayer RegionLayer { get; }
         public int TopVisibleRow { get; private set; }
@@ -39,24 +47,16 @@ namespace Fossick.Core.Mine
 
         public void AddRow(FossickCell[] row)
         {
-            if (row != null)
-            {
-                rows.Add(new FossickMineRow(RowCount, row));
-            }
+            rows.Add(new FossickMineRow(RowCount, row));
         }
 
         public void AppendFragment(FossickFragmentConfig fragment)
         {
-            if (fragment == null)
-            {
-                return;
-            }
-
+            var fragmentStartRow = RowCount;
             for (var y = 0; y < fragment.height; y++)
             {
                 var absoluteRow = RowCount;
                 var row = FossickRuntimeObjectFactory.CreateEmptyRow(Spec, absoluteRow);
-                var rowConfigs = new List<FossickCellConfig>();
                 for (var i = 0; i < fragment.cells.Count; i++)
                 {
                     var cellConfig = fragment.cells[i];
@@ -65,66 +65,98 @@ namespace Fossick.Core.Mine
                         continue;
                     }
 
-                    row[cellConfig.x] = FossickRuntimeObjectFactory.CreateCell(cellConfig, cellConfig.x, absoluteRow);
-                    rowConfigs.Add(cellConfig);
+                    row[cellConfig.x] = FossickRuntimeObjectFactory.CreateCell(
+                        cellConfig,
+                        cellConfig.x,
+                        absoluteRow,
+                        rewardProvider);
                 }
 
                 rows.Add(new FossickMineRow(absoluteRow, row));
-                AddRegionsFromCells(absoluteRow, rowConfigs);
             }
+
+            AddRewardBackgroundRegion(fragment, fragmentStartRow);
         }
 
         public void AppendGeneratedMine(FossickGeneratedMine mine)
         {
-            if (mine == null || mine.rows == null)
-            {
-                return;
-            }
-
+            var mineStartRow = RowCount;
             for (var i = 0; i < mine.rows.Count; i++)
             {
                 AppendGeneratedRow(mine.rows[i]);
             }
+
+            for (var i = 0; i < mine.fragments.Count; i++)
+            {
+                var span = mine.fragments[i];
+                AddRewardBackgroundRegion(span.config, mineStartRow + span.startRow);
+            }
         }
 
-        public void RestoreRows(int loadedStartRow, IReadOnlyList<IReadOnlyList<FossickCellConfig>> savedRows, int topVisibleRow)
+        public void RestoreRows(
+            int loadedStartRow,
+            IReadOnlyList<FossickMineRowData> savedRows,
+            int topVisibleRow)
         {
             rows.Clear();
             RegionLayer.Clear();
-            firstLoadedRow = loadedStartRow < 0 ? 0 : loadedStartRow;
+            firstLoadedRow = loadedStartRow;
             TopVisibleRow = firstLoadedRow;
             Depth = firstLoadedRow;
             Window.MoveTo(TopVisibleRow);
 
-            if (savedRows != null)
+            for (var rowOffset = 0; rowOffset < savedRows.Count; rowOffset++)
             {
-                for (var rowOffset = 0; rowOffset < savedRows.Count; rowOffset++)
+                var absoluteRow = firstLoadedRow + rowOffset;
+                var savedRow = savedRows[rowOffset];
+                var row = FossickRuntimeObjectFactory.CreateEmptyRow(Spec, absoluteRow);
+                for (var i = 0; i < savedRow.cells.Count; i++)
                 {
-                    var absoluteRow = firstLoadedRow + rowOffset;
-                    var savedRow = savedRows[rowOffset];
-                    var row = FossickRuntimeObjectFactory.CreateEmptyRow(Spec, absoluteRow);
-                    if (savedRow != null)
-                    {
-                        for (var i = 0; i < savedRow.Count; i++)
-                        {
-                            var cellConfig = savedRow[i];
-                            if (cellConfig == null || cellConfig.x < 0 || cellConfig.x >= Spec.width)
-                            {
-                                continue;
-                            }
-
-                            row[cellConfig.x] = FossickRuntimeObjectFactory.CreateCell(cellConfig, cellConfig.x, absoluteRow);
-                        }
-                    }
-
-                    rows.Add(new FossickMineRow(absoluteRow, row));
-                    AddRegionsFromCells(absoluteRow, savedRow);
+                    var cellData = savedRow.cells[i];
+                    row[cellData.x] = FossickRuntimeObjectFactory.CreateCell(
+                        cellData,
+                        cellData.x,
+                        absoluteRow,
+                        rewardProvider);
                 }
+
+                rows.Add(new FossickMineRow(absoluteRow, row));
             }
 
-            if (!MoveWindowTo(topVisibleRow))
+            MoveWindowTo(topVisibleRow);
+        }
+
+        public void RebuildRewardBackgroundRegions(
+            FossickMapConfig config,
+            IReadOnlyList<int> generatedFragmentIds)
+        {
+            var fragmentsById = new Dictionary<int, FossickFragmentConfig>();
+            for (var i = 0; i < config.fragments.Count; i++)
             {
-                MoveWindowTo(firstLoadedRow);
+                var fragment = config.fragments[i];
+                fragmentsById.Add(fragment.id, fragment);
+            }
+
+            var overridesBySequence = new Dictionary<int, FossickFragmentConfig>();
+            for (var i = 0; i < config.generation.sequenceOverrides.Count; i++)
+            {
+                var sequenceOverride = config.generation.sequenceOverrides[i];
+                overridesBySequence.Add(sequenceOverride.sequenceIndex, sequenceOverride.fragment);
+            }
+
+            var absoluteStartRow = 0;
+            for (var i = 0; i < generatedFragmentIds.Count; i++)
+            {
+                var fragment = overridesBySequence.TryGetValue(i, out var sequenceFragment)
+                    ? sequenceFragment
+                    : fragmentsById[generatedFragmentIds[i]];
+                var absoluteEndRow = absoluteStartRow + fragment.height;
+                if (absoluteEndRow > firstLoadedRow && absoluteStartRow < RowCount)
+                {
+                    AddRewardBackgroundRegion(fragment, absoluteStartRow);
+                }
+
+                absoluteStartRow = absoluteEndRow;
             }
         }
 
@@ -132,16 +164,16 @@ namespace Fossick.Core.Mine
         {
             var absoluteRow = RowCount;
             var row = FossickRuntimeObjectFactory.CreateEmptyRow(Spec, absoluteRow);
-            if (generatedRow != null && generatedRow.cells != null)
+            for (var x = 0; x < Spec.width; x++)
             {
-                for (var x = 0; x < Spec.width && x < generatedRow.cells.Length; x++)
-                {
-                    row[x] = FossickRuntimeObjectFactory.CreateCell(generatedRow.cells[x], x, absoluteRow);
-                }
+                row[x] = FossickRuntimeObjectFactory.CreateCell(
+                    generatedRow.cells[x],
+                    x,
+                    absoluteRow,
+                    rewardProvider);
             }
 
             rows.Add(new FossickMineRow(absoluteRow, row));
-            AddRegionsFromCells(absoluteRow, generatedRow == null ? null : generatedRow.cells);
         }
 
         public IReadOnlyList<FossickCell[]> GetVisibleRows()
@@ -313,75 +345,38 @@ namespace Fossick.Core.Mine
             RegionLayer.Add(region);
         }
 
-        private void AddRegionsFromCells(int absoluteRow, IReadOnlyList<FossickCellConfig> cells)
+        private void AddRewardBackgroundRegion(FossickFragmentConfig fragment, int absoluteStartRow)
         {
-            if (cells == null)
+            if (fragment == null || string.IsNullOrEmpty(fragment.rewardBackgroundId))
             {
                 return;
             }
 
-            AddRowRegions(absoluteRow, cells, false);
-            AddRowRegions(absoluteRow, cells, true);
-        }
-
-        private void AddRowRegions(int absoluteRow, IReadOnlyList<FossickCellConfig> cells, bool rewardBackground)
-        {
-            var startX = -1;
-            string activeId = null;
-
-            for (var x = 0; x <= Spec.width; x++)
-            {
-                var id = x < Spec.width ? GetRegionId(FindCellConfig(cells, x), rewardBackground) : null;
-                if (id == activeId)
-                {
-                    continue;
-                }
-
-                if (!string.IsNullOrEmpty(activeId))
-                {
-                    AddRegion(absoluteRow, startX, x - startX, activeId, rewardBackground);
-                }
-
-                activeId = id;
-                startX = string.IsNullOrEmpty(id) ? -1 : x;
-            }
-        }
-
-        private void AddRegion(int absoluteRow, int startX, int width, string id, bool rewardBackground)
-        {
-            if (width <= 0 || string.IsNullOrEmpty(id))
+            if (!FossickRewardBackgroundSpec.TryGetSize(fragment.rewardBackgroundId, out var width, out var height))
             {
                 return;
             }
 
-            var bounds = new FossickRect(startX, absoluteRow, width, 1);
-            AddRegion(rewardBackground
-                ? (FossickRegionObject)new RewardBackdropRegion("reward_background_" + absoluteRow + "_" + startX, bounds, id)
-                : new BackgroundRegion("background_" + absoluteRow + "_" + startX, bounds, id));
-        }
-
-        private static string GetRegionId(FossickCellConfig cell, bool rewardBackground)
-        {
-            if (cell == null)
+            var startX = fragment.rewardBackgroundX;
+            var startY = fragment.rewardBackgroundY;
+            if (startX < 0 ||
+                startY < 0 ||
+                startX + width > fragment.width ||
+                startY + height > fragment.height)
             {
-                return null;
+                return;
             }
 
-            return rewardBackground ? cell.rewardBackgroundId : cell.backgroundId;
+            var bounds = new FossickRect(startX, absoluteStartRow + startY, width, height);
+            AddRegion(new RewardBackdropRegion(
+                CreateRewardBackgroundRegionId(absoluteStartRow),
+                bounds,
+                fragment.rewardBackgroundId));
         }
 
-        private static FossickCellConfig FindCellConfig(IReadOnlyList<FossickCellConfig> cells, int x)
+        private static string CreateRewardBackgroundRegionId(int absoluteStartRow)
         {
-            for (var i = 0; i < cells.Count; i++)
-            {
-                var cell = cells[i];
-                if (cell != null && cell.x == x)
-                {
-                    return cell;
-                }
-            }
-
-            return null;
+            return "reward_background_" + absoluteStartRow;
         }
 
         private bool TopTwoVisibleRowsHaveNoDiggableTerrain()

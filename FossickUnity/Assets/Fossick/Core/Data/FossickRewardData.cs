@@ -1,16 +1,23 @@
 using System.Collections.Generic;
 using Fossick.Core.Application.Results;
 using Fossick.Core.Definition.Config;
+using Fossick.Core.Generation;
+using System;
 
 namespace Fossick.Core.Data
 {
     public sealed class FossickRewardData
     {
         private readonly Dictionary<string, int> collections = new Dictionary<string, int>();
+        private readonly HashSet<string> discoveredCollections = new HashSet<string>();
+        private readonly List<string> collectionDrawIds = new List<string>();
+        private int collectionDrawSeed;
 
         public int score;
         public int coins;
+        public int collectionDrawCount;
         public List<string> collectionItems = new List<string>();
+        public List<string> collectionDiscoveredItems = new List<string>();
         public IReadOnlyDictionary<string, int> Collections => collections;
 
         public void Apply(FossickRewardEvent reward, FossickInventoryData inventory)
@@ -20,7 +27,7 @@ namespace Fossick.Core.Data
                 return;
             }
 
-            var amount = reward.amount <= 0 ? 1 : reward.amount;
+            var amount = reward.amount;
             switch (reward.elementType)
             {
                 case FossickElementType.Coin:
@@ -30,7 +37,8 @@ namespace Fossick.Core.Data
                     score += amount;
                     break;
                 case FossickElementType.Collection:
-                    AddCollection(reward.id, amount);
+                    reward.resolvedId = ResolveCollectionId(reward.id);
+                    AddCollection(reward.resolvedId, amount);
                     break;
                 case FossickElementType.Item:
                     ApplyItemReward(reward.id, amount, inventory);
@@ -40,22 +48,42 @@ namespace Fossick.Core.Data
 
         public void AddCollection(string id, int amount)
         {
-            if (string.IsNullOrEmpty(id))
-            {
-                id = "default";
-            }
-
-            if (amount <= 0)
-            {
-                amount = 1;
-            }
-
             if (!collections.ContainsKey(id))
             {
                 collections.Add(id, 0);
             }
 
             collections[id] += amount;
+            discoveredCollections.Add(id);
+            collectionItems = CreateCollectionSaveList();
+            collectionDiscoveredItems = CreateCollectionDiscoveredSaveList();
+        }
+
+        public bool HasDiscoveredCollection(string id)
+        {
+            return !string.IsNullOrEmpty(id) && discoveredCollections.Contains(id);
+        }
+
+        public void ConfigureCollectionDraw(IReadOnlyList<string> collectionIds, int seed)
+        {
+            if (collectionIds == null || collectionIds.Count != 5)
+            {
+                throw new InvalidOperationException("Fossick collection item config must contain exactly five items.");
+            }
+
+            collectionDrawIds.Clear();
+            for (var i = 0; i < collectionIds.Count; i++)
+            {
+                var id = collectionIds[i];
+                if (string.IsNullOrEmpty(id) || collectionDrawIds.Contains(id))
+                {
+                    throw new InvalidOperationException("Fossick collection item config contains an invalid or duplicate id.");
+                }
+
+                collectionDrawIds.Add(id);
+            }
+
+            collectionDrawSeed = seed;
             collectionItems = CreateCollectionSaveList();
         }
 
@@ -116,6 +144,31 @@ namespace Fossick.Core.Data
             return success;
         }
 
+        public bool ConsumeCollectionSet(IReadOnlyList<string> collectionIds)
+        {
+            if (collectionIds == null || collectionIds.Count == 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < collectionIds.Count; i++)
+            {
+                var id = collectionIds[i];
+                if (string.IsNullOrEmpty(id) || !collections.TryGetValue(id, out var amount) || amount <= 0)
+                {
+                    return false;
+                }
+            }
+
+            for (var i = 0; i < collectionIds.Count; i++)
+            {
+                collections[collectionIds[i]]--;
+            }
+
+            collectionItems = CreateCollectionSaveList();
+            return true;
+        }
+
         public List<string> CreateCollectionSaveList()
         {
             var result = new List<string>();
@@ -127,14 +180,17 @@ namespace Fossick.Core.Data
             return result;
         }
 
+        public List<string> CreateCollectionDiscoveredSaveList()
+        {
+            var result = new List<string>(discoveredCollections);
+            result.Sort();
+            return result;
+        }
+
         public void LoadCollectionSaveList(List<string> values)
         {
             collections.Clear();
-            collectionItems = values == null ? new List<string>() : new List<string>(values);
-            if (values == null)
-            {
-                return;
-            }
+            collectionItems = new List<string>(values);
 
             for (var i = 0; i < values.Count; i++)
             {
@@ -145,28 +201,35 @@ namespace Fossick.Core.Data
             }
         }
 
-        private static void ApplyItemReward(string id, int amount, FossickInventoryData inventory)
+        public void LoadCollectionDiscoveredSaveList(List<string> values)
         {
-            if (inventory == null)
+            discoveredCollections.Clear();
+            collectionDiscoveredItems = values == null ? new List<string>() : new List<string>(values);
+            for (var i = 0; i < collectionDiscoveredItems.Count; i++)
             {
-                return;
+                var id = collectionDiscoveredItems[i];
+                if (!string.IsNullOrEmpty(id))
+                {
+                    discoveredCollections.Add(id);
+                }
             }
 
-            if (id == "tnt")
+            foreach (var item in collections)
             {
-                inventory.AddTool(FossickToolType.Tnt, amount);
+                if (item.Value > 0)
+                {
+                    discoveredCollections.Add(item.Key);
+                }
             }
-            else if (id == "radar")
+
+            collectionDiscoveredItems = CreateCollectionDiscoveredSaveList();
+        }
+
+        private static void ApplyItemReward(string id, int amount, FossickInventoryData inventory)
+        {
+            if (FossickContentIds.Tool.TryGetType(id, out var toolType))
             {
-                inventory.AddTool(FossickToolType.Radar, amount);
-            }
-            else if (id == "dynamite")
-            {
-                inventory.AddTool(FossickToolType.Dynamite, amount);
-            }
-            else
-            {
-                inventory.AddTool(FossickToolType.Pickaxe, amount);
+                inventory.AddTool(toolType, amount);
             }
         }
 
@@ -187,6 +250,53 @@ namespace Fossick.Core.Data
 
             id = value.Substring(0, splitIndex);
             return int.TryParse(value.Substring(splitIndex + 1), out amount);
+        }
+
+        private string ResolveCollectionId(string id)
+        {
+            if (!string.IsNullOrEmpty(id) &&
+                id != FossickContentIds.Reward.CollectionBox &&
+                id != FossickContentIds.Reward.CollectionPiece &&
+                id != FossickContentIds.Reward.DefaultCollection)
+            {
+                return id;
+            }
+
+            if (collectionDrawIds.Count == 0)
+            {
+                throw new InvalidOperationException("Fossick collection draw is not configured.");
+            }
+
+            var min = int.MaxValue;
+            var max = int.MinValue;
+            for (var i = 0; i < collectionDrawIds.Count; i++)
+            {
+                var amount = GetCollectionAmount(collectionDrawIds[i]);
+                min = Math.Min(min, amount);
+                max = Math.Max(max, amount);
+            }
+
+            var candidates = new List<string>(collectionDrawIds.Count);
+            var excludeMax = max - min >= 2;
+            for (var i = 0; i < collectionDrawIds.Count; i++)
+            {
+                var candidate = collectionDrawIds[i];
+                if (!excludeMax || GetCollectionAmount(candidate) < max)
+                {
+                    candidates.Add(candidate);
+                }
+            }
+
+            var drawState = unchecked(collectionDrawSeed * 397 ^ collectionDrawCount * 7919 ^ 0x5F3759DF);
+            var random = new FossickSeededRandom(collectionDrawSeed, drawState);
+            var selected = candidates[random.RangeExclusive(0, candidates.Count)];
+            collectionDrawCount++;
+            return selected;
+        }
+
+        private int GetCollectionAmount(string id)
+        {
+            return collections.TryGetValue(id, out var amount) ? amount : 0;
         }
     }
 }

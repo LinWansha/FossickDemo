@@ -104,17 +104,24 @@ namespace Fossick.Editor.Art
                 ?? LoadSprite("Layer1_RewardBackground/treasure_room_3x2.png")
                 ?? mineBackground;
 
-            AddReward(catalog, FossickElementType.Coin, "coin_pile", "Layer4_Reward/Coins/coin_stack.png", "Layer4_Reward/Coins/coin_pile_large.png", "Layer4_Reward/Coins/coin_pile_small.png");
-            AddReward(catalog, FossickElementType.Ore, "ore_copper", "Layer4_Reward/Ores/ore_copper.png");
-            AddReward(catalog, FossickElementType.Ore, "ore_gem", "Layer4_Reward/Ores/ore_gem.png");
-            AddReward(catalog, FossickElementType.Ore, "ore_gold", "Layer4_Reward/Ores/ore_gold.png");
-            AddReward(catalog, FossickElementType.Ore, "ore_silver", "Layer4_Reward/Ores/ore_silver.png");
-            AddReward(catalog, FossickElementType.Item, "pickaxe", "Layer4_Reward/Tools/tool_pickaxe.png");
-            AddReward(catalog, FossickElementType.Item, "dynamite", "Layer4_Reward/Tools/tool_dynamite.png");
-            AddReward(catalog, FossickElementType.Item, "tnt", "Layer4_Reward/Tools/tool_tnt.png");
-            AddReward(catalog, FossickElementType.Item, "radar", "Layer4_Reward/Tools/tool_radar.png");
-            AddReward(catalog, FossickElementType.Chest, "treasure_chest", "Layer4_Reward/Chests/chest_closed.png", "Layer4_Reward/Chests/chest_locked.png");
-            AddReward(catalog, FossickElementType.Collection, "collection_piece", "Layer4_Reward/Collections/collection_bottle.png", "Layer4_Reward/Collections/collection_bottle_shadow.png");
+            AddReward(catalog, FossickElementType.Coin, FossickContentIds.Reward.CoinDrop, "Layer4_Reward/Coins/coin_stack.png");
+            AddReward(catalog, FossickElementType.Coin, FossickContentIds.Reward.CoinDropSmall, "Layer4_Reward/Coins/coin_stack.png");
+            AddReward(catalog, FossickElementType.Coin, FossickContentIds.Reward.CoinDropMedium, "Layer4_Reward/Coins/coin_stack.png");
+            AddReward(catalog, FossickElementType.Coin, FossickContentIds.Reward.CoinDropLarge, "Layer4_Reward/Coins/coin_stack.png");
+            AddReward(catalog, FossickElementType.Coin, FossickContentIds.Reward.CoinPileSmall, "Layer4_Reward/Coins/coin_pile_small.png");
+            AddReward(catalog, FossickElementType.Coin, FossickContentIds.Reward.CoinPileLarge, "Layer4_Reward/Coins/coin_pile_large.png");
+            AddReward(catalog, FossickElementType.Ore, FossickContentIds.Reward.OreCopper, "Layer4_Reward/Ores/ore_copper.png");
+            AddReward(catalog, FossickElementType.Ore, FossickContentIds.Reward.OreGem, "Layer4_Reward/Ores/ore_gem.png");
+            AddReward(catalog, FossickElementType.Ore, FossickContentIds.Reward.OreGold, "Layer4_Reward/Ores/ore_gold.png");
+            AddReward(catalog, FossickElementType.Ore, FossickContentIds.Reward.OreSilver, "Layer4_Reward/Ores/ore_silver.png");
+            AddReward(catalog, FossickElementType.Item, FossickContentIds.Tool.Pickaxe, "Layer4_Reward/Tools/tool_pickaxe.png");
+            AddReward(catalog, FossickElementType.Item, FossickContentIds.Tool.Dynamite, "Layer4_Reward/Tools/tool_dynamite.png");
+            AddReward(catalog, FossickElementType.Item, FossickContentIds.Tool.Tnt, "Layer4_Reward/Tools/tool_tnt.png");
+            AddReward(catalog, FossickElementType.Item, FossickContentIds.Tool.Radar, "Layer4_Reward/Tools/tool_radar.png");
+            AddReward(catalog, FossickElementType.Chest, FossickContentIds.Reward.TreasureChest, "Layer4_Reward/Chests/chest_closed.png");
+            AddReward(catalog, FossickElementType.Collection, FossickContentIds.Reward.CollectionBox, "Layer3_TerrainAttachment/chest_mystery_dirt.png");
+            AddReward(catalog, FossickElementType.Collection, FossickContentIds.Reward.CollectionPiece, "Layer4_Reward/Collections/collection_bottle.png");
+            AddReward(catalog, FossickElementType.Chest, FossickContentIds.Reward.MessageBottle, "Layer4_Reward/Collections/collection_bottle.png");
 
             AddTerrainAttachment(catalog, FossickElementType.Ore, "ore_copper", FossickTerrainType.Empty, "Layer3_TerrainAttachment/ore_copper.png");
             AddTerrainAttachment(catalog, FossickElementType.Ore, "ore_gem", FossickTerrainType.Empty, "Layer3_TerrainAttachment/ore_gem.png");
@@ -129,6 +136,7 @@ namespace Fossick.Editor.Art
             AddTerrainAttachment(catalog, FossickElementType.Item, "radar", FossickTerrainType.Dirt, "Layer3_TerrainAttachment/tool_radar_dirt.png");
             AddTerrainAttachment(catalog, FossickElementType.Item, "radar", FossickTerrainType.Stone, "Layer3_TerrainAttachment/tool_radar_stone.png");
             AddTerrainAttachment(catalog, FossickElementType.Chest, "treasure_chest", FossickTerrainType.Dirt, "Layer3_TerrainAttachment/chest_mystery_dirt.png");
+            AddTerrainAttachment(catalog, FossickElementType.Collection, FossickContentIds.Reward.CollectionBox, FossickTerrainType.Dirt, "Layer3_TerrainAttachment/chest_mystery_dirt.png");
 
             AddNamed(catalog.layer5Decoration.decorations, "grass_large", LoadSprite("Layer5_Decoration/grass_large.png"));
             AddNamed(catalog.layer5Decoration.decorations, "grass_small", LoadSprite("Layer5_Decoration/grass_small.png"));
@@ -161,7 +169,7 @@ namespace Fossick.Editor.Art
             catalog.layer1RewardBackground ??= new FossickVisualLayer1RewardBackgroundCatalog();
             catalog.layer2Terrain ??= new FossickVisualLayer2TerrainCatalog();
             catalog.layer3TerrainAttachment ??= new FossickVisualLayer3TerrainAttachmentCatalog();
-            catalog.layer4Reward ??= new FossickVisualLayer4RewardCatalog();
+            catalog.layer4Entity ??= new FossickVisualLayer4EntityCatalog();
             catalog.layer5Decoration ??= new FossickVisualLayer5DecorationCatalog();
             catalog.layer6Fog ??= new FossickVisualLayer6FogCatalog();
             catalog.layer2Terrain.terrainSprites ??= new List<FossickTerrainSpriteEntry>();
@@ -171,7 +179,7 @@ namespace Fossick.Editor.Art
             catalog.layer2Terrain.autoTileSets.Clear();
             catalog.layer2Terrain.terrainSprites.Clear();
             catalog.layer3TerrainAttachment.attachments.Clear();
-            catalog.layer4Reward.rewards.Clear();
+            catalog.layer4Entity.entities.Clear();
             catalog.layer5Decoration.decorations.Clear();
             catalog.layer6Fog.autoTileSet = new FossickAutoTileSet { kind = FossickAutoTileSetKind.Fog };
         }
@@ -291,7 +299,7 @@ namespace Fossick.Editor.Art
             var sprite = LoadFirstSprite(candidates);
             if (sprite != null)
             {
-                catalog.layer4Reward.rewards.Add(new FossickElementSpriteEntry { type = type, id = id, sprite = sprite });
+                catalog.layer4Entity.entities.Add(new FossickElementSpriteEntry { type = type, id = id, sprite = sprite });
             }
         }
 

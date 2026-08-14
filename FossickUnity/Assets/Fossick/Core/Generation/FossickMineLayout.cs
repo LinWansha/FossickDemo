@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using Fossick.Core.Definition.Config;
 using Fossick.Core.Data;
 
@@ -6,6 +7,7 @@ namespace Fossick.Core.Generation
 {
     public sealed class FossickGeneratedMine
     {
+        public int seed;
         public readonly List<FossickGeneratedMineRow> rows = new List<FossickGeneratedMineRow>();
         public readonly List<FossickGeneratedFragmentSpan> fragments = new List<FossickGeneratedFragmentSpan>();
     }
@@ -49,8 +51,8 @@ namespace Fossick.Core.Generation
 
         public static FossickGeneratedMine Build(FossickMapConfig config, FossickGenerationData state, int targetRows, IDictionary<int, FossickFragmentConfig> sequenceOverrides)
         {
-            var mine = new FossickGeneratedMine();
-            if (config == null || targetRows <= 0)
+            var mine = new FossickGeneratedMine { seed = state.seed };
+            if (targetRows <= 0)
             {
                 return mine;
             }
@@ -67,7 +69,7 @@ namespace Fossick.Core.Generation
                 AppendFragment(mine, generator.Next(), sequenceOverrides);
             }
 
-            ApplyRowOverrides(mine, config.generation == null ? null : config.generation.rowOverrides, 0);
+            ApplyRowOverrides(mine, config.generation.rowOverrides, 0);
             return mine;
         }
 
@@ -78,8 +80,8 @@ namespace Fossick.Core.Generation
 
         public static FossickGeneratedMine BuildAdditional(FossickMapConfig config, FossickGenerationData state, int minimumAdditionalRows, int absoluteStartRow, IDictionary<int, FossickFragmentConfig> sequenceOverrides)
         {
-            var mine = new FossickGeneratedMine();
-            if (config == null || minimumAdditionalRows <= 0)
+            var mine = new FossickGeneratedMine { seed = state.seed };
+            if (minimumAdditionalRows <= 0)
             {
                 return mine;
             }
@@ -96,7 +98,7 @@ namespace Fossick.Core.Generation
                 AppendFragment(mine, generator.Next(), sequenceOverrides);
             }
 
-            ApplyRowOverrides(mine, config.generation == null ? null : config.generation.rowOverrides, absoluteStartRow);
+            ApplyRowOverrides(mine, config.generation.rowOverrides, absoluteStartRow);
             return mine;
         }
 
@@ -143,11 +145,6 @@ namespace Fossick.Core.Generation
         {
             var originalFragment = generated.config;
             var fragment = ResolveFragment(generated, sequenceOverrides);
-            if (fragment == null)
-            {
-                return;
-            }
-
             var span = new FossickGeneratedFragmentSpan
             {
                 config = fragment,
@@ -182,11 +179,6 @@ namespace Fossick.Core.Generation
 
         private static FossickFragmentConfig ResolveFragment(FossickGeneratedFragment generated, IDictionary<int, FossickFragmentConfig> sequenceOverrides)
         {
-            if (generated == null)
-            {
-                return null;
-            }
-
             if (sequenceOverrides != null && sequenceOverrides.TryGetValue(generated.sequenceIndex, out var fragmentOverride) && fragmentOverride != null)
             {
                 return fragmentOverride;
@@ -230,10 +222,7 @@ namespace Fossick.Core.Generation
             {
                 x = x,
                 y = y,
-                backgroundId = source.backgroundId,
-                rewardBackgroundId = source.rewardBackgroundId,
                 terrain = source.terrain,
-                hp = source.hp,
                 reward = source.reward,
                 decorations = source.decorations == null ? new List<string>() : new List<string>(source.decorations),
                 fog = source.fog

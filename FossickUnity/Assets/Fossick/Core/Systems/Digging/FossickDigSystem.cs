@@ -14,7 +14,12 @@ namespace Fossick.Core.Systems
         {
         }
 
-        public bool ApplyCellEffect(FossickCell cell, FossickActionResult result, bool invalidWhenNoEffect, int damage)
+        public bool ApplyCellEffect(
+            FossickCell cell,
+            FossickActionResult result,
+            bool invalidWhenNoEffect,
+            int damage,
+            bool hasSupportBelowBefore)
         {
             if (cell == null)
             {
@@ -60,17 +65,17 @@ namespace Fossick.Core.Systems
 
                     if (cell.FossickEmbeddedContent != null)
                     {
-                        var rewardEntity = cell.FossickEmbeddedContent.SpawnPickup(cell.Position);
-                        cell.SetPickup(rewardEntity);
-                        AddRewardRevealedStep(result, rewardEntity);
+                        var pickupEntity = cell.FossickEmbeddedContent.SpawnPickup(cell.Position);
+                        cell.SetPickup(pickupEntity);
+                        AddEntityRevealedStep(result, pickupEntity);
                         result.domainEvents.Add(new FossickDomainEvent
                         {
                             type = FossickDomainEventType.EmbeddedContentRevealed,
                             x = cell.Position.x,
                             y = cell.Position.y,
-                            elementType = rewardEntity.Payload.ElementType,
-                            id = rewardEntity.Payload.Id,
-                            amount = rewardEntity.Payload.Amount
+                            elementType = pickupEntity.Payload.ElementType,
+                            id = pickupEntity.Payload.Id,
+                            amount = pickupEntity.Payload.Amount
                         });
                         cell.ClearEmbeddedContent();
                     }
@@ -91,10 +96,9 @@ namespace Fossick.Core.Systems
                     terrainAfter = GetTerrainType(cell),
                     hpBefore = hpBefore,
                     hpAfter = GetHp(cell),
+                    hasSupportBelowBefore = hasSupportBelowBefore,
                     fogBefore = visibleBefore ? FossickFogType.None : FossickFogType.Covered,
-                    fogAfter = cell.IsVisible ? FossickFogType.None : FossickFogType.Covered,
-                    rewardRevealed = cell.HasCollectablePickup,
-                    elementRevealed = cell.HasCollectablePickup
+                    fogAfter = cell.IsVisible ? FossickFogType.None : FossickFogType.Covered
                 });
             }
 
@@ -115,7 +119,6 @@ namespace Fossick.Core.Systems
             explosivesTerrain.Damage(explosivesTerrain.Hp);
             cell.ClearTerrain();
             result.isApplied = true;
-            AddStep(result, FossickActionStepType.ExplosiveCrateTriggered, cell.Position.x, cell.Position.y);
             result.domainEvents.Add(new FossickDomainEvent
             {
                 type = FossickDomainEventType.ExplosiveCrateTriggered,
@@ -138,21 +141,21 @@ namespace Fossick.Core.Systems
             return true;
         }
 
-        private static void AddRewardRevealedStep(FossickActionResult result, FossickPickupEntity rewardEntity)
+        private static void AddEntityRevealedStep(FossickActionResult result, FossickPickupEntity pickupEntity)
         {
-            if (result == null || rewardEntity == null || rewardEntity.Payload == null)
+            if (result == null || pickupEntity == null || pickupEntity.Payload == null)
             {
                 return;
             }
 
             result.steps.Add(new FossickActionStep
             {
-                type = FossickActionStepType.RewardRevealed,
-                x = rewardEntity.Position.x,
-                y = rewardEntity.Position.y,
-                elementType = rewardEntity.Payload.ElementType,
-                id = rewardEntity.Payload.Id,
-                amount = rewardEntity.Payload.Amount
+                type = FossickActionStepType.EntityRevealed,
+                x = pickupEntity.Position.x,
+                y = pickupEntity.Position.y,
+                elementType = pickupEntity.Payload.ElementType,
+                id = pickupEntity.Payload.Id,
+                amount = pickupEntity.Payload.Amount
             });
         }
 

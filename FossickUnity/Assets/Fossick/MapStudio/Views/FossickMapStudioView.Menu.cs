@@ -37,18 +37,10 @@ namespace Fossick.MapStudio.Views
         {
             AddText(panel, "地图预览", 17, FontStyle.Bold, new Vector2(LeftButtonWidth, 24f));
             AddText(panel, FormatMineInstanceSummary(), 12, FontStyle.Normal, new Vector2(LeftButtonWidth, 56f));
-            AddText(panel, $"当前种子：{controller.Seed}", 12, FontStyle.Bold, new Vector2(LeftButtonWidth, 24f));
 
             AddButton(panel, "生成地图预览", new Vector2(LeftButtonWidth, 32f), () =>
             {
-                GenerateMineInstance(true, "已按当前模板、半随机规则和种子生成地图预览；矿井会按需无限向下延展。");
-                Build();
-            });
-            AddButton(panel, "换一个种子", new Vector2(LeftButtonWidth, 32f), () =>
-            {
-                controller.RandomizeSeed();
-                generationRulesDirty = true;
-                editNotice = "已换一个种子，点击“生成地图预览”后会刷新地图预览。";
+                GenerateMineInstance(true, "已按当前模板和半随机规则生成地图预览；矿井会按需无限向下延展。");
                 Build();
             });
             AddButton(panel, "关闭预览", new Vector2(LeftButtonWidth, 32f), () =>

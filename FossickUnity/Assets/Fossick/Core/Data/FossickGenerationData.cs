@@ -40,9 +40,9 @@ namespace Fossick.Core.Data
                 regularSinceLastReward = regularSinceLastReward,
                 nextRewardAfterRegularCount = nextRewardAfterRegularCount,
                 groupIndex = groupIndex,
-                pendingRegularFragmentIds = pendingRegularFragmentIds == null ? new List<int>() : new List<int>(pendingRegularFragmentIds),
-                generatedFragmentIds = generatedFragmentIds == null ? new List<int>() : new List<int>(generatedFragmentIds),
-                rewardInsertedAfterRegularCounts = rewardInsertedAfterRegularCounts == null ? new List<int>() : new List<int>(rewardInsertedAfterRegularCounts)
+                pendingRegularFragmentIds = new List<int>(pendingRegularFragmentIds),
+                generatedFragmentIds = new List<int>(generatedFragmentIds),
+                rewardInsertedAfterRegularCounts = new List<int>(rewardInsertedAfterRegularCounts)
             };
         }
     }

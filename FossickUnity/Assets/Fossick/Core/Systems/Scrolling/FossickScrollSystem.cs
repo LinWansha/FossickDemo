@@ -15,7 +15,7 @@ namespace Fossick.Core.Systems
         public FossickScrollSystem(FossickVisibilitySystem visibilitySystem)
             : base("Scroll")
         {
-            this.visibilitySystem = visibilitySystem ?? new FossickVisibilitySystem();
+            this.visibilitySystem = visibilitySystem;
         }
 
         public bool TryScrollUntilStable(FossickMine mine, FossickActionResult result, int x, int y, Action afterScroll)
@@ -69,25 +69,25 @@ namespace Fossick.Core.Systems
 
                 if (IsMissedWhenScrolledOut(cell.Pickup.Payload))
                 {
-                    MissReward(cell, result);
+                    MissEntity(cell, result);
                 }
                 else
                 {
-                    CollectReward(cell, result, FossickActionStepType.RewardAutoCollected);
+                    CollectEntity(cell, result, FossickActionStepType.EntityAutoCollected);
                 }
             }
         }
 
-        private static bool CollectReward(FossickCell cell, FossickActionResult result, FossickActionStepType stepType)
+        private static bool CollectEntity(FossickCell cell, FossickActionResult result, FossickActionStepType stepType)
         {
             if (cell == null || result == null || !cell.HasCollectablePickup || cell.Pickup.Payload == null)
             {
                 return false;
             }
 
-            var rewardEntity = cell.Pickup;
-            var reward = rewardEntity.Payload.ToRewardEvent(rewardEntity.Position);
-            rewardEntity.Collect();
+            var pickupEntity = cell.Pickup;
+            var reward = pickupEntity.Payload.ToRewardEvent(pickupEntity.Position);
+            pickupEntity.Collect();
             cell.ClearPickup();
             result.rewards.Add(reward);
             result.steps.Add(new FossickActionStep
@@ -103,34 +103,35 @@ namespace Fossick.Core.Systems
             return true;
         }
 
-        private static bool IsMissedWhenScrolledOut(FossickRewardPayload reward)
+        private static bool IsMissedWhenScrolledOut(FossickEntityPayload payload)
         {
-            if (reward == null || reward.ElementType != FossickElementType.Chest)
+            if (payload == null || payload.ElementType != FossickElementType.Chest)
             {
                 return false;
             }
 
-            return reward.Id == "locked_chest" || reward.Id == "lockedChest";
+            return payload.Id == FossickContentIds.Reward.LockedChest ||
+                   payload.Id == FossickContentIds.Reward.LockedChestLegacy;
         }
 
-        private static void MissReward(FossickCell cell, FossickActionResult result)
+        private static void MissEntity(FossickCell cell, FossickActionResult result)
         {
             if (cell == null || result == null || !cell.HasCollectablePickup || cell.Pickup.Payload == null)
             {
                 return;
             }
 
-            var rewardEntity = cell.Pickup;
+            var pickupEntity = cell.Pickup;
             result.steps.Add(new FossickActionStep
             {
-                type = FossickActionStepType.RewardMissed,
-                x = rewardEntity.Position.x,
-                y = rewardEntity.Position.y,
-                elementType = rewardEntity.Payload.ElementType,
-                id = rewardEntity.Payload.Id,
-                amount = rewardEntity.Payload.Amount
+                type = FossickActionStepType.EntityMissed,
+                x = pickupEntity.Position.x,
+                y = pickupEntity.Position.y,
+                elementType = pickupEntity.Payload.ElementType,
+                id = pickupEntity.Payload.Id,
+                amount = pickupEntity.Payload.Amount
             });
-            rewardEntity.Collect();
+            pickupEntity.Collect();
             cell.ClearPickup();
         }
 

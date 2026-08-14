@@ -19,21 +19,21 @@ namespace Fossick.Core.Systems
                 return false;
             }
 
-            var rewardEntity = cell.Pickup;
-            if (!rewardEntity.Collect())
+            var pickupEntity = cell.Pickup;
+            if (!pickupEntity.Collect())
             {
                 return false;
             }
 
             if (result != null)
             {
-                var reward = rewardEntity.Payload.ToRewardEvent(rewardEntity.Position);
+                var reward = pickupEntity.Payload.ToRewardEvent(pickupEntity.Position);
                 result.isApplied = true;
                 result.isCollectOnly = true;
                 result.rewards.Add(reward);
                 result.steps.Add(new FossickActionStep
                 {
-                    type = FossickActionStepType.RewardCollected,
+                    type = FossickActionStepType.EntityCollected,
                     x = reward.x,
                     y = reward.y,
                     elementType = reward.elementType,

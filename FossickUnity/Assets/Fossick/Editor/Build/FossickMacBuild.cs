@@ -78,7 +78,7 @@ namespace Fossick.Editor.Build
         private static void CopyMapFilesToStreamingAssets(string projectRoot)
         {
             var source = Path.Combine(projectRoot, SourceMapsPath);
-            var target = Path.Combine(Application.streamingAssetsPath, FossickMapProjectFileService.RelativeMapsFolder);
+            var target = FossickMapProjectFileService.GetBundledPlayerMapsFolder(string.Empty);
             Directory.CreateDirectory(target);
 
             CopyJson(source, target, "FossickFragmentLibrary.json");
